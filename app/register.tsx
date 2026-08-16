@@ -1,7 +1,13 @@
 import { useRouter } from "expo-router";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore"; 
-import React, { useState } from "react";
+import * as Google from "expo-auth-session/providers/google";
+import * as WebBrowser from "expo-web-browser";
+import {
+  createUserWithEmailAndPassword,
+  signInWithCredential,
+  GoogleAuthProvider,
+} from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
+import React, { useEffect, useState } from "react";
 import {
   Image,
   SafeAreaView,
@@ -14,8 +20,10 @@ import {
   ActivityIndicator,
 } from "react-native";
 
-import { auth, db, googleProvider } from "@/src/config/firebase"; 
-import { signInWithPopup } from "firebase/auth";
+import { auth, db } from "@/src/config/firebase";
+import { GOOGLE_AUTH } from "@/src/config/googleAuth";
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -23,6 +31,21 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+    clientId: GOOGLE_AUTH.webClientId,
+    androidClientId: GOOGLE_AUTH.androidClientId,
+    iosClientId: GOOGLE_AUTH.iosClientId,
+  });
+
+  useEffect(() => {
+    if (response?.type === "success") {
+      const { id_token } = response.params;
+      finishGoogleSignIn(id_token);
+    } else if (response?.type === "error") {
+      Alert.alert("Error", "No se pudo iniciar sesión con Google.");
+    }
+  }, [response]);
 
   const handleRegister = async () => {
     if (!email || !password || !confirm) {
@@ -58,24 +81,39 @@ export default function RegisterScreen() {
     }
   };
 
-  const handleGoogle = async () => {
+  const finishGoogleSignIn = async (idToken: string) => {
     try {
-        const result = await signInWithPopup(auth, googleProvider);
-        const user = result.user;
+      const credential = GoogleAuthProvider.credential(idToken);
+      const result = await signInWithCredential(auth, credential);
+      const user = result.user;
 
-       
-        await setDoc(doc(db, "users", user.uid), {
-            nickname: user.displayName || "Usuario Google",
-            email: user.email,
-            photoURL: user.photoURL || "",
-            phone: "",
-            createdAt: new Date(),
-        }, { merge: true }); 
+      await setDoc(
+        doc(db, "users", user.uid),
+        {
+          nickname: user.displayName || "Usuario Google",
+          email: user.email,
+          photoURL: user.photoURL || "",
+          phone: "",
+          createdAt: new Date(),
+        },
+        { merge: true }
+      );
 
-        router.push("/(tabs)/home");
+      router.push("/(tabs)/home");
     } catch (error: any) {
       Alert.alert("Error al iniciar con Google", error.message);
     }
+  };
+
+  const handleGoogle = async () => {
+    if (GOOGLE_AUTH.webClientId.startsWith("TU_") || !request) {
+      Alert.alert(
+        "Falta configuración",
+        "Todavía no configuraste los Client ID de Google. Revisa src/config/googleAuth.ts"
+      );
+      return;
+    }
+    await promptAsync();
   };
 
   return (

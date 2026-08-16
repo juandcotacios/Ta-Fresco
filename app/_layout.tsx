@@ -30,17 +30,17 @@ export default function RootLayout() {
             
             <Stack.Screen name="(tabs)" />
           ) : (
-            <>
-              <Stack.Screen name="index" />
-              <Stack.Screen name="login" />
-              <Stack.Screen name="register" />
-            </>
+            [
+              <Stack.Screen key="index" name="index" />,
+              <Stack.Screen key="login" name="login" />,
+              <Stack.Screen key="register" name="register" />,
+            ]
           )}
 
           {}
-          <Stack.Screen name="checkout" />
-          <Stack.Screen name="pedidos" />
-          <Stack.Screen name="chatbot" />
+          <Stack.Screen name="checkout/index" />
+          <Stack.Screen name="pedidos/index" />
+          <Stack.Screen name="chatbot/index" />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
         </Stack>
         <StatusBar style="auto" />

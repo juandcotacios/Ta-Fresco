@@ -1,7 +1,13 @@
 import { useRouter } from "expo-router";
-import { signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore"; 
-import React, { useState } from "react";
+import * as Google from "expo-auth-session/providers/google";
+import * as WebBrowser from "expo-web-browser";
+import {
+  signInWithEmailAndPassword,
+  signInWithCredential,
+  GoogleAuthProvider,
+} from "firebase/auth";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import React, { useEffect, useState } from "react";
 import {
   Image,
   SafeAreaView,
@@ -16,7 +22,10 @@ import {
 
 import GoogleLoginModal from "@/components/GoogleLoginModal";
 
-import { auth, db, googleProvider } from "@/src/config/firebase"; 
+import { auth, db } from "@/src/config/firebase";
+import { GOOGLE_AUTH } from "@/src/config/googleAuth";
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -26,6 +35,29 @@ export default function LoginScreen() {
   
   const [modalVisible, setModalVisible] = useState(false);
   const [loginStatus, setLoginStatus] = useState<'loading' | 'success'>('loading'); 
+
+  // Flujo nativo de Google: abre el selector de cuenta del sistema
+  // (o el navegador) y devuelve un id_token que le pasamos a Firebase.
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+    clientId: GOOGLE_AUTH.webClientId,
+    androidClientId: GOOGLE_AUTH.androidClientId,
+    iosClientId: GOOGLE_AUTH.iosClientId,
+  });
+
+  useEffect(() => {
+    if (response?.type === "success") {
+      const { id_token } = response.params;
+      finishGoogleSignIn(id_token);
+    } else if (response?.type === "error") {
+      setModalVisible(false);
+      Alert.alert("Error", "No se pudo iniciar sesión con Google.");
+    }
+    // Si el usuario cierra el selector de cuenta (type === "cancel"),
+    // no mostramos error, simplemente cerramos el modal.
+    else if (response?.type === "cancel" || response?.type === "dismiss") {
+      setModalVisible(false);
+    }
+  }, [response]);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -41,43 +73,53 @@ export default function LoginScreen() {
     }
   };
 
-  const handleGoogle = async () => {
-   
-    setLoginStatus('loading');
-    setModalVisible(true);
-
+  const finishGoogleSignIn = async (idToken: string) => {
     try {
-     
-      const result = await signInWithPopup(auth, googleProvider);
+      const credential = GoogleAuthProvider.credential(idToken);
+      const result = await signInWithCredential(auth, credential);
       const user = result.user;
-      
 
       const userDocRef = doc(db, "users", user.uid);
       const userDoc = await getDoc(userDocRef);
 
       if (!userDoc.exists()) {
-          await setDoc(userDocRef, {
-              nickname: user.displayName || "Usuario Google",
-              email: user.email,
-              photoURL: user.photoURL || "",
-              phone: "",
-              createdAt: new Date(),
-          });
-          console.log("Perfil de Google creado en Firestore");
+        await setDoc(userDocRef, {
+          nickname: user.displayName || "Usuario Google",
+          email: user.email,
+          photoURL: user.photoURL || "",
+          phone: "",
+          createdAt: new Date(),
+        });
+        console.log("Perfil de Google creado en Firestore");
       }
 
-
-      setLoginStatus('success');
+      setLoginStatus("success");
 
       setTimeout(() => {
         setModalVisible(false);
         router.push("/(tabs)/home");
       }, 1500);
-
     } catch (error: any) {
       setModalVisible(false);
       Alert.alert("Error", "Fallo al iniciar con Google: " + error.message);
     }
+  };
+
+  const handleGoogle = async () => {
+    if (
+      GOOGLE_AUTH.webClientId.startsWith("TU_") ||
+      !request
+    ) {
+      Alert.alert(
+        "Falta configuración",
+        "Todavía no configuraste los Client ID de Google. Revisa src/config/googleAuth.ts"
+      );
+      return;
+    }
+
+    setLoginStatus("loading");
+    setModalVisible(true);
+    await promptAsync();
   };
 
   return (
