@@ -137,7 +137,7 @@ export default function Home() {
             renderItem={({ item }) => (
               <View style={styles.categoryItem}>
                 <View style={styles.categoryCircle}>
-                  <Image source={item.icon} style={styles.categoryImage} />
+                  <Image source={item.icon} style={styles.categoryImage} resizeMode="contain" />
                 </View>
                 <Text style={styles.categoryLabel}>{item.name}</Text>
               </View>
@@ -158,7 +158,7 @@ export default function Home() {
               </View>
             </View>
             <View style={styles.promoImageContainer}>
-              <Image source={{ uri: "https://www.buyfrescapp.com/wp-content/uploads/2025/11/BOG-CAT001-00005-3-300x300.png" }} style={styles.promoImage} />
+              <Image source={{ uri: "https://www.buyfrescapp.com/wp-content/uploads/2025/11/BOG-CAT001-00005-3-300x300.png" }} style={styles.promoImage} resizeMode="contain" />
             </View>
           </View>
           <Text style={styles.promoProductLabel}>Pimentón Maduración Mixta</Text>
@@ -242,7 +242,7 @@ export default function Home() {
                         showsVerticalScrollIndicator={false}
                         renderItem={({item}) => (
                            <View style={styles.miniItemRow}>
-                              <Image source={{ uri: item.imageUrl }} style={styles.miniItemImg} />
+                              <Image source={{ uri: item.imageUrl }} style={styles.miniItemImg} resizeMode="contain" />
                               <View style={{flex:1, marginLeft:10}}>
                                  <Text style={styles.miniItemName} numberOfLines={1}>{item.name}</Text>
                                  <Text style={styles.miniItemPrice}>${item.price.toLocaleString()}</Text>
@@ -312,7 +312,7 @@ function ProductCard({ item, categoryLabel, currentQty, onAdd, onRemove, onDelet
 
   return (
     <View style={styles.productCard}>
-      <Image source={{ uri: item.imageUrl }} style={styles.productImage} />
+      <Image source={{ uri: item.imageUrl }} style={styles.productImage} resizeMode="contain" />
       <View style={styles.productInfo}>
         <Text style={styles.productPrice}>$ {item.price.toLocaleString()}</Text>
         <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
     justifyContent: "center", alignItems: "center", marginBottom: 8,
     borderWidth: 1, borderColor: "#F0F0F0", elevation: 2,
   },
-  categoryImage: { width: '60%', height: '60%', resizeMode: "contain" },
+  categoryImage: { width: '60%', height: '60%' },
   categoryLabel: { fontSize: 11, color: "#444", textAlign: "center", fontWeight: '500' },
 
   promoWrapper: { marginBottom: 25, height: 170, position: "relative", marginTop: 10 },
@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
   nowBadgeText: { color: "#D84315", fontWeight: "800", fontSize: 10 },
   promoPrice: { fontSize: 18, fontWeight: "bold", color: "#FFF" },
   promoImageContainer: { position: 'absolute', right: -25, top: -20, bottom: 0, justifyContent: 'center', alignItems: 'center', width: '60%', height: '120%' },
-  promoImage: { width: 200, height: 200, resizeMode: "contain" },
+  promoImage: { width: 200, height: 200 },
   promoProductLabel: { position: 'absolute', bottom: 15, right: 15, fontSize: 10, color: 'rgba(255,255,255,0.8)', fontWeight: '600', zIndex: 3 },
 
   productSection: { marginBottom: 25 },
@@ -391,7 +391,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFF", width: 165, borderRadius: 18, padding: 12, marginRight: 15,
     elevation: 3, marginBottom: 10, alignItems: "center",
   },
-  productImage: { width: 110, height: 110, resizeMode: "contain", marginBottom: 12 },
+  productImage: { width: 110, height: 110, marginBottom: 12 },
   productInfo: { width: '100%', paddingHorizontal: 2, marginBottom: 10 },
   productPrice: { fontSize: 17, fontWeight: "bold", color: "#222" },
   productName: { fontSize: 13, color: "#555", marginTop: 2, height: 34 },
@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
   miniListContainer: { maxHeight: height * 0.4, marginBottom: 20 },
   emptyText: { textAlign: 'center', color: '#999', marginVertical: 20 },
   miniItemRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 15, borderBottomWidth: 1, borderBottomColor: '#F5F5F5', paddingBottom: 10 },
-  miniItemImg: { width: 50, height: 50, resizeMode: 'contain', marginRight: 5 },
+  miniItemImg: { width: 50, height: 50, marginRight: 5 },
   miniItemName: { fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 4 },
   miniItemPrice: { fontSize: 14, fontWeight: 'bold', color: '#000' },
   miniControls: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F9F9F9', borderRadius: 15, padding: 2, borderWidth: 1, borderColor: '#EEE' },

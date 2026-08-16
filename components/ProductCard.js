@@ -1,5 +1,5 @@
 import { useNavigation } from '@react-navigation/native';
-import { arrayUnion, collection, doc, getDocs, query, updateDoc, where } from 'firebase/firestore';
+import { addDoc, arrayUnion, collection, getDocs, query, updateDoc, where } from 'firebase/firestore';
 import { Image, Text, TouchableOpacity, View } from 'react-native';
 import { auth, db } from '@/src/config/firebase';
 
@@ -9,18 +9,11 @@ export default function ProductCard({ product }) {
   const handleAdd = async () => {
     try {
       const userId = auth.currentUser.uid;
-      // buscar carrito del usuario
       const cartsQ = query(collection(db, 'carts'), where('userId', '==', userId));
       const snap = await getDocs(cartsQ);
 
       if (snap.empty) {
-        // crear carrito nuevo
-        await doc(collection(db, 'carts')).set
-      }
-
-      // simplificamos usando update on first cart doc (si existe) o crear uno nuevo
-      if (snap.empty) {
-        await db.collection('carts').add({
+        await addDoc(collection(db, 'carts'), {
           userId,
           items: [{
             productId: product.id,

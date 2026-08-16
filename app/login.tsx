@@ -4,12 +4,15 @@ import * as WebBrowser from "expo-web-browser";
 import {
   signInWithEmailAndPassword,
   signInWithCredential,
+  signInWithPopup,
   GoogleAuthProvider,
+  User,
 } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
   Image,
+  Platform,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -18,7 +21,6 @@ import {
   View,
   Alert,
 } from "react-native";
-
 
 import GoogleLoginModal from "@/components/GoogleLoginModal";
 
@@ -32,9 +34,8 @@ export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  
   const [modalVisible, setModalVisible] = useState(false);
-  const [loginStatus, setLoginStatus] = useState<'loading' | 'success'>('loading'); 
+  const [loginStatus, setLoginStatus] = useState<'loading' | 'success'>('loading');
 
   // Flujo nativo de Google: abre el selector de cuenta del sistema
   // (o el navegador) y devuelve un id_token que le pasamos a Firebase.
@@ -66,39 +67,42 @@ export default function LoginScreen() {
     }
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      
       router.push("/(tabs)/home");
     } catch (error: any) {
       Alert.alert("Error al iniciar sesión", error.message);
     }
   };
 
+  // Crea el perfil en Firestore si es la primera vez, y navega a home.
+  // Se usa tanto para el flujo nativo (id_token) como para el de web (popup).
+  const afterGoogleSignIn = async (user: User) => {
+    const userDocRef = doc(db, "users", user.uid);
+    const userDoc = await getDoc(userDocRef);
+
+    if (!userDoc.exists()) {
+      await setDoc(userDocRef, {
+        nickname: user.displayName || "Usuario Google",
+        email: user.email,
+        photoURL: user.photoURL || "",
+        phone: "",
+        createdAt: new Date(),
+      });
+      console.log("Perfil de Google creado en Firestore");
+    }
+
+    setLoginStatus("success");
+
+    setTimeout(() => {
+      setModalVisible(false);
+      router.push("/(tabs)/home");
+    }, 1500);
+  };
+
   const finishGoogleSignIn = async (idToken: string) => {
     try {
       const credential = GoogleAuthProvider.credential(idToken);
       const result = await signInWithCredential(auth, credential);
-      const user = result.user;
-
-      const userDocRef = doc(db, "users", user.uid);
-      const userDoc = await getDoc(userDocRef);
-
-      if (!userDoc.exists()) {
-        await setDoc(userDocRef, {
-          nickname: user.displayName || "Usuario Google",
-          email: user.email,
-          photoURL: user.photoURL || "",
-          phone: "",
-          createdAt: new Date(),
-        });
-        console.log("Perfil de Google creado en Firestore");
-      }
-
-      setLoginStatus("success");
-
-      setTimeout(() => {
-        setModalVisible(false);
-        router.push("/(tabs)/home");
-      }, 1500);
+      await afterGoogleSignIn(result.user);
     } catch (error: any) {
       setModalVisible(false);
       Alert.alert("Error", "Fallo al iniciar con Google: " + error.message);
@@ -106,6 +110,31 @@ export default function LoginScreen() {
   };
 
   const handleGoogle = async () => {
+    // En web, expo-auth-session abre un popup y detecta que se cerró
+    // sondeando `window.closed`, pero el dev server de Expo manda una
+    // cabecera Cross-Origin-Opener-Policy que bloquea justo eso, así
+    // que el login se queda colgado para siempre. En web usamos el
+    // popup nativo de Firebase, que no depende de `window.closed`.
+    if (Platform.OS === "web") {
+      setLoginStatus("loading");
+      setModalVisible(true);
+      try {
+        const provider = new GoogleAuthProvider();
+        const result = await signInWithPopup(auth, provider);
+        await afterGoogleSignIn(result.user);
+      } catch (error: any) {
+        setModalVisible(false);
+        // Si el usuario simplemente cerró el popup, no mostramos error.
+        if (
+          error?.code !== "auth/popup-closed-by-user" &&
+          error?.code !== "auth/cancelled-popup-request"
+        ) {
+          Alert.alert("Error", "Fallo al iniciar con Google: " + error.message);
+        }
+      }
+      return;
+    }
+
     if (
       GOOGLE_AUTH.webClientId.startsWith("TU_") ||
       !request
@@ -124,8 +153,6 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      
-      {}
       <GoogleLoginModal visible={modalVisible} status={loginStatus} />
 
       <View style={styles.container}>
