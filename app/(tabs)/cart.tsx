@@ -22,6 +22,7 @@ import { collection, getDocs, limit, query } from "firebase/firestore";
 import { getAuth } from "firebase/auth"; 
 import { db } from "@/src/config/firebase"; 
 import { useCart } from "@/src/contexts/CartContext"; 
+import { crearPedido } from "@/src/services/pedidosService";
 import OpenChatbotButton from "../../components/OpenChatbotButton"; 
 
 const { width, height } = Dimensions.get('window');
@@ -158,7 +159,7 @@ export default function CartScreen() {
     setCardDate(clean);
   };
 
-  const handlePay = () => {
+  const handlePay = async () => {
     if (paymentMethod === 'card') {
         if (cardNumber.length < 13 || cardDate.length < 5 || cardCVC.length < 3) {
             Alert.alert("Error", "Verifica los datos de la tarjeta");
@@ -169,9 +170,14 @@ export default function CartScreen() {
        Alert.alert("Error", "Selecciona una dirección de entrega");
        return;
     }
+    if (!user) {
+       Alert.alert("Error", "Debes iniciar sesión para confirmar el pedido.");
+       return;
+    }
 
     setProcessingPayment(true);
-    setTimeout(() => {
+    try {
+        await crearPedido(user.uid, cart, totalPrice, 3500);
         setProcessingPayment(false);
         setCheckoutVisible(false);
         setSuccessVisible(true);
@@ -180,7 +186,11 @@ export default function CartScreen() {
             setSuccessVisible(false);
             router.replace("/home"); 
         }, 2500);
-    }, 2000);
+    } catch (error: any) {
+        console.log("Error creando pedido:", error);
+        setProcessingPayment(false);
+        Alert.alert("Error", error?.message || "No se pudo confirmar el pedido. Intenta de nuevo.");
+    }
   };
 
   if (!cart || cart.length === 0) {

@@ -333,6 +333,11 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        <TouchableOpacity style={styles.logoutButton} onPress={() => router.push('/pedidos')}>
+          <Ionicons name="receipt-outline" size={20} color="#666" style={{ marginRight: 8 }} />
+           <Text style={styles.logoutButtonText}>Mis pedidos</Text>
+            </TouchableOpacity>
+
         <TouchableOpacity style={styles.logoutButton} onPress={requestLogout}>
           <Ionicons name="log-out-outline" size={20} color="#666" style={{ marginRight: 8 }} />
           <Text style={styles.logoutButtonText}>Cerrar sesión</Text>
