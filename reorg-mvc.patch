@@ -1,0 +1,692 @@
+From 051eda5a887b5cc60843eec9572d94ab6ee1b486 Mon Sep 17 00:00:00 2001
+From: Reorg Assistant <reorg@local>
+Date: Sat, 15 Aug 2026 23:15:30 +0000
+Subject: [PATCH] refactor: reorganizar estructura de carpetas estilo MVC
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- Elimina el stack de navegación viejo (App.js, src/navigation, src/screens,
+  src/contexts/AuthContext) que quedó como código muerto tras migrar a expo-router
+- Unifica la config de Firebase duplicada en src/config/firebase.ts
+- Mueve componentes activos mal ubicados (GoogleLoginModal, ProductCard) a components/
+- Mueve CartContext a src/contexts/
+- Mueve seedProducts.tsx a scripts/ (no es código de la app)
+---
+ App.js                                        | 10 --
+ app/(tabs)/cart.tsx                           |  4 +-
+ app/(tabs)/home.tsx                           |  4 +-
+ app/(tabs)/ofertas.tsx                        |  4 +-
+ app/(tabs)/profile.tsx                        |  2 +-
+ app/_layout.tsx                               |  4 +-
+ app/checkout/index.tsx                        |  2 +-
+ app/config/firebaseConfig.ts                  | 20 ----
+ app/login.tsx                                 |  4 +-
+ app/register.tsx                              |  2 +-
+ .../GoogleLoginModal.js                       |  0
+ {src/components => components}/ProductCard.js |  2 +-
+ {src/scripts => scripts}/seedProducts.tsx     |  0
+ src/components/CategoryCarousel.js            | 17 ----
+ src/components/SearchBar.js                   |  0
+ .../firebase.js => config/firebase.ts}        | 13 +--
+ src/contexts/AuthContext.js                   | 24 -----
+ .../contexts/CartContext.tsx                  |  0
+ src/navigation/AuthStack.js                   | 14 ---
+ src/navigation/MainTabs.js                    | 26 -----
+ src/navigation/RootNavigator.js               | 24 -----
+ src/screens/CartScreen.js                     | 44 ---------
+ src/screens/HomeScreen.js                     | 49 ----------
+ src/screens/auth/LoginScreen.js               | 36 -------
+ src/screens/auth/RegisterScreen.js            | 95 -------------------
+ src/styles/global.js                          | 11 ---
+ 26 files changed, 19 insertions(+), 392 deletions(-)
+ delete mode 100644 App.js
+ delete mode 100644 app/config/firebaseConfig.ts
+ rename {src/components => components}/GoogleLoginModal.js (100%)
+ rename {src/components => components}/ProductCard.js (97%)
+ rename {src/scripts => scripts}/seedProducts.tsx (100%)
+ delete mode 100644 src/components/CategoryCarousel.js
+ delete mode 100644 src/components/SearchBar.js
+ rename src/{services/firebase.js => config/firebase.ts} (70%)
+ delete mode 100644 src/contexts/AuthContext.js
+ rename app/context/cartContext.tsx => src/contexts/CartContext.tsx (100%)
+ delete mode 100644 src/navigation/AuthStack.js
+ delete mode 100644 src/navigation/MainTabs.js
+ delete mode 100644 src/navigation/RootNavigator.js
+ delete mode 100644 src/screens/CartScreen.js
+ delete mode 100644 src/screens/HomeScreen.js
+ delete mode 100644 src/screens/auth/LoginScreen.js
+ delete mode 100644 src/screens/auth/RegisterScreen.js
+ delete mode 100644 src/styles/global.js
+
+diff --git a/App.js b/App.js
+deleted file mode 100644
+index 77236de..0000000
+--- a/App.js
++++ /dev/null
+@@ -1,10 +0,0 @@
+-import { AuthProvider } from './src/contexts/AuthContext';
+-import RootNavigator from './src/navigation/RootNavigator';
+-
+-export default function App() {
+-  return (
+-    <AuthProvider>
+-      <RootNavigator />
+-    </AuthProvider>
+-  );
+-}
+diff --git a/app/(tabs)/cart.tsx b/app/(tabs)/cart.tsx
+index 8057bea..97fe436 100644
+--- a/app/(tabs)/cart.tsx
++++ b/app/(tabs)/cart.tsx
+@@ -20,8 +20,8 @@ import { Ionicons } from "@expo/vector-icons";
+ import { useRouter, useNavigation } from "expo-router";
+ import { collection, getDocs, limit, query } from "firebase/firestore"; 
+ import { getAuth } from "firebase/auth"; 
+-import { db } from "../config/firebaseConfig"; 
+-import { useCart } from "../context/cartContext"; 
++import { db } from '@/src/config/firebase'; 
++import { useCart } from "@/src/contexts/CartContext"; 
+ import OpenChatbotButton from "../../components/OpenChatbotButton"; 
+ 
+ const { width, height } = Dimensions.get('window');
+diff --git a/app/(tabs)/home.tsx b/app/(tabs)/home.tsx
+index 8b589dc..00b216e 100644
+--- a/app/(tabs)/home.tsx
++++ b/app/(tabs)/home.tsx
+@@ -16,8 +16,8 @@ import {
+ } from "react-native";
+ import { Ionicons } from "@expo/vector-icons";
+ import { useRouter } from "expo-router";
+-import { db } from "../config/firebaseConfig";
+-import { useCart } from "../context/cartContext";
++import { db } from '@/src/config/firebase';
++import { useCart } from "@/src/contexts/CartContext";
+ import OpenChatbotButton from "../../components/OpenChatbotButton"; 
+ 
+ const { width, height } = Dimensions.get('window');
+diff --git a/app/(tabs)/ofertas.tsx b/app/(tabs)/ofertas.tsx
+index fc7e337..8232f95 100644
+--- a/app/(tabs)/ofertas.tsx
++++ b/app/(tabs)/ofertas.tsx
+@@ -16,8 +16,8 @@ import {
+ import { Ionicons } from "@expo/vector-icons";
+ import { useRouter } from "expo-router";
+ import { collection, getDocs } from "firebase/firestore"; 
+-import { db } from "../config/firebaseConfig"; 
+-import { useCart } from "../context/cartContext";
++import { db } from '@/src/config/firebase'; 
++import { useCart } from "@/src/contexts/CartContext";
+ import OpenChatbotButton from "../../components/OpenChatbotButton";
+ 
+ const { width, height } = Dimensions.get('window');
+diff --git a/app/(tabs)/profile.tsx b/app/(tabs)/profile.tsx
+index e1d41da..b032211 100644
+--- a/app/(tabs)/profile.tsx
++++ b/app/(tabs)/profile.tsx
+@@ -29,7 +29,7 @@ import {
+   deleteDoc,
+   serverTimestamp
+ } from 'firebase/firestore';
+-import { db } from '../../src/services/firebase';
++import { db } from '@/src/config/firebase';
+ 
+ const auth = getAuth();
+ const { width, height } = Dimensions.get('window');
+diff --git a/app/_layout.tsx b/app/_layout.tsx
+index ce5d3b7..83912cd 100644
+--- a/app/_layout.tsx
++++ b/app/_layout.tsx
+@@ -5,8 +5,8 @@ import { StatusBar } from 'expo-status-bar';
+ import { getAuth, onAuthStateChanged } from 'firebase/auth';
+ import React, { useEffect, useState } from 'react';
+ import 'react-native-reanimated';
+-import { app } from './config/firebaseConfig';
+-import { CartProvider } from './context/cartContext';
++import { app } from '@/src/config/firebase';
++import { CartProvider } from '@/src/contexts/CartContext';
+ 
+ export const unstable_settings = { anchor: '(tabs)' };
+ 
+diff --git a/app/checkout/index.tsx b/app/checkout/index.tsx
+index 2934118..4bd4b43 100644
+--- a/app/checkout/index.tsx
++++ b/app/checkout/index.tsx
+@@ -1,6 +1,6 @@
+ import React, { useMemo } from "react"; // Importamos useMemo
+ import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert } from "react-native";
+-import { useCart } from "../context/cartContext";
++import { useCart } from '@/src/contexts/CartContext';
+ 
+ export default function CheckoutScreen() {
+   // 1. Usamos el nombre correcto: 'cart'
+diff --git a/app/config/firebaseConfig.ts b/app/config/firebaseConfig.ts
+deleted file mode 100644
+index 43edb29..0000000
+--- a/app/config/firebaseConfig.ts
++++ /dev/null
+@@ -1,20 +0,0 @@
+-import { initializeApp } from "firebase/app";
+-import { getAuth, GoogleAuthProvider } from "firebase/auth";
+-import { getFirestore } from "firebase/firestore";
+-// Your web app's Firebase configuration
+-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+-const firebaseConfig = {
+-  apiKey: "AIzaSyC9wRH0qtedF6NhCJF0CvT-vTn6OyP1V8k",
+-  authDomain: "frescapp-57eb3.firebaseapp.com",
+-  projectId: "frescapp-57eb3",
+-  storageBucket: "frescapp-57eb3.firebasestorage.app",
+-  messagingSenderId: "690772033761",
+-  appId: "1:690772033761:web:a2a13d9017ad84c84e77a0",
+-  measurementId: "G-B97XZCTM62"
+-};
+-
+-// Initialize Firebase
+-export const app = initializeApp(firebaseConfig);
+-export const auth = getAuth(app);
+-export const googleProvider = new GoogleAuthProvider();
+-export const db = getFirestore(app);
+\ No newline at end of file
+diff --git a/app/login.tsx b/app/login.tsx
+index 1a46b58..30193ba 100644
+--- a/app/login.tsx
++++ b/app/login.tsx
+@@ -14,9 +14,9 @@ import {
+ } from "react-native";
+ 
+ 
+-import GoogleLoginModal from "../src/components/GoogleLoginModal";
++import GoogleLoginModal from '@/components/GoogleLoginModal';
+ 
+-import { auth, db, googleProvider } from "./config/firebaseConfig"; 
++import { auth, db, googleProvider } from '@/src/config/firebase'; 
+ 
+ export default function LoginScreen() {
+   const router = useRouter();
+diff --git a/app/register.tsx b/app/register.tsx
+index cdd5d14..f81d322 100644
+--- a/app/register.tsx
++++ b/app/register.tsx
+@@ -14,7 +14,7 @@ import {
+   ActivityIndicator,
+ } from "react-native";
+ 
+-import { auth, db, googleProvider } from "./config/firebaseConfig"; 
++import { auth, db, googleProvider } from '@/src/config/firebase'; 
+ import { signInWithPopup } from "firebase/auth";
+ 
+ export default function RegisterScreen() {
+diff --git a/src/components/GoogleLoginModal.js b/components/GoogleLoginModal.js
+similarity index 100%
+rename from src/components/GoogleLoginModal.js
+rename to components/GoogleLoginModal.js
+diff --git a/src/components/ProductCard.js b/components/ProductCard.js
+similarity index 97%
+rename from src/components/ProductCard.js
+rename to components/ProductCard.js
+index 78dbb76..d839f6e 100644
+--- a/src/components/ProductCard.js
++++ b/components/ProductCard.js
+@@ -1,7 +1,7 @@
+ import { useNavigation } from '@react-navigation/native';
+ import { arrayUnion, collection, doc, getDocs, query, updateDoc, where } from 'firebase/firestore';
+ import { Image, Text, TouchableOpacity, View } from 'react-native';
+-import { auth, db } from '../services/firebase';
++import { auth, db } from '@/src/config/firebase';
+ 
+ export default function ProductCard({ product }) {
+   const navigation = useNavigation();
+diff --git a/src/scripts/seedProducts.tsx b/scripts/seedProducts.tsx
+similarity index 100%
+rename from src/scripts/seedProducts.tsx
+rename to scripts/seedProducts.tsx
+diff --git a/src/components/CategoryCarousel.js b/src/components/CategoryCarousel.js
+deleted file mode 100644
+index a7b8208..0000000
+--- a/src/components/CategoryCarousel.js
++++ /dev/null
+@@ -1,17 +0,0 @@
+-import { FlatList, Text, View } from 'react-native';
+-import ProductCard from './ProductCard';
+-
+-export default function CategoryCarousel({ category, products }) {
+-  return (
+-    <View style={{marginRight:12}}>
+-      <Text style={{fontWeight:'bold'}}>{category.name}</Text>
+-      <FlatList
+-        data={products}
+-        horizontal
+-        keyExtractor={i => i.id}
+-        showsHorizontalScrollIndicator={false}
+-        renderItem={({item}) => <ProductCard product={item} />}
+-      />
+-    </View>
+-  );
+-}
+diff --git a/src/components/SearchBar.js b/src/components/SearchBar.js
+deleted file mode 100644
+index e69de29..0000000
+diff --git a/src/services/firebase.js b/src/config/firebase.ts
+similarity index 70%
+rename from src/services/firebase.js
+rename to src/config/firebase.ts
+index 798a2ae..2092a1f 100644
+--- a/src/services/firebase.js
++++ b/src/config/firebase.ts
+@@ -2,8 +2,10 @@ import { initializeApp } from "firebase/app";
+ import { getAuth, GoogleAuthProvider } from "firebase/auth";
+ import { getFirestore } from "firebase/firestore";
+ import { getStorage } from "firebase/storage";
+-import AsyncStorage from '@react-native-async-storage/async-storage';
+ 
++// Configuración única de Firebase para toda la app.
++// Antes existían dos copias (app/config/firebaseConfig.ts y src/services/firebase.js)
++// que podían desincronizarse; ahora hay una sola fuente de verdad.
+ const firebaseConfig = {
+   apiKey: "AIzaSyC9wRH0qtedF6NhCJF0CvT-vTn6OyP1V8k",
+   authDomain: "frescapp-57eb3.firebaseapp.com",
+@@ -11,16 +13,11 @@ const firebaseConfig = {
+   storageBucket: "frescapp-57eb3.firebasestorage.app",
+   messagingSenderId: "690772033761",
+   appId: "1:690772033761:web:a2a13d9017ad84c84e77a0",
+-  measurementId: "G-B97XZCTM62"
++  measurementId: "G-B97XZCTM62",
+ };
+ 
+-
+ export const app = initializeApp(firebaseConfig);
+-
+ export const auth = getAuth(app);
+-
+ export const googleProvider = new GoogleAuthProvider();
+-
+ export const db = getFirestore(app);
+-
+-export const storage = getStorage(app);
+\ No newline at end of file
++export const storage = getStorage(app);
+diff --git a/src/contexts/AuthContext.js b/src/contexts/AuthContext.js
+deleted file mode 100644
+index a37bdca..0000000
+--- a/src/contexts/AuthContext.js
++++ /dev/null
+@@ -1,24 +0,0 @@
+-import { onAuthStateChanged } from 'firebase/auth';
+-import { createContext, useEffect, useState } from 'react';
+-import { auth } from '../services/firebase';
+-
+-export const AuthContext = createContext();
+-
+-export const AuthProvider = ({ children }) => {
+-  const [user, setUser] = useState(null);
+-  const [loading, setLoading] = useState(true);
+-
+-  useEffect(() => {
+-    const unsub = onAuthStateChanged(auth, (u) => {
+-      setUser(u);
+-      setLoading(false);
+-    });
+-    return unsub;
+-  }, []);
+-
+-  return (
+-    <AuthContext.Provider value={{ user, loading }}>
+-      {children}
+-    </AuthContext.Provider>
+-  );
+-};
+diff --git a/app/context/cartContext.tsx b/src/contexts/CartContext.tsx
+similarity index 100%
+rename from app/context/cartContext.tsx
+rename to src/contexts/CartContext.tsx
+diff --git a/src/navigation/AuthStack.js b/src/navigation/AuthStack.js
+deleted file mode 100644
+index 0e8029a..0000000
+--- a/src/navigation/AuthStack.js
++++ /dev/null
+@@ -1,14 +0,0 @@
+-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+-import LoginScreen from '../screens/auth/LoginScreen';
+-import RegisterScreen from '../screens/auth/RegisterScreen';
+-
+-const Stack = createNativeStackNavigator();
+-
+-export default function AuthStack() {
+-  return (
+-    <Stack.Navigator screenOptions={{headerShown:false}}>
+-      <Stack.Screen name="Login" component={LoginScreen} />
+-      <Stack.Screen name="Register" component={RegisterScreen} />
+-    </Stack.Navigator>
+-  );
+-}
+diff --git a/src/navigation/MainTabs.js b/src/navigation/MainTabs.js
+deleted file mode 100644
+index eab2611..0000000
+--- a/src/navigation/MainTabs.js
++++ /dev/null
+@@ -1,26 +0,0 @@
+-import { Ionicons } from '@expo/vector-icons';
+-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+-import CartScreen from '../screens/CartScreen';
+-import HomeScreen from '../screens/HomeScreen';
+-import ProfileScreen from '../screens/ProfileScreen';
+-
+-const Tab = createBottomTabNavigator();
+-
+-export default function MainTabs() {
+-  return (
+-    <Tab.Navigator screenOptions={({route}) => ({
+-      headerShown:false,
+-      tabBarIcon: ({color, size}) => {
+-        let name = 'home';
+-        if (route.name === 'Home') name = 'home';
+-        if (route.name === 'Cart') name = 'cart';
+-        if (route.name === 'Profile') name = 'person';
+-        return <Ionicons name={name} size={size} color={color} />;
+-      }
+-    })}>
+-      <Tab.Screen name="Home" component={HomeScreen} />
+-      <Tab.Screen name="Cart" component={CartScreen} />
+-      <Tab.Screen name="Profile" component={ProfileScreen} />
+-    </Tab.Navigator>
+-  );
+-}
+diff --git a/src/navigation/RootNavigator.js b/src/navigation/RootNavigator.js
+deleted file mode 100644
+index 9f008cf..0000000
+--- a/src/navigation/RootNavigator.js
++++ /dev/null
+@@ -1,24 +0,0 @@
+-import { NavigationContainer } from '@react-navigation/native';
+-import { useContext } from 'react';
+-import { ActivityIndicator, View } from 'react-native';
+-import { AuthContext } from '../contexts/AuthContext';
+-import AuthStack from './AuthStack';
+-import MainTabs from './MainTabs';
+-
+-export default function RootNavigator() {
+-  const { user, loading } = useContext(AuthContext);
+-
+-  if (loading) {
+-    return (
+-      <View style={{flex:1, justifyContent:'center', alignItems:'center'}}>
+-        <ActivityIndicator size="large" />
+-      </View>
+-    );
+-  }
+-
+-  return (
+-    <NavigationContainer>
+-      {user ? <MainTabs /> : <AuthStack />}
+-    </NavigationContainer>
+-  );
+-}
+diff --git a/src/screens/CartScreen.js b/src/screens/CartScreen.js
+deleted file mode 100644
+index 762cd51..0000000
+--- a/src/screens/CartScreen.js
++++ /dev/null
+@@ -1,44 +0,0 @@
+-import { collection, getDocs, query, where } from 'firebase/firestore';
+-import { useEffect, useState } from 'react';
+-import { Button, FlatList, Text, View } from 'react-native';
+-import { auth, db } from '../services/firebase';
+-
+-export default function CartScreen() {
+-  const [cart, setCart] = useState(null);
+-
+-  useEffect(()=> {
+-    const loadCart = async () => {
+-      try {
+-        const userId = auth.currentUser.uid;
+-        const q = query(collection(db, 'carts'), where('userId', '==', userId));
+-        const snap = await getDocs(q);
+-        if (!snap.empty) setCart(snap.docs[0]);
+-        else setCart(null);
+-      } catch (e) {
+-        console.log(e);
+-      }
+-    };
+-    loadCart();
+-  }, []);
+-
+-  if (!cart) return <View style={{flex:1,justifyContent:'center',alignItems:'center'}}><Text>Carrito vacío</Text></View>;
+-
+-  const data = cart.data();
+-
+-  return (
+-    <View style={{flex:1, padding:12}}>
+-      <FlatList
+-        data={data.items || []}
+-        keyExtractor={(i,idx)=>i.productId + idx}
+-        renderItem={({item}) => (
+-          <View style={{padding:8, borderBottomWidth:1, borderColor:'#eee'}}>
+-            <Text style={{fontWeight:'600'}}>{item.name}</Text>
+-            <Text>Cantidad: {item.quantity}</Text>
+-            <Text>Precio: ${item.priceAtAdd}</Text>
+-          </View>
+-        )}
+-      />
+-      <Button title="Ir a pagar (simulado)" onPress={() => alert('Funcionalidad de pago no implementada')} />
+-    </View>
+-  );
+-}
+diff --git a/src/screens/HomeScreen.js b/src/screens/HomeScreen.js
+deleted file mode 100644
+index 02f3894..0000000
+--- a/src/screens/HomeScreen.js
++++ /dev/null
+@@ -1,49 +0,0 @@
+-import { collection, getDocs } from 'firebase/firestore';
+-import { useEffect, useState } from 'react';
+-import { FlatList, SafeAreaView, Text, TextInput } from 'react-native';
+-import CategoryCarousel from '../components/CategoryCarousel';
+-import ProductCard from '../components/ProductCard';
+-import { db } from '../services/firebase';
+-
+-export default function HomeScreen() {
+-  const [categories, setCategories] = useState([]);
+-  const [products, setProducts] = useState([]);
+-  const [search, setSearch] = useState('');
+-
+-  useEffect(()=> {
+-    const load = async () => {
+-      const catsSnap = await getDocs(collection(db, 'categories'));
+-      setCategories(catsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+-
+-      const prodsSnap = await getDocs(collection(db, 'products'));
+-      setProducts(prodsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+-    };
+-    load();
+-  }, []);
+-
+-  const filtered = products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
+-
+-  return (
+-    <SafeAreaView style={{flex:1, padding:12}}>
+-      <TextInput placeholder="Buscar productos..." value={search} onChangeText={setSearch}
+-        style={{borderWidth:1, borderColor:'#eee', padding:10, borderRadius:8, marginBottom:10}} />
+-
+-      <Text style={{fontSize:16, marginBottom:8}}>Categorías</Text>
+-      <FlatList
+-        data={categories}
+-        keyExtractor={i => i.id}
+-        horizontal
+-        showsHorizontalScrollIndicator={false}
+-        renderItem={({item}) => <CategoryCarousel category={item} products={products.filter(p => p.categoryId === item.id)} />}
+-      />
+-
+-      <Text style={{fontSize:16, marginVertical:8}}>Resultados</Text>
+-      <FlatList
+-        data={filtered}
+-        keyExtractor={i => i.id}
+-        renderItem={({item}) => <ProductCard product={item} />}
+-        contentContainerStyle={{paddingBottom:60}}
+-      />
+-    </SafeAreaView>
+-  );
+-}
+diff --git a/src/screens/auth/LoginScreen.js b/src/screens/auth/LoginScreen.js
+deleted file mode 100644
+index 7354428..0000000
+--- a/src/screens/auth/LoginScreen.js
++++ /dev/null
+@@ -1,36 +0,0 @@
+-import { signInWithEmailAndPassword } from 'firebase/auth';
+-import { useState } from 'react';
+-import { Button, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+-import { auth } from '../../services/firebase';
+-
+-export default function LoginScreen({ navigation }) {
+-  const [email, setEmail] = useState('');
+-  const [password, setPassword] = useState('');
+-
+-  const handleLogin = async () => {
+-    if (!email || !password) return alert('Completa los campos');
+-    try {
+-      await signInWithEmailAndPassword(auth, email, password);
+-    } catch (e) {
+-      alert(e.message);
+-    }
+-  };
+-
+-  return (
+-    <View style={styles.container}>
+-      <Text style={styles.title}>Inicia sesión</Text>
+-      <TextInput placeholder="Correo" style={styles.input} value={email} onChangeText={setEmail} keyboardType="email-address"/>
+-      <TextInput placeholder="Contraseña" style={styles.input} value={password} onChangeText={setPassword} secureTextEntry/>
+-      <Button title="Entrar" onPress={handleLogin} />
+-      <TouchableOpacity onPress={() => navigation.navigate('Register')} style={{marginTop:12}}>
+-        <Text>¿No tienes cuenta? Regístrate</Text>
+-      </TouchableOpacity>
+-    </View>
+-  );
+-}
+-
+-const styles = StyleSheet.create({
+-  container:{flex:1, padding:20, justifyContent:'center'},
+-  title:{fontSize:22, marginBottom:20, textAlign:'center'},
+-  input:{borderWidth:1, borderColor:'#ddd', padding:10, borderRadius:8, marginBottom:12}
+-});
+diff --git a/src/screens/auth/RegisterScreen.js b/src/screens/auth/RegisterScreen.js
+deleted file mode 100644
+index 963dbf8..0000000
+--- a/src/screens/auth/RegisterScreen.js
++++ /dev/null
+@@ -1,95 +0,0 @@
+-import { createUserWithEmailAndPassword, updateProfile, signOut } from 'firebase/auth';
+-import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
+-import { useState } from 'react';
+-import { Button, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
+-import { auth, db } from '../../services/firebase';
+-
+-export default function RegisterScreen({ navigation }) {
+-  const [name, setName] = useState('');
+-  const [email, setEmail] = useState('');
+-  const [password, setPassword] = useState('');
+-
+-  const handleRegister = async () => {
+-    if (!name || !email || !password) {
+-      Alert.alert('Campos vacíos', 'Por favor completa todos los campos');
+-      return;
+-    }
+-
+-    try {
+-
+-      const cred = await createUserWithEmailAndPassword(auth, email, password);
+-
+-      await updateProfile(cred.user, { displayName: name });
+-      
+-      await setDoc(doc(db, 'users', cred.user.uid), {
+-        email,
+-        name,
+-        avatarUrl: null,
+-        createdAt: serverTimestamp()
+-      });
+-
+-      await signOut(auth);
+-
+-      Alert.alert(
+-        "¡Registro Exitoso!",
+-        "Tu cuenta ha sido creada correctamente. Por favor, inicia sesión con tus nuevas credenciales.",
+-        [
+-          { 
+-            text: "Ir al Login", 
+-            onPress: () => navigation.navigate('Login') 
+-          }
+-        ]
+-      );
+-
+-    } catch (e) {
+-      let msg = e.message;
+-      if(e.code === 'auth/email-already-in-use') msg = "El correo ya está registrado.";
+-      if(e.code === 'auth/weak-password') msg = "La contraseña debe tener al menos 6 caracteres.";
+-      if(e.code === 'auth/invalid-email') msg = "El formato del correo no es válido.";
+-      
+-      Alert.alert("Error al registrar", msg);
+-    }
+-  };
+-
+-  return (
+-    <View style={styles.container}>
+-      <Text style={styles.title}>Crea una cuenta</Text>
+-      
+-      <TextInput 
+-        placeholder="Nombre" 
+-        style={styles.input} 
+-        value={name} 
+-        onChangeText={setName}
+-      />
+-      
+-      <TextInput 
+-        placeholder="Correo" 
+-        style={styles.input} 
+-        value={email} 
+-        onChangeText={setEmail} 
+-        keyboardType="email-address" 
+-        autoCapitalize="none" 
+-      />
+-      
+-      <TextInput 
+-        placeholder="Contraseña" 
+-        style={styles.input} 
+-        value={password} 
+-        onChangeText={setPassword} 
+-        secureTextEntry
+-      />
+-      
+-      <Button title="Crear Cuenta" onPress={handleRegister} />
+-      
+-      <TouchableOpacity onPress={() => navigation.navigate('Login')} style={{marginTop:12}}>
+-        <Text style={{textAlign: 'center', color: 'blue'}}>¿Ya tienes cuenta? Inicia sesión</Text>
+-      </TouchableOpacity>
+-    </View>
+-  );
+-}
+-
+-const styles = StyleSheet.create({
+-  container: { flex: 1, padding: 20, justifyContent: 'center' },
+-  title: { fontSize: 22, marginBottom: 20, textAlign: 'center', fontWeight: 'bold' },
+-  input: { borderWidth: 1, borderColor: '#ddd', padding: 10, borderRadius: 8, marginBottom: 12 }
+-});
+\ No newline at end of file
+diff --git a/src/styles/global.js b/src/styles/global.js
+deleted file mode 100644
+index 1b91415..0000000
+--- a/src/styles/global.js
++++ /dev/null
+@@ -1,11 +0,0 @@
+-export const COLORS = {
+-  primary: '#7DDC2F',
+-  accent: '#FF7A21',
+-  bg: '#F7F7F7',
+-  card: '#FFFFFF'
+-};
+-
+-export const SPACING = {
+-  container: 12,
+-  card: 10
+-};
+-- 
+2.43.0
+
