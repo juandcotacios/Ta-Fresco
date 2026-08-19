@@ -12,7 +12,8 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
-  Dimensions
+  Dimensions,
+  Alert
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -30,6 +31,7 @@ import {
   serverTimestamp
 } from 'firebase/firestore';
 import { db } from '@/src/config/firebase';
+import { subirImagenCloudinary } from '@/src/services/cloudinaryService';
 
 const auth = getAuth();
 const { width, height } = Dimensions.get('window');
@@ -134,13 +136,22 @@ export default function ProfileScreen() {
 
   const handleSaveProfile = async () => {
     if (!user) return;
-    if (tempNickname.trim().length < 3) return;
-    
+    if (tempNickname.trim().length < 3) {
+      Alert.alert("Nombre muy corto", "El nombre debe tener al menos 3 caracteres.");
+      return;
+    }
+
     setSavingProfile(true);
     try {
-      const userDocRef = doc(db, 'users', user.uid);
-      const finalPhotoURL = selectedImageUri || userData?.photoURL || "";
+      let finalPhotoURL = userData?.photoURL || "";
 
+      // Si eligió una foto nueva, la subimos a Cloudinary (no a Firestore directo,
+      // porque Firestore tiene un límite de 1MB por documento y la imagen lo supera).
+      if (selectedImageUri) {
+        finalPhotoURL = await subirImagenCloudinary(selectedImageUri);
+      }
+
+      const userDocRef = doc(db, 'users', user.uid);
       await updateDoc(userDocRef, {
         nickname: tempNickname,
         phone: tempPhone,
@@ -154,10 +165,12 @@ export default function ProfileScreen() {
         photoURL: finalPhotoURL 
       }) : null);
 
+      setSelectedImageUri(null);
       setEditModalVisible(false);
       showSuccessMessage();
-    } catch (error) {
+    } catch (error: any) {
       console.log(error);
+      Alert.alert("Error", error?.message || "No se pudo guardar el perfil. Intenta de nuevo.");
     } finally {
       setSavingProfile(false);
     }
@@ -337,6 +350,11 @@ export default function ProfileScreen() {
           <Ionicons name="receipt-outline" size={20} color="#666" style={{ marginRight: 8 }} />
            <Text style={styles.logoutButtonText}>Mis pedidos</Text>
             </TouchableOpacity>
+
+       <TouchableOpacity style={styles.logoutButton} onPress={() => router.push('/admin-pedidos')}>
+          <Ionicons name="clipboard-outline" size={20} color="#666" style={{ marginRight: 8 }} />
+            <Text style={styles.logoutButtonText}>Panel de Pedidos (temporal)</Text>
+              </TouchableOpacity>
 
         <TouchableOpacity style={styles.logoutButton} onPress={requestLogout}>
           <Ionicons name="log-out-outline" size={20} color="#666" style={{ marginRight: 8 }} />

@@ -76,30 +76,34 @@ export default function CartScreen() {
 
   const isMinMet = totalPrice >= MIN_ORDER_AMOUNT;
 
+  const fetchAddresses = async () => {
+    if (!user) {
+      setLoadingAddresses(false);
+      return;
+    }
+    setLoadingAddresses(true);
+    try {
+      const q = collection(db, `users/${user.uid}/addresses`);
+      const snapshot = await getDocs(q);
+      const addressList = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      setAddresses(addressList);
+      if (addressList.length > 0) {
+        setSelectedAddress((prev) => prev && addressList.some(a => a.id === prev) ? prev : addressList[0].id);
+      } else {
+        setSelectedAddress(null);
+      }
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setLoadingAddresses(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchAddresses = async () => {
-      if (!user) {
-        setLoadingAddresses(false);
-        return;
-      }
-      try {
-        const q = collection(db, `users/${user.uid}/addresses`);
-        const snapshot = await getDocs(q);
-        const addressList = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        
-        setAddresses(addressList);
-        if (addressList.length > 0) {
-          setSelectedAddress(addressList[0].id);
-        }
-      } catch (error) {
-        console.log(error);
-      } finally {
-        setLoadingAddresses(false);
-      }
-    };
     fetchAddresses();
   }, [user]);
 
@@ -160,24 +164,43 @@ export default function CartScreen() {
   };
 
   const handlePay = async () => {
+    if (!user) {
+       Alert.alert("Error", "Debes iniciar sesión para confirmar el pedido.");
+       return;
+    }
+    if (addresses.length === 0) {
+       Alert.alert(
+         "Falta una dirección",
+         "Debes agregar una dirección de entrega antes de confirmar tu pedido.",
+         [
+           { text: "Cancelar", style: "cancel" },
+           { text: "Agregar dirección", onPress: () => { setCheckoutVisible(false); router.push("/profile"); } },
+         ]
+       );
+       return;
+    }
+    if (!selectedAddress) {
+       Alert.alert("Error", "Selecciona una dirección de entrega");
+       return;
+    }
     if (paymentMethod === 'card') {
         if (cardNumber.length < 13 || cardDate.length < 5 || cardCVC.length < 3) {
             Alert.alert("Error", "Verifica los datos de la tarjeta");
             return;
         }
     }
-    if (!selectedAddress && addresses.length > 0) {
-       Alert.alert("Error", "Selecciona una dirección de entrega");
-       return;
-    }
-    if (!user) {
-       Alert.alert("Error", "Debes iniciar sesión para confirmar el pedido.");
-       return;
-    }
 
     setProcessingPayment(true);
     try {
-        await crearPedido(user.uid, cart, totalPrice, 3500);
+        const addressObj = addresses.find(a => a.id === selectedAddress);
+        await crearPedido(
+          user.uid,
+          cart,
+          totalPrice,
+          3500,
+          addressObj ? { name: addressObj.name, addressLine: addressObj.addressLine } : null,
+          paymentMethod
+        );
         setProcessingPayment(false);
         setCheckoutVisible(false);
         setSuccessVisible(true);
@@ -192,7 +215,6 @@ export default function CartScreen() {
         Alert.alert("Error", error?.message || "No se pudo confirmar el pedido. Intenta de nuevo.");
     }
   };
-
   if (!cart || cart.length === 0) {
     return (
       <View style={styles.container}>
@@ -276,7 +298,7 @@ export default function CartScreen() {
         <TouchableOpacity 
           disabled={!isMinMet}
           style={[styles.payButton, !isMinMet ? styles.payButtonDisabled : styles.payButtonActive]}
-          onPress={() => setCheckoutVisible(true)}
+          onPress={() => { fetchAddresses(); setCheckoutVisible(true); }}
         >
           <Text style={styles.payButtonText}>Ir a Pagar</Text>
           <Ionicons name="arrow-forward" size={20} color="#FFF" style={{marginLeft: 5}}/>

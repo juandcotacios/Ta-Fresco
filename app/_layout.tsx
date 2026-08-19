@@ -40,6 +40,7 @@ export default function RootLayout() {
           {}
           <Stack.Screen name="checkout/index" />
           <Stack.Screen name="pedidos/index" />
+          <Stack.Screen name="admin-pedidos" />
           <Stack.Screen name="chatbot/index" />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
         </Stack>
