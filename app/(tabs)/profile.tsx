@@ -41,6 +41,7 @@ interface UserProfileData {
   photoURL?: string;
   email?: string;
   phone?: string;
+  role?: 'cliente' | 'tendero' | 'admin';
 }
 
 interface UserAddress {
@@ -111,6 +112,20 @@ export default function ProfileScreen() {
     };
     fetchUserData();
   }, [user]);
+
+  const handleConvertirEnTendero = async () => {
+    if (!user) return;
+    try {
+      await updateDoc(doc(db, 'users', user.uid), { role: 'tendero' });
+      setUserData(prev => (prev ? { ...prev, role: 'tendero' } : prev));
+      Alert.alert('¡Listo!', 'Ya puedes crear tu tienda y añadir productos.', [
+        { text: 'Crear mi tienda', onPress: () => router.push('/tienda') },
+      ]);
+    } catch (error) {
+      console.log(error);
+      Alert.alert('Error', 'No se pudo activar el modo vendedor.');
+    }
+  };
 
   const pickImage = async () => {
     try {
@@ -348,18 +363,35 @@ export default function ProfileScreen() {
 
         <TouchableOpacity style={styles.logoutButton} onPress={() => router.push('/pedidos')}>
           <Ionicons name="receipt-outline" size={20} color="#666" style={{ marginRight: 8 }} />
-           <Text style={styles.logoutButtonText}>Mis pedidos</Text>
-            </TouchableOpacity>
+          <Text style={styles.logoutButtonText}>Mis pedidos</Text>
+        </TouchableOpacity>
 
-       <TouchableOpacity style={styles.logoutButton} onPress={() => router.push('/admin-pedidos')}>
-          <Ionicons name="clipboard-outline" size={20} color="#666" style={{ marginRight: 8 }} />
-            <Text style={styles.logoutButtonText}>Panel de Pedidos (temporal)</Text>
-              </TouchableOpacity>
+        {userData?.role === 'tendero' && (
+          <TouchableOpacity style={styles.logoutButton} onPress={() => router.push('/tienda')}>
+            <Ionicons name="storefront-outline" size={20} color="#666" style={{ marginRight: 8 }} />
+            <Text style={styles.logoutButtonText}>Mi Tienda</Text>
+          </TouchableOpacity>
+        )}
+
+        {userData?.role !== 'tendero' && userData?.role !== 'admin' && (
+          <TouchableOpacity style={styles.logoutButton} onPress={handleConvertirEnTendero}>
+            <Ionicons name="storefront-outline" size={20} color="#666" style={{ marginRight: 8 }} />
+            <Text style={styles.logoutButtonText}>Quiero vender en Ta-Fresco</Text>
+          </TouchableOpacity>
+        )}
+
+        {userData?.role === 'admin' && (
+          <TouchableOpacity style={styles.logoutButton} onPress={() => router.push('/admin-pedidos')}>
+            <Ionicons name="clipboard-outline" size={20} color="#666" style={{ marginRight: 8 }} />
+            <Text style={styles.logoutButtonText}>Panel de Pedidos</Text>
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity style={styles.logoutButton} onPress={requestLogout}>
           <Ionicons name="log-out-outline" size={20} color="#666" style={{ marginRight: 8 }} />
           <Text style={styles.logoutButtonText}>Cerrar sesión</Text>
         </TouchableOpacity>
+        
       </ScrollView>
 
       <Modal animationType="fade" transparent={true} visible={infoModalVisible} onRequestClose={() => setInfoModalVisible(false)}>

@@ -68,6 +68,7 @@ export default function RegisterScreen() {
         email: user.email,
         photoURL: "",
         phone: "",
+        role: "cliente",
         createdAt: new Date(),
       });
 
@@ -94,6 +95,7 @@ export default function RegisterScreen() {
           email: user.email,
           photoURL: user.photoURL || "",
           phone: "",
+          role: "cliente",
           createdAt: new Date(),
         },
         { merge: true }
