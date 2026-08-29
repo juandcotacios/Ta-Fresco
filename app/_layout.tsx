@@ -38,11 +38,14 @@ export default function RootLayout() {
           )}
 
           {}
-          <Stack.Screen name="checkout/index" />
-          <Stack.Screen name="pedidos/index" />
+          <Stack.Screen name="checkout" />
+          <Stack.Screen name="pedidos" />
+          <Stack.Screen name="admin" />
           <Stack.Screen name="admin-pedidos" />
+          <Stack.Screen name="admin-productos" />
           <Stack.Screen name="tienda" />
-          <Stack.Screen name="chatbot/index" />
+          <Stack.Screen name="tiendas" />
+          <Stack.Screen name="chatbot" />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
         </Stack>
         <StatusBar style="auto" />

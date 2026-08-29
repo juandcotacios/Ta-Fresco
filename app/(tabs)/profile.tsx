@@ -381,9 +381,9 @@ export default function ProfileScreen() {
         )}
 
         {userData?.role === 'admin' && (
-          <TouchableOpacity style={styles.logoutButton} onPress={() => router.push('/admin-pedidos')}>
-            <Ionicons name="clipboard-outline" size={20} color="#666" style={{ marginRight: 8 }} />
-            <Text style={styles.logoutButtonText}>Panel de Pedidos</Text>
+          <TouchableOpacity style={styles.logoutButton} onPress={() => router.push('/admin')}>
+            <Ionicons name="settings-outline" size={20} color="#666" style={{ marginRight: 8 }} />
+            <Text style={styles.logoutButtonText}>Panel de Administración</Text>
           </TouchableOpacity>
         )}
 
@@ -391,7 +391,7 @@ export default function ProfileScreen() {
           <Ionicons name="log-out-outline" size={20} color="#666" style={{ marginRight: 8 }} />
           <Text style={styles.logoutButtonText}>Cerrar sesión</Text>
         </TouchableOpacity>
-        
+
       </ScrollView>
 
       <Modal animationType="fade" transparent={true} visible={infoModalVisible} onRequestClose={() => setInfoModalVisible(false)}>

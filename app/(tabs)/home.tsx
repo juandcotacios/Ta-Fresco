@@ -1,4 +1,4 @@
-import { collection, getDocs } from "firebase/firestore";
+import { collection, onSnapshot } from "firebase/firestore";
 import React, { useEffect, useState, useMemo } from "react";
 import {
   FlatList,
@@ -32,6 +32,7 @@ interface Product {
   category: string;
   stock: number;
   quantity?: number;
+  proveedorId?: string;
 }
 
 const CATEGORIES = [
@@ -46,6 +47,7 @@ export default function Home() {
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   
   const [miniCartVisible, setMiniCartVisible] = useState(false);
   const [isLoadingCart, setIsLoadingCart] = useState(false);
@@ -57,9 +59,12 @@ export default function Home() {
   const isMinMet = totalPrice >= MIN_ORDER_AMOUNT;
 
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const snapshot = await getDocs(collection(db, "Productos"));
+    // onSnapshot mantiene el catálogo en tiempo real: si un tendero agrega,
+    // edita o borra un producto, se refleja aquí al instante en todos los
+    // dispositivos, sin necesidad de reiniciar la app.
+    const unsubscribe = onSnapshot(
+      collection(db, "Productos"),
+      (snapshot) => {
         const data = snapshot.docs.map((doc) => {
           const productData = doc.data() as any;
           return {
@@ -69,26 +74,34 @@ export default function Home() {
             imageUrl: productData.imageUrl || "https://via.placeholder.com/300",
             category: (productData.category || "sin categoria").toString(),
             stock: productData.stock || 0,
+            proveedorId: productData.proveedorId || "",
           } as Product;
         });
         setProducts(data);
-      } catch (e) {
-        console.log(e);
-      }
-    };
-    fetchProducts();
+      },
+      (error) => console.log(error)
+    );
+    return () => unsubscribe();
   }, []);
 
   const filtered = products.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  const groupedProducts = CATEGORIES.map((cat) => ({
+  const normalizar = (s: string) =>
+    s
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, ""); // quita tildes para comparar "Tubérculos" y "Tuberculos" por igual
+
+  const groupedProducts = CATEGORIES.filter(
+    (cat) => !selectedCategory || cat.name === selectedCategory
+  ).map((cat) => ({
     category: cat.name,
     products: filtered.filter((p) => {
-      const catName = cat.name.toLowerCase().replace(/s$/, "");
-      const prodCat = (p.category || "").toLowerCase();
-      return prodCat.includes(catName) || prodCat === cat.name.toLowerCase();
+      const catName = normalizar(cat.name).replace(/s$/, "");
+      const prodCat = normalizar(p.category || "");
+      return prodCat.includes(catName) || prodCat === normalizar(cat.name);
     }),
   }));
 
@@ -127,21 +140,52 @@ export default function Home() {
           />
         </View>
 
+          <TouchableOpacity
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            backgroundColor: "#EAF6D8",
+            marginHorizontal: 20,
+            marginBottom: 20,
+            padding: 16,
+            borderRadius: 16,
+          }}
+          onPress={() => router.push("/tiendas")}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <Ionicons name="storefront" size={22} color="#83c41a" style={{ marginRight: 10 }} />
+            <Text style={{ fontWeight: "bold", color: "#333", fontSize: 15 }}>
+              Explorar tiendas de Corabastos
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#83c41a" />
+        </TouchableOpacity>
+
         <View style={styles.categoriesSection}>
           <Text style={styles.sectionTitle}>Categorias</Text>
           <FlatList
+
             data={CATEGORIES}
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ paddingLeft: 4 }}
-            renderItem={({ item }) => (
-              <View style={styles.categoryItem}>
-                <View style={styles.categoryCircle}>
-                  <Image source={item.icon} style={styles.categoryImage} resizeMode="contain" />
-                </View>
-                <Text style={styles.categoryLabel}>{item.name}</Text>
-              </View>
-            )}
+            renderItem={({ item }) => {
+              const isSelected = selectedCategory === item.name;
+              return (
+                <TouchableOpacity
+                  style={styles.categoryItem}
+                  onPress={() => setSelectedCategory(isSelected ? null : item.name)}
+                >
+                  <View style={[styles.categoryCircle, isSelected && { borderWidth: 2, borderColor: "#83c41a" }]}>
+                    <Image source={item.icon} style={styles.categoryImage} resizeMode="contain" />
+                  </View>
+                  <Text style={[styles.categoryLabel, isSelected && { color: "#83c41a", fontWeight: "bold" }]}>
+                    {item.name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            }}
             keyExtractor={(item) => item.name}
           />
         </View>

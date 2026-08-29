@@ -45,6 +45,7 @@ export default function MisProductosScreen() {
   const [imageUrl, setImageUrl] = useState(""); // URL final (ya subida a Cloudinary)
   const [imagenLocal, setImagenLocal] = useState<string | null>(null); // preview antes de subir
   const [stock, setStock] = useState("");
+  const [discount, setDiscount] = useState("");
 
   const cargar = async () => {
     if (!user) {
@@ -71,6 +72,7 @@ export default function MisProductosScreen() {
     setImageUrl("");
     setImagenLocal(null);
     setStock("");
+    setDiscount("");
     setModalVisible(true);
   };
 
@@ -82,6 +84,7 @@ export default function MisProductosScreen() {
     setImageUrl(p.imageUrl || "");
     setImagenLocal(null);
     setStock(String(p.stock ?? 0));
+    setDiscount(p.discountPercent ? String(p.discountPercent) : "");
     setModalVisible(true);
   };
 
@@ -130,6 +133,11 @@ export default function MisProductosScreen() {
       Alert.alert("Stock inválido", "Escribe una cantidad válida.");
       return;
     }
+    const descuentoNum = discount.trim() === "" ? 0 : parseInt(discount, 10);
+    if (isNaN(descuentoNum) || descuentoNum < 0 || descuentoNum > 90) {
+      Alert.alert("Descuento inválido", "Escribe un número entre 0 y 90 (o déjalo vacío).");
+      return;
+    }
     if (subiendoFoto) {
       Alert.alert("Espera", "La imagen todavía se está subiendo.");
       return;
@@ -143,6 +151,7 @@ export default function MisProductosScreen() {
         category,
         imageUrl: imageUrl.trim(),
         stock: stockNum,
+        discountPercent: descuentoNum,
       };
       if (editingId) {
         await actualizarProducto(editingId, data);
@@ -210,7 +219,12 @@ export default function MisProductosScreen() {
               <View style={{ flex: 1, marginLeft: 12 }}>
                 <Text style={styles.name}>{item.name}</Text>
                 <Text style={styles.meta}>{item.category} · Stock: {item.stock}</Text>
-                <Text style={styles.price}>${item.price.toLocaleString()}</Text>
+                <Text style={styles.price}>
+                  ${item.price.toLocaleString()}
+                  {!!item.discountPercent && (
+                    <Text style={{ color: "#D32F2F", fontSize: 12 }}>  -{item.discountPercent}%</Text>
+                  )}
+                </Text>
               </View>
               <TouchableOpacity onPress={() => abrirEditar(item)} style={styles.iconBtn}>
                 <Ionicons name="create-outline" size={20} color="#3b82f6" />
@@ -265,6 +279,15 @@ export default function MisProductosScreen() {
             onChangeText={setStock}
             keyboardType="numeric"
             placeholder="Ej: 20"
+          />
+
+          <Text style={styles.label}>Descuento actual (%) — opcional</Text>
+          <TextInput
+            style={styles.input}
+            value={discount}
+            onChangeText={setDiscount}
+            keyboardType="numeric"
+            placeholder="Ej: 15 (déjalo vacío si no tiene oferta)"
           />
 
           <Text style={styles.label}>Categoría</Text>

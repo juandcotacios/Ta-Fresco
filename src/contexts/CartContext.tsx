@@ -11,6 +11,7 @@ interface CartItem {
   imageUrl: string;
   category: string;
   stock?: number;
+  proveedorId?: string;
 }
 
 

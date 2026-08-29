@@ -122,7 +122,8 @@ export default function CartScreen() {
             discount: "-15%",
             imageUrl: data.imageUrl || "https://via.placeholder.com/100",
             category: data.category || "Varios",
-            stock: data.stock || 99
+            stock: data.stock || 99,
+            proveedorId: data.proveedorId || "",
           };
         });
         const cartIds = cart.map((c: any) => c.id);

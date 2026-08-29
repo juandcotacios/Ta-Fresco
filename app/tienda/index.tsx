@@ -100,6 +100,12 @@ export default function MiTiendaScreen() {
         <Ionicons name="pricetags-outline" size={20} color="#83c41a" style={{ marginRight: 8 }} />
         <Text style={styles.productsBtnText}>Gestionar mis productos</Text>
       </TouchableOpacity>
+
+      <TouchableOpacity style={styles.productsBtn} onPress={() => router.push("/tienda/pedidos")}>
+        <Ionicons name="receipt-outline" size={20} color="#83c41a" style={{ marginRight: 8 }} />
+        <Text style={styles.productsBtnText}>Pedidos de mi tienda</Text>
+      </TouchableOpacity>
+
     </ScrollView>
   );
 }

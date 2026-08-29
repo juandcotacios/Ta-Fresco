@@ -20,6 +20,7 @@ export interface PedidoItem {
   price: number;
   quantity: number;
   imageUrl?: string;
+  proveedorId?: string;
 }
 
 export interface PedidoAddress {
@@ -52,6 +53,7 @@ export interface Pedido {
   status: EstadoPedido;
   address: PedidoAddress | null;
   paymentMethod: "cash" | "card";
+  proveedorIds: string[];
   createdAt: Timestamp | null;
 }
 
@@ -67,12 +69,15 @@ function mapPedido(docSnap: any): Pedido {
     status: (data.status || "pendiente") as EstadoPedido,
     address: data.address || null,
     paymentMethod: (data.paymentMethod || "cash") as "cash" | "card",
+    proveedorIds: data.proveedorIds || [],
     createdAt: data.createdAt || null,
   };
 }
 
 /**
  * Crea un pedido en Firestore a partir del carrito actual.
+ * Calcula automáticamente qué proveedores tienen productos en este pedido
+ * (proveedorIds), para que cada tendero pueda ver y avanzar sus propios pedidos.
  * Devuelve el id del pedido creado.
  */
 export async function crearPedido(
@@ -87,6 +92,9 @@ export async function crearPedido(
   if (!items || items.length === 0) throw new Error("El carrito está vacío.");
 
   const total = subtotal + envio;
+  const proveedorIds = Array.from(
+    new Set(items.map((i) => i.proveedorId).filter((id): id is string => !!id))
+  );
 
   const docRef = await addDoc(collection(db, "pedidos"), {
     userId,
@@ -97,6 +105,7 @@ export async function crearPedido(
     status: "pendiente" as EstadoPedido,
     address: address || null,
     paymentMethod,
+    proveedorIds,
     createdAt: serverTimestamp(),
   });
 
@@ -115,11 +124,7 @@ export async function obtenerPedidosUsuario(userId: string): Promise<Pedido[]> {
   return snapshot.docs.map(mapPedido);
 }
 
-/**
- * Se suscribe en tiempo real a los pedidos de un usuario.
- * Llama a `callback` cada vez que algo cambia (nuevo pedido, cambio de estado, etc).
- * Devuelve una función para cancelar la suscripción (llamarla al desmontar la pantalla).
- */
+/** Se suscribe en tiempo real a los pedidos de un usuario (como comprador). */
 export function suscribirsePedidosUsuario(
   userId: string,
   callback: (pedidos: Pedido[]) => void
@@ -135,8 +140,26 @@ export function suscribirsePedidosUsuario(
 }
 
 /**
+ * Se suscribe en tiempo real a los pedidos que contienen al menos un producto
+ * de este proveedor (uso: el tendero gestionando sus propios pedidos).
+ */
+export function suscribirsePedidosDeProveedor(
+  proveedorId: string,
+  callback: (pedidos: Pedido[]) => void
+): Unsubscribe {
+  const q = query(
+    collection(db, "pedidos"),
+    where("proveedorIds", "array-contains", proveedorId),
+    orderBy("createdAt", "desc")
+  );
+  return onSnapshot(q, (snapshot) => {
+    callback(snapshot.docs.map(mapPedido));
+  });
+}
+
+/**
  * Se suscribe en tiempo real a TODOS los pedidos (todos los usuarios).
- * Uso temporal: panel de gestión mientras no existan roles de proveedor.
+ * Uso: panel de administración.
  */
 export function suscribirseTodosLosPedidos(
   callback: (pedidos: Pedido[]) => void
@@ -147,7 +170,7 @@ export function suscribirseTodosLosPedidos(
   });
 }
 
-/** Actualiza el estado de un pedido (usado por el panel de gestión). */
+/** Actualiza el estado de un pedido (usado por el panel de admin y por el tendero). */
 export async function actualizarEstadoPedido(
   pedidoId: string,
   nuevoEstado: EstadoPedido

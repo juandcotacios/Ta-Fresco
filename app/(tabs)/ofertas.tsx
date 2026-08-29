@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { collection, getDocs } from "firebase/firestore"; 
+import { collection, onSnapshot } from "firebase/firestore"; 
 import { db } from "@/src/config/firebase"; 
 import { useCart } from "@/src/contexts/CartContext";
 import OpenChatbotButton from "../../components/OpenChatbotButton";
@@ -33,7 +33,9 @@ interface Product {
   stock: number;
   oldPrice?: number;
   discountTag?: string;
+  discountPercent?: number;
   quantity?: number; 
+  proveedorId?: string;
 }
 
 const CATEGORIES = [
@@ -50,8 +52,19 @@ export default function OfertasScreen() {
   
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [topOffers, setTopOffers] = useState<Product[]>([]);
-  const [superDiscounts, setSuperDiscounts] = useState<Product[]>([]);
+  const [discountedProducts, setDiscountedProducts] = useState<Product[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  const normalizar = (s: string) =>
+    s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+  const filteredOffers = useMemo(() => {
+    if (!selectedCategory) return discountedProducts;
+    return discountedProducts.filter((p) => normalizar(p.category) === normalizar(selectedCategory));
+  }, [discountedProducts, selectedCategory]);
+
+  const topOffers = filteredOffers.slice(0, 5);
+  const superDiscounts = filteredOffers.slice(5, 15);
 
   const [miniCartVisible, setMiniCartVisible] = useState(false);
   const [isLoadingCart, setIsLoadingCart] = useState(false);
@@ -60,46 +73,53 @@ export default function OfertasScreen() {
   const totalItems = useMemo(() => cart.reduce((acc, item) => acc + item.quantity, 0), [cart]);
   const isMinMet = totalPrice >= MIN_ORDER_AMOUNT;
 
-  const loadOffers = async () => {
-    try {
-      const snapshot = await getDocs(collection(db, "Productos"));
-      const productsData: Product[] = snapshot.docs.map((doc) => {
-        const data = doc.data() as any;
-        const currentPrice = data.price || 0;
-        const randomDiscount = Math.floor(Math.random() * (40 - 10 + 1)) + 10; 
-        const calculatedOldPrice = Math.floor(currentPrice * (1 + randomDiscount / 100));
-
-        return {
-          id: doc.id,
-          name: data.name || "Producto sin nombre",
-          price: currentPrice,
-          imageUrl: data.imageUrl || "https://via.placeholder.com/150",
-          category: data.category || "Varios",
-          stock: data.stock || 0,
-          oldPrice: calculatedOldPrice,
-          discountTag: `-${randomDiscount}%`,
-        };
-      });
-
-      const shuffled = productsData.sort(() => 0.5 - Math.random());
-      setTopOffers(shuffled.slice(0, 5)); 
-      setSuperDiscounts(shuffled.slice(5, 15)); 
-      
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
   useEffect(() => {
-    loadOffers();
+    // Tiempo real + descuentos reales (ya no aleatorios): solo entran a "Ofertas"
+    // los productos que el tendero o el admin marcaron con un discountPercent > 0.
+    const unsubscribe = onSnapshot(
+      collection(db, "Productos"),
+      (snapshot) => {
+        const productsData: Product[] = snapshot.docs
+          .map((doc) => {
+            const data = doc.data() as any;
+            const currentPrice = data.price || 0;
+            const discountPercent = data.discountPercent || 0;
+            const oldPrice =
+              discountPercent > 0
+                ? Math.round(currentPrice / (1 - discountPercent / 100))
+                : undefined;
+
+            return {
+              id: doc.id,
+              name: data.name || "Producto sin nombre",
+              price: currentPrice,
+              imageUrl: data.imageUrl || "https://via.placeholder.com/150",
+              category: data.category || "Varios",
+              stock: data.stock || 0,
+              oldPrice,
+              discountTag: discountPercent > 0 ? `-${discountPercent}%` : undefined,
+              discountPercent,
+              proveedorId: data.proveedorId || "",
+            } as Product;
+          })
+          .filter((p) => (p.discountPercent || 0) > 0);
+
+        setDiscountedProducts(productsData);
+        setLoading(false);
+        setRefreshing(false);
+      },
+      (error) => {
+        console.error(error);
+        setLoading(false);
+        setRefreshing(false);
+      }
+    );
+    return () => unsubscribe();
   }, []);
 
   const onRefresh = () => {
     setRefreshing(true);
-    loadOffers();
+    setTimeout(() => setRefreshing(false), 400); // los datos ya llegan solos por tiempo real
   };
 
   const goToFullCart = () => {
@@ -170,20 +190,34 @@ export default function OfertasScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ paddingLeft: 20 }}
             keyExtractor={(item) => item.name}
-            renderItem={({ item }) => (
-              <View style={styles.catItem}>
-                <View style={styles.catCircle}>
-                  <Image source={item.icon} style={styles.catImage} />
-                </View>
-                <Text style={styles.catText}>{item.name}</Text>
-              </View>
-            )}
+            renderItem={({ item }) => {
+              const isSelected = selectedCategory === item.name;
+              return (
+                <TouchableOpacity
+                  style={styles.catItem}
+                  onPress={() => setSelectedCategory(isSelected ? null : item.name)}
+                >
+                  <View style={[styles.catCircle, isSelected && { borderWidth: 2, borderColor: "#83c41a" }]}>
+                    <Image source={item.icon} style={styles.catImage} />
+                  </View>
+                  <Text style={[styles.catText, isSelected && { color: "#83c41a", fontWeight: "bold" }]}>
+                    {item.name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            }}
           />
         </View>
 
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>Super descuentos</Text>
-          
+
+          {filteredOffers.length === 0 && (
+            <Text style={{ color: "#999", paddingHorizontal: 20 }}>
+              No hay ofertas activas por ahora.
+            </Text>
+          )}
+
           {superDiscounts.map((item) => {
              const cartItem = cart.find((c) => c.id === item.id);
              const currentQty = cartItem ? cartItem.quantity : 0;
