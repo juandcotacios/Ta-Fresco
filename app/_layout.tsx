@@ -45,6 +45,7 @@ export default function RootLayout() {
           <Stack.Screen name="admin-productos" />
           <Stack.Screen name="tienda" />
           <Stack.Screen name="tiendas" />
+          <Stack.Screen name="convertirse-tendero" />
           <Stack.Screen name="chatbot" />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
         </Stack>

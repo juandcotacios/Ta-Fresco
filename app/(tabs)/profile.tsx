@@ -374,7 +374,7 @@ export default function ProfileScreen() {
         )}
 
         {userData?.role !== 'tendero' && userData?.role !== 'admin' && (
-          <TouchableOpacity style={styles.logoutButton} onPress={handleConvertirEnTendero}>
+          <TouchableOpacity style={styles.logoutButton} onPress={() => router.push('/convertirse-tendero')}>
             <Ionicons name="storefront-outline" size={20} color="#666" style={{ marginRight: 8 }} />
             <Text style={styles.logoutButtonText}>Quiero vender en Ta-Fresco</Text>
           </TouchableOpacity>
