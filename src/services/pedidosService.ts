@@ -52,7 +52,7 @@ export interface Pedido {
   total: number;
   status: EstadoPedido;
   address: PedidoAddress | null;
-  paymentMethod: "cash" | "card";
+  paymentMethod: "cash" | "card" | "nequi";
   proveedorIds: string[];
   createdAt: Timestamp | null;
 }
@@ -68,7 +68,7 @@ function mapPedido(docSnap: any): Pedido {
     total: data.total || 0,
     status: (data.status || "pendiente") as EstadoPedido,
     address: data.address || null,
-    paymentMethod: (data.paymentMethod || "cash") as "cash" | "card",
+    paymentMethod: (data.paymentMethod || "cash") as "cash" | "card" | "nequi",
     proveedorIds: data.proveedorIds || [],
     createdAt: data.createdAt || null,
   };
@@ -86,7 +86,7 @@ export async function crearPedido(
   subtotal: number,
   envio: number,
   address?: PedidoAddress | null,
-  paymentMethod: "cash" | "card" = "cash"
+  paymentMethod: "cash" | "card" | "nequi" = "cash"
 ): Promise<string> {
   if (!userId) throw new Error("Usuario no autenticado.");
   if (!items || items.length === 0) throw new Error("El carrito está vacío.");

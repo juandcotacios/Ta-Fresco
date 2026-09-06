@@ -12,10 +12,12 @@ import { useRouter } from "expo-router";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "@/src/config/firebase";
 import { TiendaConId } from "@/src/services/tiendaService";
+import { obtenerPromedioProveedor } from "@/src/services/valoracionesService";
 
 export default function TiendasScreen() {
   const router = useRouter();
   const [tiendas, setTiendas] = useState<TiendaConId[]>([]);
+  const [ratings, setRatings] = useState<Record<string, { promedio: number; cantidad: number }>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -25,6 +27,11 @@ export default function TiendasScreen() {
         const data = snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
         setTiendas(data);
         setLoading(false);
+        data.forEach((t: any) => {
+          obtenerPromedioProveedor(t.id).then((r) => {
+            setRatings((prev) => ({ ...prev, [t.id]: r }));
+          });
+        });
       },
       (error) => {
         console.log(error);
@@ -66,6 +73,14 @@ export default function TiendasScreen() {
                 <Text style={styles.desc} numberOfLines={2}>
                   {item.descripcion || "Sin descripción todavía."}
                 </Text>
+                {ratings[item.id] && ratings[item.id].cantidad > 0 && (
+                  <View style={{ flexDirection: "row", alignItems: "center", marginTop: 4 }}>
+                    <Ionicons name="star" size={13} color="#f0a500" />
+                    <Text style={{ fontSize: 12, color: "#666", marginLeft: 3 }}>
+                      {ratings[item.id].promedio.toFixed(1)} ({ratings[item.id].cantidad})
+                    </Text>
+                  </View>
+                )}
               </View>
               <Ionicons name="chevron-forward" size={20} color="#ccc" />
             </TouchableOpacity>

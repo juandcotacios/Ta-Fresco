@@ -33,6 +33,7 @@ interface Product {
   stock: number;
   quantity?: number;
   proveedorId?: string;
+  discountPercent?: number;
 }
 
 const CATEGORIES = [
@@ -75,6 +76,7 @@ export default function Home() {
             category: (productData.category || "sin categoria").toString(),
             stock: productData.stock || 0,
             proveedorId: productData.proveedorId || "",
+            discountPercent: productData.discountPercent || 0,
           } as Product;
         });
         setProducts(data);
@@ -87,6 +89,28 @@ export default function Home() {
   const filtered = products.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase())
   );
+
+  // Top descuentos vigentes, ordenados de mayor a menor, para el panel dinámico.
+  const topDescuentos = useMemo(() => {
+    return products
+      .filter((p) => (p.discountPercent || 0) > 0)
+      .sort((a, b) => (b.discountPercent || 0) - (a.discountPercent || 0))
+      .slice(0, 5);
+  }, [products]);
+
+  const [promoIndex, setPromoIndex] = useState(0);
+
+  useEffect(() => {
+    if (topDescuentos.length < 2) return;
+    const interval = setInterval(() => {
+      setPromoIndex((prev) => (prev + 1) % topDescuentos.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [topDescuentos.length]);
+
+  useEffect(() => {
+    if (promoIndex >= topDescuentos.length) setPromoIndex(0);
+  }, [topDescuentos.length]);
 
   const normalizar = (s: string) =>
     s
@@ -190,23 +214,54 @@ export default function Home() {
           />
         </View>
 
-        <View style={styles.promoWrapper}>
-          <View style={styles.promoBackground}>
-            <View style={styles.promoLeftContent}>
-              <Text style={styles.promoPercent}>30%</Text>
-              <Text style={styles.promoSubtitle}>Descuento</Text>
-              <Text style={styles.promoDate}>Hasta el 25/08</Text>
-              <View style={styles.priceTagContainer}>
-                 <View style={styles.nowBadge}><Text style={styles.nowBadgeText}>Ahora</Text></View>
-                 <Text style={styles.promoPrice}>$3,724</Text>
+        {topDescuentos.length > 0 && (() => {
+          const promo = topDescuentos[promoIndex] || topDescuentos[0];
+          const precioAnterior = Math.round(promo.price / (1 - (promo.discountPercent || 0) / 100));
+          return (
+            <TouchableOpacity
+              style={styles.promoWrapper}
+              activeOpacity={0.9}
+              onPress={() => router.push("/ofertas")}
+            >
+              <View style={styles.promoBackground}>
+                <View style={styles.promoLeftContent}>
+                  <Text style={styles.promoPercent}>{promo.discountPercent}%</Text>
+                  <Text style={styles.promoSubtitle}>Descuento</Text>
+                  <Text style={styles.promoDate}>Oferta activa ahora</Text>
+                  <View style={styles.priceTagContainer}>
+                    <View style={styles.nowBadge}>
+                      <Text style={styles.nowBadgeText}>${promo.price.toLocaleString()}</Text>
+                    </View>
+                    <Text style={[styles.promoPrice, { textDecorationLine: "line-through", fontSize: 13, opacity: 0.8 }]}>
+                      ${precioAnterior.toLocaleString()}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.promoImageContainer}>
+                  <Image source={{ uri: promo.imageUrl }} style={styles.promoImage} resizeMode="contain" />
+                </View>
               </View>
-            </View>
-            <View style={styles.promoImageContainer}>
-              <Image source={{ uri: "https://www.buyfrescapp.com/wp-content/uploads/2025/11/BOG-CAT001-00005-3-300x300.png" }} style={styles.promoImage} resizeMode="contain" />
-            </View>
-          </View>
-          <Text style={styles.promoProductLabel}>Pimentón Maduración Mixta</Text>
-        </View>
+              <Text style={styles.promoProductLabel}>{promo.name}</Text>
+
+              {topDescuentos.length > 1 && (
+                <View style={{ flexDirection: "row", justifyContent: "center", marginTop: 8 }}>
+                  {topDescuentos.map((_, i) => (
+                    <View
+                      key={i}
+                      style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: 3,
+                        backgroundColor: i === promoIndex ? "#83c41a" : "#DDD",
+                        marginHorizontal: 3,
+                      }}
+                    />
+                  ))}
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        })()}
 
         {groupedProducts.map((group) =>
             group.products.length > 0 && (

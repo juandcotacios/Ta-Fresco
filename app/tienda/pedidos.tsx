@@ -10,6 +10,8 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { getAuth } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/src/config/firebase";
 import {
   suscribirsePedidosDeProveedor,
   actualizarEstadoPedido,
@@ -19,12 +21,19 @@ import {
   ORDEN_ESTADOS,
 } from "@/src/services/pedidosService";
 
+interface Comprador {
+  nickname?: string;
+  phone?: string;
+  email?: string;
+}
+
 export default function PedidosDeMiTiendaScreen() {
   const router = useRouter();
   const auth = getAuth();
   const user = auth.currentUser;
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
+  const [compradores, setCompradores] = useState<Record<string, Comprador>>({});
 
   useEffect(() => {
     if (!user) {
@@ -37,6 +46,24 @@ export default function PedidosDeMiTiendaScreen() {
     });
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    pedidos.forEach((p) => {
+      if (p.userId && !compradores[p.userId]) {
+        getDoc(doc(db, "users", p.userId))
+          .then((snap) => {
+            if (snap.exists()) {
+              const data = snap.data() as any;
+              setCompradores((prev) => ({
+                ...prev,
+                [p.userId]: { nickname: data.nickname, phone: data.phone, email: data.email },
+              }));
+            }
+          })
+          .catch((e) => console.log(e));
+      }
+    });
+  }, [pedidos]);
 
   const avanzarEstado = async (pedido: Pedido) => {
     const currentIndex = ORDEN_ESTADOS.indexOf(pedido.status);
@@ -95,8 +122,8 @@ export default function PedidosDeMiTiendaScreen() {
                 ? ESTADO_LABELS[ORDEN_ESTADOS[currentIndex + 1]].label
                 : null;
 
-            // Solo mostramos, dentro del pedido, los productos que son de este proveedor
             const misItems = item.items.filter((i) => i.proveedorId === user?.uid);
+            const comprador = compradores[item.userId];
 
             return (
               <View style={styles.card}>
@@ -104,6 +131,14 @@ export default function PedidosDeMiTiendaScreen() {
                   <Text style={styles.pedidoId}>#{item.id.slice(0, 6).toUpperCase()}</Text>
                   <View style={[styles.badge, { backgroundColor: estado.color }]}>
                     <Text style={styles.badgeText}>{estado.label}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.compradorBox}>
+                  <Ionicons name="person-circle-outline" size={16} color="#555" />
+                  <View style={{ marginLeft: 6, flex: 1 }}>
+                    <Text style={styles.compradorNombre}>{comprador?.nickname || "Cargando..."}</Text>
+                    {!!comprador?.phone && <Text style={styles.compradorDato}>📞 {comprador.phone}</Text>}
                   </View>
                 </View>
 
@@ -118,6 +153,9 @@ export default function PedidosDeMiTiendaScreen() {
                     📍 {item.address.name} — {item.address.addressLine}
                   </Text>
                 )}
+                <Text style={styles.paymentLine}>
+                  💳 {item.paymentMethod === "card" ? "Tarjeta" : item.paymentMethod === "nequi" ? "Nequi" : "Contraentrega"}
+                </Text>
 
                 {!esFinal && (
                   <View style={styles.actions}>
@@ -163,8 +201,21 @@ const styles = StyleSheet.create({
   pedidoId: { fontWeight: "bold", fontSize: 15, color: "#333" },
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
   badgeText: { color: "#fff", fontSize: 12, fontWeight: "bold" },
+  compradorBox: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#eee",
+  },
+  compradorNombre: { fontWeight: "bold", fontSize: 13, color: "#333" },
+  compradorDato: { fontSize: 12, color: "#777", marginTop: 2 },
   itemLine: { color: "#555", fontSize: 14, marginBottom: 2 },
   addressLine: { color: "#666", fontSize: 12, marginTop: 6 },
+  paymentLine: { color: "#666", fontSize: 12, marginTop: 4 },
   actions: { flexDirection: "row", marginTop: 12 },
   advanceBtn: {
     backgroundColor: "#83c41a",

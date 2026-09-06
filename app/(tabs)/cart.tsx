@@ -60,7 +60,8 @@ export default function CartScreen() {
   const [loadingAddresses, setLoadingAddresses] = useState(true);
   const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
 
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card'>('cash');
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'nequi'>('cash');
+  const [nequiPhone, setNequiPhone] = useState('');
   const [cardNumber, setCardNumber] = useState('');
   const [cardName, setCardName] = useState('');
   const [cardDate, setCardDate] = useState('');
@@ -187,6 +188,12 @@ export default function CartScreen() {
     if (paymentMethod === 'card') {
         if (cardNumber.length < 13 || cardDate.length < 5 || cardCVC.length < 3) {
             Alert.alert("Error", "Verifica los datos de la tarjeta");
+            return;
+        }
+    }
+    if (paymentMethod === 'nequi') {
+        if (nequiPhone.replace(/\D/g, '').length < 10) {
+            Alert.alert("Error", "Escribe un número de celular válido para Nequi");
             return;
         }
     }
@@ -351,20 +358,71 @@ export default function CartScreen() {
                       style={[styles.paymentOption, paymentMethod === 'cash' && styles.paymentOptionSelected]}
                       onPress={() => setPaymentMethod('cash')}
                    >
-                      <Ionicons name="cash-outline" size={24} color="#333" />
+                      <Ionicons name="cash-outline" size={22} color="#333" />
                       <Text style={styles.paymentText}>Contraentrega</Text>
+                   </TouchableOpacity>
+                   <TouchableOpacity 
+                      style={[styles.paymentOption, paymentMethod === 'nequi' && styles.paymentOptionSelected]}
+                      onPress={() => setPaymentMethod('nequi')}
+                   >
+                      <View style={styles.nequiDot}><Text style={styles.nequiDotText}>N</Text></View>
+                      <Text style={styles.paymentText}>Nequi</Text>
                    </TouchableOpacity>
                    <TouchableOpacity 
                       style={[styles.paymentOption, paymentMethod === 'card' && styles.paymentOptionSelected]}
                       onPress={() => setPaymentMethod('card')}
                    >
-                      <Ionicons name="card-outline" size={24} color="#333" />
+                      <Ionicons name="card-outline" size={22} color="#333" />
                       <Text style={styles.paymentText}>Tarjeta</Text>
                    </TouchableOpacity>
                 </View>
 
+                {paymentMethod === 'nequi' && (
+                    <View style={styles.cardForm}>
+                        <View style={styles.nequiBanner}>
+                          <View style={[styles.nequiDot, { width: 34, height: 34, borderRadius: 17 }]}>
+                            <Text style={[styles.nequiDotText, { fontSize: 16 }]}>N</Text>
+                          </View>
+                          <Text style={styles.nequiBannerText}>
+                            Vas a recibir una notificación push en tu app de Nequi para aprobar el pago.
+                          </Text>
+                        </View>
+                        <Text style={styles.label}>Número de celular Nequi</Text>
+                        <TextInput
+                           placeholder="300 000 0000"
+                           style={styles.input}
+                           keyboardType="numeric"
+                           maxLength={10}
+                           value={nequiPhone}
+                           onChangeText={(t) => setNequiPhone(t.replace(/[^0-9]/g, ''))}
+                        />
+                    </View>
+                )}
+
                 {paymentMethod === 'card' && (
                     <View style={styles.cardForm}>
+                        <View style={styles.creditCardPreview}>
+                          <View style={styles.creditCardTopRow}>
+                            <Ionicons name="wifi" size={20} color="rgba(255,255,255,0.85)" style={{ transform: [{ rotate: '90deg' }] }} />
+                            <Text style={styles.creditCardBrand}>
+                              {cardNumber.startsWith('4') ? 'VISA' : cardNumber.startsWith('5') ? 'MASTERCARD' : 'TARJETA'}
+                            </Text>
+                          </View>
+                          <Text style={styles.creditCardNumber}>
+                            {(cardNumber || '•••• •••• •••• ••••').padEnd(16, '•').match(/.{1,4}/g)?.join('  ')}
+                          </Text>
+                          <View style={styles.creditCardBottomRow}>
+                            <View>
+                              <Text style={styles.creditCardSmallLabel}>TITULAR</Text>
+                              <Text style={styles.creditCardValue}>{cardName || 'NOMBRE APELLIDO'}</Text>
+                            </View>
+                            <View>
+                              <Text style={styles.creditCardSmallLabel}>VENCE</Text>
+                              <Text style={styles.creditCardValue}>{cardDate || 'MM/YY'}</Text>
+                            </View>
+                          </View>
+                        </View>
+
                         <Text style={styles.label}>Número de Tarjeta</Text>
                         <TextInput 
                            placeholder="0000 0000 0000 0000" 
@@ -538,6 +596,24 @@ const styles = StyleSheet.create({
   paymentText: { marginTop: 10, fontWeight: '600', fontSize: 12 },
   cardForm: { backgroundColor: '#FFF', padding: 20, borderRadius: 12, marginTop: 15 },
   input: { backgroundColor: '#F5F5F5', borderRadius: 8, padding: 12, fontSize: 14 },
+  nequiDot: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#8A2BE2', justifyContent: 'center', alignItems: 'center' },
+  nequiDotText: { color: '#FFF', fontWeight: 'bold', fontSize: 13 },
+  nequiBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3E8FF', borderRadius: 12, padding: 12, marginBottom: 16 },
+  nequiBannerText: { flex: 1, marginLeft: 10, fontSize: 12, color: '#6B21A8' },
+  creditCardPreview: {
+    backgroundColor: '#1a1a2e',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
+    height: 170,
+    justifyContent: 'space-between',
+  },
+  creditCardTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  creditCardBrand: { color: '#FFF', fontWeight: 'bold', fontSize: 14, letterSpacing: 1 },
+  creditCardNumber: { color: '#FFF', fontSize: 19, letterSpacing: 2, fontWeight: '600' },
+  creditCardBottomRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  creditCardSmallLabel: { color: 'rgba(255,255,255,0.5)', fontSize: 9, marginBottom: 2 },
+  creditCardValue: { color: '#FFF', fontSize: 13, fontWeight: '600', letterSpacing: 0.5 },
   summaryContainer: { backgroundColor: '#FFF', padding: 20, borderRadius: 12, marginTop: 30 },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   summaryLabel: { color: '#666' },

@@ -9,6 +9,8 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/src/config/firebase";
 import {
   suscribirseTodosLosPedidos,
   actualizarEstadoPedido,
@@ -18,14 +20,39 @@ import {
   ORDEN_ESTADOS,
 } from "@/src/services/pedidosService";
 
+interface Comprador {
+  nickname?: string;
+  phone?: string;
+  email?: string;
+}
+
 export default function AdminPedidosScreen() {
   const router = useRouter();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
+  const [compradores, setCompradores] = useState<Record<string, Comprador>>({});
 
   useEffect(() => {
     const unsubscribe = suscribirseTodosLosPedidos(setPedidos);
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    pedidos.forEach((p) => {
+      if (p.userId && !compradores[p.userId]) {
+        getDoc(doc(db, "users", p.userId))
+          .then((snap) => {
+            if (snap.exists()) {
+              const data = snap.data() as any;
+              setCompradores((prev) => ({
+                ...prev,
+                [p.userId]: { nickname: data.nickname, phone: data.phone, email: data.email },
+              }));
+            }
+          })
+          .catch((e) => console.log(e));
+      }
+    });
+  }, [pedidos]);
 
   const avanzarEstado = async (pedido: Pedido) => {
     const currentIndex = ORDEN_ESTADOS.indexOf(pedido.status);
@@ -62,12 +89,8 @@ export default function AdminPedidosScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={24} color="#333" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Panel de Pedidos (temporal)</Text>
+        <Text style={styles.headerTitle}>Panel de Pedidos</Text>
       </View>
-
-      <Text style={styles.warning}>
-        ⚠️ Panel provisional visible para cualquier usuario logueado, hasta que exista el rol de proveedor.
-      </Text>
 
       <FlatList
         data={pedidos}
@@ -82,6 +105,7 @@ export default function AdminPedidosScreen() {
             currentIndex >= 0 && currentIndex < ORDEN_ESTADOS.length - 1
               ? ESTADO_LABELS[ORDEN_ESTADOS[currentIndex + 1]].label
               : null;
+          const comprador = compradores[item.userId];
 
           return (
             <View style={styles.card}>
@@ -92,12 +116,24 @@ export default function AdminPedidosScreen() {
                 </View>
               </View>
 
+              <View style={styles.compradorBox}>
+                <Ionicons name="person-circle-outline" size={16} color="#555" />
+                <View style={{ marginLeft: 6, flex: 1 }}>
+                  <Text style={styles.compradorNombre}>{comprador?.nickname || "Cargando..."}</Text>
+                  {!!comprador?.phone && <Text style={styles.compradorDato}>📞 {comprador.phone}</Text>}
+                  {!!comprador?.email && <Text style={styles.compradorDato}>✉️ {comprador.email}</Text>}
+                </View>
+              </View>
+
               <Text style={styles.total}>Total: ${item.total.toLocaleString()}</Text>
               {item.address && (
                 <Text style={styles.addressLine}>
                   📍 {item.address.name} — {item.address.addressLine}
                 </Text>
               )}
+              <Text style={styles.paymentLine}>
+                💳 {item.paymentMethod === "card" ? "Tarjeta" : item.paymentMethod === "nequi" ? "Nequi" : "Contraentrega"}
+              </Text>
 
               {!esFinal && (
                 <View style={styles.actions}>
@@ -130,14 +166,6 @@ const styles = StyleSheet.create({
   },
   backBtn: { marginRight: 10 },
   headerTitle: { fontSize: 18, fontWeight: "bold", color: "#333" },
-  warning: {
-    backgroundColor: "#FFF3E0",
-    color: "#EF6C00",
-    fontSize: 12,
-    padding: 10,
-    marginHorizontal: 16,
-    borderRadius: 8,
-  },
   empty: { textAlign: "center", color: "#999", marginTop: 30 },
   card: {
     backgroundColor: "#f9f9f9",
@@ -151,8 +179,21 @@ const styles = StyleSheet.create({
   pedidoId: { fontWeight: "bold", fontSize: 15, color: "#333" },
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
   badgeText: { color: "#fff", fontSize: 12, fontWeight: "bold" },
+  compradorBox: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    padding: 10,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: "#eee",
+  },
+  compradorNombre: { fontWeight: "bold", fontSize: 13, color: "#333" },
+  compradorDato: { fontSize: 12, color: "#777", marginTop: 2 },
   total: { marginTop: 8, fontWeight: "bold", fontSize: 15, color: "#83c41a" },
   addressLine: { color: "#666", fontSize: 12, marginTop: 4 },
+  paymentLine: { color: "#666", fontSize: 12, marginTop: 4 },
   actions: { flexDirection: "row", marginTop: 12 },
   advanceBtn: {
     backgroundColor: "#83c41a",

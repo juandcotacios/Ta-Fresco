@@ -5,7 +5,12 @@ import {
   StyleSheet,
   FlatList,
   ActivityIndicator,
+  TouchableOpacity,
+  Modal,
+  TextInput,
+  ScrollView,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { getAuth } from "firebase/auth";
 import {
   suscribirsePedidosUsuario,
@@ -14,6 +19,10 @@ import {
   ESTADO_LABELS,
   ORDEN_ESTADOS,
 } from "@/src/services/pedidosService";
+import {
+  crearValoracion,
+  obtenerValoracionesUsuario,
+} from "@/src/services/valoracionesService";
 
 function StatusStepper({ status }: { status: EstadoPedido }) {
   if (status === "cancelado") {
@@ -69,6 +78,20 @@ function StatusStepper({ status }: { status: EstadoPedido }) {
 export default function PedidosScreen() {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
+  // Set de "pedidoId:productoId" ya calificados
+  const [calificados, setCalificados] = useState<Set<string>>(new Set());
+
+  const [modalVisible, setModalVisible] = useState(false);
+  const [pedidoActivo, setPedidoActivo] = useState<Pedido | null>(null);
+  const [proveedorActivo, setProveedorActivo] = useState<string | null>(null);
+  const [ratingsPorProducto, setRatingsPorProducto] = useState<Record<string, number>>({});
+  const [comentario, setComentario] = useState("");
+  const [guardando, setGuardando] = useState(false);
+
+  const cargarCalificados = async (userId: string) => {
+    const valoraciones = await obtenerValoracionesUsuario(userId);
+    setCalificados(new Set(valoraciones.map((v) => `${v.pedidoId}:${v.productoId}`)));
+  };
 
   useEffect(() => {
     const auth = getAuth();
@@ -78,9 +101,8 @@ export default function PedidosScreen() {
       return;
     }
 
-    // onSnapshot mantiene esta lista actualizada en tiempo real: si el estado
-    // de un pedido cambia (por ejemplo desde el panel de gestión), se refleja
-    // aquí al instante, sin recargar la pantalla.
+    cargarCalificados(user.uid);
+
     const unsubscribe = suscribirsePedidosUsuario(user.uid, (data) => {
       setPedidos(data);
       setLoading(false);
@@ -88,6 +110,55 @@ export default function PedidosScreen() {
 
     return () => unsubscribe();
   }, []);
+
+  const productosPendientesDeCalificar = (pedido: Pedido, proveedorId: string) => {
+    return pedido.items.filter(
+      (i) => i.proveedorId === proveedorId && !calificados.has(`${pedido.id}:${i.id}`)
+    );
+  };
+
+  const abrirCalificar = (pedido: Pedido, proveedorId: string) => {
+    setPedidoActivo(pedido);
+    setProveedorActivo(proveedorId);
+    setRatingsPorProducto({});
+    setComentario("");
+    setModalVisible(true);
+  };
+
+  const enviarValoraciones = async () => {
+    const auth = getAuth();
+    const user = auth.currentUser;
+    if (!user || !pedidoActivo || !proveedorActivo) return;
+
+    const entradas = Object.entries(ratingsPorProducto).filter(([, rating]) => rating > 0);
+    if (entradas.length === 0) return;
+
+    setGuardando(true);
+    try {
+      for (const [productoId, rating] of entradas) {
+        const item = pedidoActivo.items.find((i) => i.id === productoId);
+        await crearValoracion(
+          pedidoActivo.id,
+          proveedorActivo,
+          productoId,
+          item?.name || "Producto",
+          user.uid,
+          rating,
+          comentario
+        );
+      }
+      setCalificados((prev) => {
+        const nuevo = new Set(prev);
+        entradas.forEach(([productoId]) => nuevo.add(`${pedidoActivo.id}:${productoId}`));
+        return nuevo;
+      });
+      setModalVisible(false);
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setGuardando(false);
+    }
+  };
 
   const formatFecha = (timestamp: any) => {
     if (!timestamp?.toDate) return "";
@@ -108,6 +179,10 @@ export default function PedidosScreen() {
       </View>
     );
   }
+
+  const itemsDelModal = pedidoActivo && proveedorActivo
+    ? pedidoActivo.items.filter((i) => i.proveedorId === proveedorActivo)
+    : [];
 
   return (
     <View style={styles.container}>
@@ -146,10 +221,106 @@ export default function PedidosScreen() {
               )}
 
               <Text style={styles.total}>Total: ${item.total.toLocaleString()}</Text>
+
+              {item.status === "entregado" && item.proveedorIds && item.proveedorIds.length > 0 && (
+                <View style={styles.rateSection}>
+                  {item.proveedorIds.map((proveedorId) => {
+                    const pendientes = productosPendientesDeCalificar(item, proveedorId);
+                    const todoCalificado = pendientes.length === 0;
+                    return (
+                      <TouchableOpacity
+                        key={proveedorId}
+                        style={[styles.rateBtn, todoCalificado && styles.rateBtnDone]}
+                        onPress={() => !todoCalificado && abrirCalificar(item, proveedorId)}
+                        disabled={todoCalificado}
+                      >
+                        <Ionicons
+                          name={todoCalificado ? "checkmark-circle" : "star-outline"}
+                          size={16}
+                          color={todoCalificado ? "#22c55e" : "#f0a500"}
+                        />
+                        <Text style={[styles.rateBtnText, todoCalificado && { color: "#22c55e" }]}>
+                          {todoCalificado
+                            ? "Productos calificados"
+                            : `Calificar ${pendientes.length} producto${pendientes.length > 1 ? "s" : ""}`}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
             </View>
           )}
         />
       )}
+
+      <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={() => setModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Califica tus productos</Text>
+
+            <ScrollView style={{ maxHeight: 280 }}>
+              {itemsDelModal.map((item) => {
+                const yaCalificado = pedidoActivo && calificados.has(`${pedidoActivo.id}:${item.id}`);
+                const ratingActual = ratingsPorProducto[item.id] || 0;
+                return (
+                  <View key={item.id} style={styles.productRow}>
+                    <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
+                    {yaCalificado ? (
+                      <Text style={styles.yaCalificadoText}>Ya calificado</Text>
+                    ) : (
+                      <View style={{ flexDirection: "row" }}>
+                        {[1, 2, 3, 4, 5].map((n) => (
+                          <TouchableOpacity
+                            key={n}
+                            onPress={() =>
+                              setRatingsPorProducto((prev) => ({ ...prev, [item.id]: n }))
+                            }
+                          >
+                            <Ionicons
+                              name={n <= ratingActual ? "star" : "star-outline"}
+                              size={22}
+                              color="#f0a500"
+                              style={{ marginHorizontal: 1 }}
+                            />
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
+            </ScrollView>
+
+            <TextInput
+              style={styles.commentInput}
+              placeholder="Contanos cómo fue tu experiencia (opcional, aplica a todos)"
+              value={comentario}
+              onChangeText={setComentario}
+              multiline
+            />
+
+            <TouchableOpacity
+              style={[
+                styles.submitBtn,
+                (Object.values(ratingsPorProducto).every((r) => !r) || guardando) && { opacity: 0.5 },
+              ]}
+              onPress={enviarValoraciones}
+              disabled={Object.values(ratingsPorProducto).every((r) => !r) || guardando}
+            >
+              {guardando ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.submitBtnText}>Enviar calificaciones</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={() => setModalVisible(false)} style={{ marginTop: 12 }}>
+              <Text style={{ color: "#999", textAlign: "center" }}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -186,6 +357,44 @@ const styles = StyleSheet.create({
   itemLine: { color: "#555", fontSize: 14, marginBottom: 2 },
   addressLine: { color: "#666", fontSize: 12, marginTop: 8 },
   total: { marginTop: 8, fontWeight: "bold", fontSize: 15, color: "#83c41a" },
+  rateSection: { marginTop: 12, borderTopWidth: 1, borderTopColor: "#eee", paddingTop: 10 },
+  rateBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFF8E1",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    alignSelf: "flex-start",
+    marginTop: 4,
+  },
+  rateBtnDone: { backgroundColor: "#E8F5E9" },
+  rateBtnText: { marginLeft: 6, fontSize: 12, fontWeight: "600", color: "#EF6C00" },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" },
+  modalContent: { backgroundColor: "#fff", width: "88%", borderRadius: 20, padding: 22 },
+  modalTitle: { fontSize: 17, fontWeight: "bold", color: "#333", textAlign: "center", marginBottom: 16 },
+  productRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+  },
+  productName: { flex: 1, fontSize: 13, color: "#333", marginRight: 8 },
+  yaCalificadoText: { fontSize: 12, color: "#22c55e", fontWeight: "600" },
+  commentInput: {
+    backgroundColor: "#F5F5F5",
+    borderRadius: 10,
+    padding: 12,
+    height: 60,
+    textAlignVertical: "top",
+    marginTop: 14,
+    marginBottom: 16,
+    fontSize: 13,
+  },
+  submitBtn: { backgroundColor: "#83c41a", paddingVertical: 14, borderRadius: 22, alignItems: "center" },
+  submitBtnText: { color: "#fff", fontWeight: "bold", fontSize: 15 },
 });
 
 const stepperStyles = StyleSheet.create({

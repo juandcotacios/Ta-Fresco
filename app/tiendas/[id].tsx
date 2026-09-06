@@ -14,6 +14,7 @@ import { collection, onSnapshot, query, where, doc, getDoc } from "firebase/fire
 import { db } from "@/src/config/firebase";
 import { useCart } from "@/src/contexts/CartContext";
 import { TiendaConId, ProductoTendero } from "@/src/services/tiendaService";
+import { obtenerPromedioProducto } from "@/src/services/valoracionesService";
 
 export default function TiendaDetalleScreen() {
   const router = useRouter();
@@ -22,6 +23,7 @@ export default function TiendaDetalleScreen() {
 
   const [tienda, setTienda] = useState<TiendaConId | null>(null);
   const [productos, setProductos] = useState<ProductoTendero[]>([]);
+  const [ratings, setRatings] = useState<Record<string, { promedio: number; cantidad: number }>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -37,8 +39,14 @@ export default function TiendaDetalleScreen() {
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        setProductos(snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as any) })));
+        const data = snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+        setProductos(data);
         setLoading(false);
+        data.forEach((p: any) => {
+          obtenerPromedioProducto(p.id).then((r) => {
+            setRatings((prev) => ({ ...prev, [p.id]: r }));
+          });
+        });
       },
       (error) => {
         console.log(error);
@@ -95,6 +103,14 @@ export default function TiendaDetalleScreen() {
                 style={styles.image}
               />
               <Text style={styles.name} numberOfLines={2}>{item.name}</Text>
+              {ratings[item.id] && ratings[item.id].cantidad > 0 && (
+                <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 2 }}>
+                  <Ionicons name="star" size={11} color="#f0a500" />
+                  <Text style={{ fontSize: 11, color: "#888", marginLeft: 3 }}>
+                    {ratings[item.id].promedio.toFixed(1)} ({ratings[item.id].cantidad})
+                  </Text>
+                </View>
+              )}
               <Text style={styles.price}>${finalPrice.toLocaleString()}</Text>
 
               {qty === 0 ? (
