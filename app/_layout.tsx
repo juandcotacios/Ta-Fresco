@@ -38,7 +38,6 @@ export default function RootLayout() {
           )}
 
           {}
-          <Stack.Screen name="checkout" />
           <Stack.Screen name="pedidos" />
           <Stack.Screen name="admin" />
           <Stack.Screen name="admin-pedidos" />

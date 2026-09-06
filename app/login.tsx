@@ -85,6 +85,7 @@ export default function LoginScreen() {
         email: user.email,
         photoURL: user.photoURL || "",
         phone: "",
+        role: "cliente",
         createdAt: new Date(),
       });
       console.log("Perfil de Google creado en Firestore");

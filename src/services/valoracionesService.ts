@@ -1,10 +1,11 @@
 import {
-  addDoc,
   collection,
+  doc,
   getDocs,
   query,
   where,
   serverTimestamp,
+  setDoc,
 } from "firebase/firestore";
 import { db } from "@/src/config/firebase";
 
@@ -30,7 +31,8 @@ export async function crearValoracion(
   comentario: string
 ): Promise<void> {
   if (rating < 1 || rating > 5) throw new Error("La calificación debe ser entre 1 y 5.");
-  await addDoc(collection(db, "valoraciones"), {
+  const valoracionId = `${pedidoId}_${productoId}_${userId}`;
+  await setDoc(doc(db, "valoraciones", valoracionId), {
     pedidoId,
     proveedorId,
     productoId,

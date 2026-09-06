@@ -11,7 +11,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { getAuth } from "firebase/auth";
-import { doc, updateDoc } from "firebase/firestore";
+import { addDoc, collection, doc, getDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/src/config/firebase";
 import { guardarMiTienda } from "@/src/services/tiendaService";
 
@@ -23,6 +23,7 @@ export default function ConvertirseTenderoScreen() {
   const [nombre, setNombre] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [saving, setSaving] = useState(false);
+  const [rol, setRol] = useState<"cliente" | "tendero" | "admin" | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleCrear = async () => {
@@ -36,11 +37,26 @@ export default function ConvertirseTenderoScreen() {
 
     setSaving(true);
     try {
-      // 1) Se activa el rol de tendero, 2) se crea la tienda con esos datos.
-      // Los dos pasos van juntos para que el alta quede completa de una sola vez.
-      await updateDoc(doc(db, "users", user.uid), { role: "tendero" });
-      await guardarMiTienda(user.uid, nombre.trim(), descripcion.trim());
-      router.replace("/tienda/productos");
+      const userSnapshot = await getDoc(doc(db, "users", user.uid));
+      const userRole = userSnapshot.data()?.role || "cliente";
+      setRol(userRole);
+
+      if (userRole === "tendero" || userRole === "admin") {
+        await guardarMiTienda(user.uid, nombre.trim(), descripcion.trim());
+        router.replace("/tienda/productos");
+        return;
+      }
+
+      // La app no se autoasigna privilegios: un administrador debe aprobar
+      // la solicitud y otorgar el rol de tendero desde un entorno autorizado.
+      await addDoc(collection(db, "solicitudesTienda"), {
+        userId: user.uid,
+        nombre: nombre.trim(),
+        descripcion: descripcion.trim(),
+        estado: "pendiente",
+        createdAt: serverTimestamp(),
+      });
+      setErrorMsg("Solicitud enviada. Un administrador debe aprobar tu tienda antes de activarla.");
     } catch (error: any) {
       console.log(error);
       setErrorMsg(error?.message || "No se pudo crear tu tienda. Intenta de nuevo.");
@@ -93,12 +109,12 @@ export default function ConvertirseTenderoScreen() {
         {saving ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.createBtnText}>Crear mi tienda y empezar a vender</Text>
+          <Text style={styles.createBtnText}>{rol === "tendero" || rol === "admin" ? "Crear mi tienda" : "Solicitar tienda"}</Text>
         )}
       </TouchableOpacity>
 
       <Text style={styles.footerNote}>
-        Después de crear tu tienda vas a poder añadir tus productos, con foto, precio y stock.
+        Por seguridad, la solicitud de tienda debe ser aprobada por un administrador.
       </Text>
     </ScrollView>
   );

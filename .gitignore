@@ -30,8 +30,10 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
-.env*.local
+# Environment files contain deployment configuration and must never be committed.
+.env
+.env.*
+!.env.example
 
 # typescript
 *.tsbuildinfo

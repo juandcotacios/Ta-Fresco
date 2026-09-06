@@ -6,7 +6,7 @@ import {
   signInWithCredential,
   GoogleAuthProvider,
 } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
   Image,
@@ -88,18 +88,18 @@ export default function RegisterScreen() {
       const result = await signInWithCredential(auth, credential);
       const user = result.user;
 
-      await setDoc(
-        doc(db, "users", user.uid),
-        {
+      const userRef = doc(db, "users", user.uid);
+      const existingProfile = await getDoc(userRef);
+      if (!existingProfile.exists()) {
+        await setDoc(userRef, {
           nickname: user.displayName || "Usuario Google",
           email: user.email,
           photoURL: user.photoURL || "",
           phone: "",
           role: "cliente",
           createdAt: new Date(),
-        },
-        { merge: true }
-      );
+        });
+      }
 
       router.push("/(tabs)/home");
     } catch (error: any) {

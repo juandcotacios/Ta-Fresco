@@ -100,6 +100,7 @@ export default function ProfileScreen() {
             nickname: user.displayName || 'Invitado',
             phone: '',
             photoURL: user.photoURL || '',
+            role: 'cliente',
           };
           await setDoc(userDocRef, initialData);
           setUserData(initialData);
@@ -112,20 +113,6 @@ export default function ProfileScreen() {
     };
     fetchUserData();
   }, [user]);
-
-  const handleConvertirEnTendero = async () => {
-    if (!user) return;
-    try {
-      await updateDoc(doc(db, 'users', user.uid), { role: 'tendero' });
-      setUserData(prev => (prev ? { ...prev, role: 'tendero' } : prev));
-      Alert.alert('¡Listo!', 'Ya puedes crear tu tienda y añadir productos.', [
-        { text: 'Crear mi tienda', onPress: () => router.push('/tienda') },
-      ]);
-    } catch (error) {
-      console.log(error);
-      Alert.alert('Error', 'No se pudo activar el modo vendedor.');
-    }
-  };
 
   const pickImage = async () => {
     try {

@@ -4,14 +4,30 @@ import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
+const requiredConfig = [
+  "EXPO_PUBLIC_FIREBASE_API_KEY",
+  "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN",
+  "EXPO_PUBLIC_FIREBASE_PROJECT_ID",
+  "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET",
+  "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID",
+  "EXPO_PUBLIC_FIREBASE_APP_ID",
+] as const;
+
+const missingConfig = requiredConfig.filter((key) => !process.env[key]);
+if (missingConfig.length > 0) {
+  throw new Error(`Falta configuración de Firebase: ${missingConfig.join(", ")}`);
+}
+
+// Esta configuración es pública en una app móvil; la seguridad real se aplica
+// con Firebase App Check, restricciones de la API key y Firestore Rules.
 const firebaseConfig = {
-  apiKey: "AIzaSyCEgM0gLhzj9h_rxxczMlsRHhkuCrySw_4",
-  authDomain: "tafresco.firebaseapp.com",
-  projectId: "tafresco",
-  storageBucket: "tafresco.firebasestorage.app",
-  messagingSenderId: "799200713865",
-  appId: "1:799200713865:web:29963b4fd6c18e0c80ba58",
-  measurementId: "G-24B2E960CC",
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
+  measurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
 export const app = initializeApp(firebaseConfig);

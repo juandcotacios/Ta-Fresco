@@ -1,0 +1,95 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return signedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isTendero() {
+      return signedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'tendero';
+    }
+
+    function profileFieldsOnly() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['nickname', 'phone', 'photoURL']);
+    }
+
+    match /users/{userId} {
+      allow create: if isOwner(userId) && request.resource.data.role == 'cliente';
+      allow read: if isOwner(userId) || isAdmin();
+      allow update: if isAdmin() || (isOwner(userId) && profileFieldsOnly());
+      allow delete: if isAdmin();
+
+      match /addresses/{addressId} {
+        allow read, create, update, delete: if isOwner(userId);
+      }
+    }
+
+    match /tiendas/{storeId} {
+      allow read: if true;
+      allow create: if isTendero() && isOwner(storeId) &&
+        request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if isAdmin() ||
+        (isTendero() && isOwner(storeId) && resource.data.ownerId == request.auth.uid &&
+          request.resource.data.ownerId == resource.data.ownerId);
+    }
+
+    match /Productos/{productId} {
+      allow read: if true;
+      allow create: if isTendero() &&
+        request.resource.data.proveedorId == request.auth.uid;
+      allow update, delete: if isAdmin() ||
+        (isTendero() && resource.data.proveedorId == request.auth.uid &&
+          request.resource.data.proveedorId == resource.data.proveedorId);
+    }
+
+    match /pedidos/{pedidoId} {
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow read: if signedIn() && (
+        resource.data.userId == request.auth.uid ||
+        request.auth.uid in resource.data.proveedorIds ||
+        isAdmin()
+      );
+      // Un tendero solo puede cambiar su entrada de estado y el resumen del pedido.
+      allow update: if isAdmin() || (
+        signedIn() && request.auth.uid in resource.data.proveedorIds &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['estadosPorProveedor', 'status']) &&
+        (
+          // Compatibilidad de una sola actualización para pedidos antiguos.
+          !resource.data.keys().hasAll(['estadosPorProveedor']) ||
+          request.resource.data.estadosPorProveedor.diff(resource.data.estadosPorProveedor)
+            .affectedKeys().hasOnly([request.auth.uid])
+        )
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /valoraciones/{ratingId} {
+      allow read: if true;
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid &&
+        request.resource.data.rating is int && request.resource.data.rating >= 1 &&
+        request.resource.data.rating <= 5 &&
+        get(/databases/$(database)/documents/pedidos/$(request.resource.data.pedidoId)).data.userId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    match /solicitudesTienda/{requestId} {
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid &&
+        request.resource.data.estado == 'pendiente';
+      allow read: if signedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow update, delete: if isAdmin();
+    }
+  }
+}

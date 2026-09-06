@@ -10,6 +10,14 @@ export async function subirImagenCloudinary(base64DataUri: string): Promise<stri
     throw new Error("Cloudinary no está configurado. Revisa el archivo .env");
   }
 
+  if (!base64DataUri.startsWith("data:image/")) {
+    throw new Error("El archivo seleccionado no es una imagen válida.");
+  }
+  // Límite defensivo para evitar cargas excesivas desde el cliente.
+  if (base64DataUri.length > 7_000_000) {
+    throw new Error("La imagen es demasiado grande. Selecciona una imagen menor a 5 MB.");
+  }
+
   const formData = new FormData();
   formData.append("file", base64DataUri);
   formData.append("upload_preset", UPLOAD_PRESET);
