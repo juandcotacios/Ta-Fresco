@@ -14,7 +14,8 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/src/config/firebase";
 import {
   suscribirsePedidosDeProveedor,
-  actualizarEstadoPedido,
+  actualizarEstadoProveedor,
+  obtenerEstadoProveedor,
   Pedido,
   EstadoPedido,
   ESTADO_LABELS,
@@ -66,11 +67,13 @@ export default function PedidosDeMiTiendaScreen() {
   }, [pedidos]);
 
   const avanzarEstado = async (pedido: Pedido) => {
-    const currentIndex = ORDEN_ESTADOS.indexOf(pedido.status);
+    if (!user) return;
+    const estadoPropio = obtenerEstadoProveedor(pedido, user.uid);
+    const currentIndex = ORDEN_ESTADOS.indexOf(estadoPropio);
     if (currentIndex === -1 || currentIndex === ORDEN_ESTADOS.length - 1) return;
     const siguiente = ORDEN_ESTADOS[currentIndex + 1];
     try {
-      await actualizarEstadoPedido(pedido.id, siguiente);
+      await actualizarEstadoProveedor(pedido.id, user.uid, siguiente);
     } catch (error) {
       console.log(error);
       Alert.alert("Error", "No se pudo actualizar el estado.");
@@ -85,7 +88,7 @@ export default function PedidosDeMiTiendaScreen() {
         style: "destructive",
         onPress: async () => {
           try {
-            await actualizarEstadoPedido(pedido.id, "cancelado" as EstadoPedido);
+            if (user) await actualizarEstadoProveedor(pedido.id, user.uid, "cancelado" as EstadoPedido);
           } catch (error) {
             console.log(error);
           }
@@ -114,9 +117,10 @@ export default function PedidosDeMiTiendaScreen() {
             <Text style={styles.empty}>Todavía no te han hecho ningún pedido.</Text>
           }
           renderItem={({ item }) => {
-            const estado = ESTADO_LABELS[item.status];
-            const esFinal = item.status === "entregado" || item.status === "cancelado";
-            const currentIndex = ORDEN_ESTADOS.indexOf(item.status);
+            const estadoPropio = user ? obtenerEstadoProveedor(item, user.uid) : item.status;
+            const estado = ESTADO_LABELS[estadoPropio];
+            const esFinal = estadoPropio === "entregado" || estadoPropio === "cancelado";
+            const currentIndex = ORDEN_ESTADOS.indexOf(estadoPropio);
             const siguienteLabel =
               currentIndex >= 0 && currentIndex < ORDEN_ESTADOS.length - 1
                 ? ESTADO_LABELS[ORDEN_ESTADOS[currentIndex + 1]].label
@@ -147,6 +151,12 @@ export default function PedidosDeMiTiendaScreen() {
                     {prod.quantity}x {prod.name}
                   </Text>
                 ))}
+
+                {item.proveedorIds.length > 1 && (
+                  <Text style={styles.independentStatus}>
+                    Este estado corresponde solo a los productos de tu tienda.
+                  </Text>
+                )}
 
                 {item.address && (
                   <Text style={styles.addressLine}>
@@ -214,6 +224,7 @@ const styles = StyleSheet.create({
   compradorNombre: { fontWeight: "bold", fontSize: 13, color: "#333" },
   compradorDato: { fontSize: 12, color: "#777", marginTop: 2 },
   itemLine: { color: "#555", fontSize: 14, marginBottom: 2 },
+  independentStatus: { color: "#5E8D10", fontSize: 12, marginTop: 7, fontWeight: "600" },
   addressLine: { color: "#666", fontSize: 12, marginTop: 6 },
   paymentLine: { color: "#666", fontSize: 12, marginTop: 4 },
   actions: { flexDirection: "row", marginTop: 12 },

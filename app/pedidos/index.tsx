@@ -19,6 +19,7 @@ import {
   EstadoPedido,
   ESTADO_LABELS,
   ORDEN_ESTADOS,
+  obtenerEstadoProveedor,
 } from "@/src/services/pedidosService";
 import {
   crearValoracion,
@@ -224,6 +225,23 @@ export default function PedidosScreen() {
                 </Text>
               ))}
 
+              {item.proveedorIds.length > 1 && (
+                <View style={styles.storeStatuses}>
+                  <Text style={styles.storeStatusesTitle}>Estado por tienda</Text>
+                  {item.proveedorIds.map((proveedorId, index) => {
+                    const estadoTienda = obtenerEstadoProveedor(item, proveedorId);
+                    return (
+                      <View key={proveedorId} style={styles.storeStatusRow}>
+                        <Text style={styles.storeStatusName}>Tienda {index + 1}</Text>
+                        <Text style={[styles.storeStatusValue, { color: ESTADO_LABELS[estadoTienda].color }]}>
+                          {ESTADO_LABELS[estadoTienda].label}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
+
               {item.address && (
                 <Text style={styles.addressLine}>
                   📍 {item.address.name} — {item.address.addressLine}
@@ -232,11 +250,15 @@ export default function PedidosScreen() {
 
               <Text style={styles.total}>Total: ${item.total.toLocaleString()}</Text>
 
-              {item.status === "entregado" && item.proveedorIds && item.proveedorIds.length > 0 && (
+              {item.proveedorIds && item.proveedorIds.some(
+                (proveedorId) => obtenerEstadoProveedor(item, proveedorId) === "entregado"
+              ) && (
                 <View style={styles.rateSection}>
                   {item.proveedorIds.map((proveedorId) => {
                     const pendientes = productosPendientesDeCalificar(item, proveedorId);
                     const todoCalificado = pendientes.length === 0;
+                    const entregadoPorEstaTienda = obtenerEstadoProveedor(item, proveedorId) === "entregado";
+                    if (!entregadoPorEstaTienda) return null;
                     return (
                       <TouchableOpacity
                         key={proveedorId}
@@ -365,6 +387,11 @@ const styles = StyleSheet.create({
   fecha: { color: "#888", fontSize: 12 },
   divider: { height: 1, backgroundColor: "#eee", marginVertical: 10 },
   itemLine: { color: "#555", fontSize: 14, marginBottom: 2 },
+  storeStatuses: { marginTop: 10, padding: 10, backgroundColor: "#fff", borderRadius: 10 },
+  storeStatusesTitle: { color: "#555", fontSize: 12, fontWeight: "bold", marginBottom: 5 },
+  storeStatusRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 2 },
+  storeStatusName: { color: "#777", fontSize: 12 },
+  storeStatusValue: { fontWeight: "bold", fontSize: 12 },
   addressLine: { color: "#666", fontSize: 12, marginTop: 8 },
   total: { marginTop: 8, fontWeight: "bold", fontSize: 15, color: "#83c41a" },
   rateSection: { marginTop: 12, borderTopWidth: 1, borderTopColor: "#eee", paddingTop: 10 },

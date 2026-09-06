@@ -3,7 +3,7 @@ import {
   collection,
   getDocs,
   doc,
-  updateDoc,
+  runTransaction,
   onSnapshot,
   query,
   where,
@@ -54,6 +54,8 @@ export interface Pedido {
   address: PedidoAddress | null;
   paymentMethod: "cash" | "card" | "nequi";
   proveedorIds: string[];
+  /** Estado independiente de la parte del pedido que atiende cada tienda. */
+  estadosPorProveedor: Record<string, EstadoPedido>;
   createdAt: Timestamp | null;
 }
 
@@ -70,6 +72,10 @@ function mapPedido(docSnap: any): Pedido {
     address: data.address || null,
     paymentMethod: (data.paymentMethod || "cash") as "cash" | "card" | "nequi",
     proveedorIds: data.proveedorIds || [],
+    // Compatibilidad con pedidos creados antes de los estados por tienda.
+    estadosPorProveedor: data.estadosPorProveedor || Object.fromEntries(
+      (data.proveedorIds || []).map((proveedorId: string) => [proveedorId, data.status || "pendiente"])
+    ),
     createdAt: data.createdAt || null,
   };
 }
@@ -95,6 +101,9 @@ export async function crearPedido(
   const proveedorIds = Array.from(
     new Set(items.map((i) => i.proveedorId).filter((id): id is string => !!id))
   );
+  const estadosPorProveedor = Object.fromEntries(
+    proveedorIds.map((proveedorId) => [proveedorId, "pendiente" as EstadoPedido])
+  );
 
   const docRef = await addDoc(collection(db, "pedidos"), {
     userId,
@@ -106,6 +115,7 @@ export async function crearPedido(
     address: address || null,
     paymentMethod,
     proveedorIds,
+    estadosPorProveedor,
     createdAt: serverTimestamp(),
   });
 
@@ -170,12 +180,77 @@ export function suscribirseTodosLosPedidos(
   });
 }
 
-/** Actualiza el estado de un pedido (usado por el panel de admin y por el tendero). */
+/**
+ * Devuelve el estado de la parte atendida por una tienda. Los pedidos antiguos
+ * usan temporalmente el estado general hasta que alguien los actualice.
+ */
+export function obtenerEstadoProveedor(pedido: Pedido, proveedorId: string): EstadoPedido {
+  return pedido.estadosPorProveedor?.[proveedorId] || pedido.status || "pendiente";
+}
+
+function calcularEstadoGeneral(estados: EstadoPedido[]): EstadoPedido {
+  if (estados.length === 0) return "pendiente";
+  if (estados.every((estado) => estado === "cancelado")) return "cancelado";
+
+  const activos = estados.filter((estado) => estado !== "cancelado");
+  if (activos.every((estado) => estado === "entregado")) return "entregado";
+
+  // El comprador ve el avance más retrasado de las entregas aún activas.
+  return activos.reduce((masAtrasado, estado) =>
+    ORDEN_ESTADOS.indexOf(estado) < ORDEN_ESTADOS.indexOf(masAtrasado)
+      ? estado
+      : masAtrasado
+  );
+}
+
+/** Actualiza solamente el estado de la parte del pedido de una tienda. */
+export async function actualizarEstadoProveedor(
+  pedidoId: string,
+  proveedorId: string,
+  nuevoEstado: EstadoPedido
+): Promise<void> {
+  const pedidoRef = doc(db, "pedidos", pedidoId);
+  await runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(pedidoRef);
+    if (!snapshot.exists()) throw new Error("El pedido ya no existe.");
+
+    const data = snapshot.data();
+    const proveedorIds = (data.proveedorIds || []) as string[];
+    if (!proveedorIds.includes(proveedorId)) {
+      throw new Error("Esta tienda no hace parte del pedido.");
+    }
+
+    const estadosPorProveedor: Record<string, EstadoPedido> = {
+      ...Object.fromEntries(proveedorIds.map((id) => [id, data.status || "pendiente"])),
+      ...(data.estadosPorProveedor || {}),
+      [proveedorId]: nuevoEstado,
+    };
+
+    transaction.update(pedidoRef, {
+      estadosPorProveedor,
+      status: calcularEstadoGeneral(Object.values(estadosPorProveedor)),
+    });
+  });
+}
+
+/**
+ * Actualización global reservada al administrador. Mantiene sincronizados los
+ * estados por tienda para que no queden pedidos en un estado incoherente.
+ */
 export async function actualizarEstadoPedido(
   pedidoId: string,
   nuevoEstado: EstadoPedido
 ): Promise<void> {
-  await updateDoc(doc(db, "pedidos", pedidoId), { status: nuevoEstado });
+  const pedidoRef = doc(db, "pedidos", pedidoId);
+  await runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(pedidoRef);
+    if (!snapshot.exists()) throw new Error("El pedido ya no existe.");
+    const proveedorIds = (snapshot.data().proveedorIds || []) as string[];
+    transaction.update(pedidoRef, {
+      status: nuevoEstado,
+      estadosPorProveedor: Object.fromEntries(proveedorIds.map((id) => [id, nuevoEstado])),
+    });
+  });
 }
 
 /** Texto y color por estado, para mostrar en pantalla. */
