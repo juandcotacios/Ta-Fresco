@@ -18,6 +18,7 @@ import { useRouter } from "expo-router";
 import { collection, onSnapshot } from "firebase/firestore"; 
 import { db } from "@/src/config/firebase"; 
 import { useCart } from "@/src/contexts/CartContext";
+import { getOriginalPrice } from "@/src/utils/pricing";
 import OpenChatbotButton from "../../components/OpenChatbotButton";
 
 const { width, height } = Dimensions.get('window');
@@ -84,10 +85,7 @@ export default function OfertasScreen() {
             const data = doc.data() as any;
             const currentPrice = data.price || 0;
             const discountPercent = data.discountPercent || 0;
-            const oldPrice =
-              discountPercent > 0
-                ? Math.round(currentPrice / (1 - discountPercent / 100))
-                : undefined;
+            const oldPrice = getOriginalPrice(currentPrice, discountPercent) || undefined;
 
             return {
               id: doc.id,

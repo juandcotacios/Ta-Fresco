@@ -17,12 +17,13 @@ import {
   Dimensions
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter, useNavigation } from "expo-router";
-import { collection, getDocs, limit, query } from "firebase/firestore"; 
+import { useRouter } from "expo-router";
+import { collection, getDocs } from "firebase/firestore";
 import { getAuth } from "firebase/auth"; 
 import { db } from "@/src/config/firebase"; 
 import { useCart } from "@/src/contexts/CartContext"; 
 import { crearPedido } from "@/src/services/pedidosService";
+import { getOriginalPrice } from "@/src/utils/pricing";
 import OpenChatbotButton from "../../components/OpenChatbotButton"; 
 
 const { width, height } = Dimensions.get('window');
@@ -35,16 +36,6 @@ if (Platform.OS === 'android') {
 
 const MIN_ORDER_AMOUNT = 100000; 
 const auth = getAuth();
-
-interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  imageUrl: string;
-  category: string;
-  quantity: number; 
-  stock?: number;
-}
 
 export default function CartScreen() {
   const router = useRouter();
@@ -111,16 +102,15 @@ export default function CartScreen() {
   useEffect(() => {
     const fetchUpsellProducts = async () => {
       try {
-        const q = query(collection(db, "Productos"), limit(5));
-        const snapshot = await getDocs(q);
+        const snapshot = await getDocs(collection(db, "Productos"));
         const products = snapshot.docs.map(doc => {
           const data = doc.data();
           return {
             id: doc.id,
             name: data.name || "Producto",
             price: data.price || 0,
-            oldPrice: Math.floor((data.price || 0) * 1.15), 
-            discount: "-15%",
+            // Solo se muestra descuento si es el configurado de verdad en el catálogo.
+            discountPercent: Number(data.discountPercent) || 0,
             imageUrl: data.imageUrl || "https://via.placeholder.com/100",
             category: data.category || "Varios",
             stock: data.stock || 99,
@@ -128,7 +118,7 @@ export default function CartScreen() {
           };
         });
         const cartIds = cart.map((c: any) => c.id);
-        const filtered = products.filter(p => !cartIds.includes(p.id));
+        const filtered = products.filter(p => !cartIds.includes(p.id)).slice(0, 5);
         setUpsellProducts(filtered);
       } catch (error) { console.log(error); } 
       finally { setLoadingUpsell(false); }
@@ -489,7 +479,15 @@ const CartItemRow = ({ item, onIncrease, onDecrease }: any) => (
     <View style={styles.itemInfo}>
       <Text style={styles.itemName} numberOfLines={2}>{item.name}</Text>
       <Text style={styles.itemCategory}>{item.category}</Text>
-      <Text style={styles.itemPrice}>${item.price.toLocaleString()}</Text>
+      <View style={styles.itemPriceRow}>
+        <Text style={styles.itemPrice}>${item.price.toLocaleString()}</Text>
+        {!!getOriginalPrice(item.price, item.discountPercent) && (
+          <>
+            <Text style={styles.itemOldPrice}>${getOriginalPrice(item.price, item.discountPercent)?.toLocaleString()}</Text>
+            <Text style={styles.itemDiscount}>-{item.discountPercent}%</Text>
+          </>
+        )}
+      </View>
     </View>
     <View style={styles.qtyContainer}>
       <TouchableOpacity style={[styles.qtyBtn, item.quantity === 1 ? styles.qtyBtnRed : styles.qtyBtnGray]} onPress={onDecrease}>
@@ -503,12 +501,10 @@ const CartItemRow = ({ item, onIncrease, onDecrease }: any) => (
 
 const UpsellCard = ({ item, onAdd }: any) => (
   <View style={styles.upsellCard}>
-     {item.discount && <View style={styles.yellowBadge}><Text style={styles.badgeText}>{item.discount}</Text></View>}
      <TouchableOpacity style={styles.addFloating} onPress={onAdd}><Ionicons name="add" size={20} color="#FFF" /></TouchableOpacity>
      <View style={styles.imageContainer}><Image source={{ uri: item.imageUrl }} style={styles.upsellImage} /></View>
      <View style={{paddingHorizontal: 5}}> 
         <Text style={styles.upsellPrice}>${item.price.toLocaleString()}</Text>
-        {item.oldPrice && <Text style={styles.upsellOldPrice}>${item.oldPrice.toLocaleString()}</Text>}
         <Text style={styles.upsellName} numberOfLines={2}>{item.name}</Text>
      </View>
   </View>
@@ -550,6 +546,9 @@ const styles = StyleSheet.create({
   itemName: { fontSize: 15, fontWeight: '600', color: '#333', marginBottom: 2 },
   itemCategory: { fontSize: 12, color: '#999', marginBottom: 5 },
   itemPrice: { fontSize: 16, fontWeight: 'bold', color: '#000' },
+  itemPriceRow: { flexDirection: 'row', alignItems: 'center' },
+  itemOldPrice: { color: '#999', fontSize: 12, textDecorationLine: 'line-through', marginLeft: 7 },
+  itemDiscount: { color: '#D32F2F', fontSize: 11, fontWeight: 'bold', marginLeft: 5 },
   qtyContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F5F5F5', borderRadius: 20, padding: 4 },
   qtyBtn: { width: 30, height: 30, borderRadius: 15, justifyContent: 'center', alignItems: 'center' },
   qtyBtnRed: { backgroundColor: '#FFEBEE' },
@@ -564,11 +563,8 @@ const styles = StyleSheet.create({
   upsellCard: { width: width * 0.4, backgroundColor: '#FFF', borderRadius: 16, padding: 10, marginRight: 15, elevation: 2, shadowColor: "#000", shadowOpacity: 0.05, shadowOffset: {width: 0, height: 2}, marginBottom: 10 },
   imageContainer: { width: '100%', height: 90, justifyContent: 'center', alignItems: 'center', marginBottom: 5 },
   upsellImage: { width: '100%', height: '100%', resizeMode: 'contain' },
-  yellowBadge: { position: 'absolute', top: 10, left: 10, backgroundColor: '#FFF100', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2, zIndex: 1 },
-  badgeText: { fontSize: 10, fontWeight: 'bold' },
   addFloating: { position: 'absolute', top: 5, right: 5, backgroundColor: '#83c41a', width: 30, height: 30, borderRadius: 15, justifyContent: 'center', alignItems: 'center', zIndex: 2, elevation: 3 },
   upsellPrice: { fontSize: 15, fontWeight: 'bold', color: '#333' },
-  upsellOldPrice: { fontSize: 11, color: '#999', textDecorationLine: 'line-through' },
   upsellName: { fontSize: 12, color: '#666', marginTop: 2, height: 32 },
   footerCard: { position: 'absolute', bottom: 80, left: 20, right: 20, backgroundColor: '#FFF', paddingHorizontal: 20, paddingVertical: 15, borderRadius: 25, shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', zIndex: 1000 },
   totalSection: { flexDirection: 'column' },

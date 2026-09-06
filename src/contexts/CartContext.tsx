@@ -12,6 +12,7 @@ interface CartItem {
   category: string;
   stock?: number;
   proveedorId?: string;
+  discountPercent?: number;
 }
 
 

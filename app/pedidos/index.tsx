@@ -11,7 +11,8 @@ import {
   ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { getAuth } from "firebase/auth";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "@/src/config/firebase";
 import {
   suscribirsePedidosUsuario,
   Pedido,
@@ -94,21 +95,31 @@ export default function PedidosScreen() {
   };
 
   useEffect(() => {
-    const auth = getAuth();
-    const user = auth.currentUser;
-    if (!user) {
-      setLoading(false);
-      return;
-    }
+    // currentUser puede ser null justo después de un F5 mientras Firebase
+    // restaura la sesión. Esperar el cambio de autenticación evita quedarse
+    // sin la suscripción de pedidos de la sesión ya existente.
+    let unsubscribePedidos: (() => void) | undefined;
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      unsubscribePedidos?.();
+      setPedidos([]);
 
-    cargarCalificados(user.uid);
+      if (!user) {
+        setLoading(false);
+        return;
+      }
 
-    const unsubscribe = suscribirsePedidosUsuario(user.uid, (data) => {
-      setPedidos(data);
-      setLoading(false);
+      setLoading(true);
+      cargarCalificados(user.uid);
+      unsubscribePedidos = suscribirsePedidosUsuario(user.uid, (data) => {
+        setPedidos(data);
+        setLoading(false);
+      });
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribePedidos?.();
+      unsubscribeAuth();
+    };
   }, []);
 
   const productosPendientesDeCalificar = (pedido: Pedido, proveedorId: string) => {
@@ -126,7 +137,6 @@ export default function PedidosScreen() {
   };
 
   const enviarValoraciones = async () => {
-    const auth = getAuth();
     const user = auth.currentUser;
     if (!user || !pedidoActivo || !proveedorActivo) return;
 

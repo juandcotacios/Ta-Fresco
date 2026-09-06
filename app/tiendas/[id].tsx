@@ -15,6 +15,7 @@ import { db } from "@/src/config/firebase";
 import { useCart } from "@/src/contexts/CartContext";
 import { TiendaConId, ProductoTendero } from "@/src/services/tiendaService";
 import { obtenerPromedioProducto } from "@/src/services/valoracionesService";
+import { getOriginalPrice } from "@/src/utils/pricing";
 
 export default function TiendaDetalleScreen() {
   const router = useRouter();
@@ -90,6 +91,7 @@ export default function TiendaDetalleScreen() {
           const qty = cartItem ? cartItem.quantity : 0;
           const hasDiscount = !!item.discountPercent && item.discountPercent > 0;
           const finalPrice = item.price;
+          const originalPrice = getOriginalPrice(item.price, item.discountPercent);
 
           return (
             <View style={styles.card}>
@@ -111,7 +113,10 @@ export default function TiendaDetalleScreen() {
                   </Text>
                 </View>
               )}
-              <Text style={styles.price}>${finalPrice.toLocaleString()}</Text>
+              <View style={styles.priceRow}>
+                <Text style={styles.price}>${finalPrice.toLocaleString()}</Text>
+                {!!originalPrice && <Text style={styles.oldPrice}>${originalPrice.toLocaleString()}</Text>}
+              </View>
 
               {qty === 0 ? (
                 <TouchableOpacity
@@ -184,7 +189,9 @@ const styles = StyleSheet.create({
   discountBadgeText: { color: "#fff", fontSize: 10, fontWeight: "bold" },
   image: { width: "100%", height: 90, resizeMode: "contain", marginBottom: 6 },
   name: { fontSize: 13, fontWeight: "600", color: "#333", height: 34 },
-  price: { fontSize: 15, fontWeight: "bold", color: "#83c41a", marginVertical: 4 },
+  priceRow: { flexDirection: "row", alignItems: "center", marginVertical: 4 },
+  price: { fontSize: 15, fontWeight: "bold", color: "#83c41a" },
+  oldPrice: { marginLeft: 6, color: "#999", fontSize: 12, textDecorationLine: "line-through" },
   addBtn: {
     flexDirection: "row",
     backgroundColor: "#83c41a",

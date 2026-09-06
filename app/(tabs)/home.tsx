@@ -18,6 +18,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { db } from "@/src/config/firebase";
 import { useCart } from "@/src/contexts/CartContext";
+import { getOriginalPrice, hasDiscount } from "@/src/utils/pricing";
 import OpenChatbotButton from "../../components/OpenChatbotButton"; 
 
 const { width, height } = Dimensions.get('window');
@@ -47,6 +48,7 @@ const CATEGORIES = [
 export default function Home() {
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
+  const [storeNames, setStoreNames] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   
@@ -83,6 +85,17 @@ export default function Home() {
       },
       (error) => console.log(error)
     );
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, "tiendas"), (snapshot) => {
+      const names: Record<string, string> = {};
+      snapshot.docs.forEach((store) => {
+        names[store.id] = String(store.data().nombre || "Tienda de Corabastos");
+      });
+      setStoreNames(names);
+    }, (error) => console.log(error));
     return () => unsubscribe();
   }, []);
 
@@ -216,7 +229,7 @@ export default function Home() {
 
         {topDescuentos.length > 0 && (() => {
           const promo = topDescuentos[promoIndex] || topDescuentos[0];
-          const precioAnterior = Math.round(promo.price / (1 - (promo.discountPercent || 0) / 100));
+          const precioAnterior = getOriginalPrice(promo.price, promo.discountPercent);
           return (
             <TouchableOpacity
               style={styles.promoWrapper}
@@ -233,7 +246,7 @@ export default function Home() {
                       <Text style={styles.nowBadgeText}>${promo.price.toLocaleString()}</Text>
                     </View>
                     <Text style={[styles.promoPrice, { textDecorationLine: "line-through", fontSize: 13, opacity: 0.8 }]}>
-                      ${precioAnterior.toLocaleString()}
+                      ${precioAnterior?.toLocaleString()}
                     </Text>
                   </View>
                 </View>
@@ -280,6 +293,8 @@ export default function Home() {
                       <ProductCard
                         item={item}
                         categoryLabel={group.category}
+                        storeName={item.proveedorId ? storeNames[item.proveedorId] : undefined}
+                        onStorePress={item.proveedorId ? () => router.push({ pathname: "/tiendas/[id]", params: { id: item.proveedorId! } }) : undefined}
                         currentQty={currentQty}
                         onAdd={() => addToCart({ ...item, quantity: 1 })}
                         onRemove={() => decreaseCart(item.id)}
@@ -404,7 +419,7 @@ export default function Home() {
   );
 }
 
-function ProductCard({ item, categoryLabel, currentQty, onAdd, onRemove, onDelete }: any) {
+function ProductCard({ item, categoryLabel, storeName, onStorePress, currentQty, onAdd, onRemove, onDelete }: any) {
   const handleDecrease = () => {
     if (currentQty > 1) onRemove(); else onDelete();
   };
@@ -413,9 +428,22 @@ function ProductCard({ item, categoryLabel, currentQty, onAdd, onRemove, onDelet
     <View style={styles.productCard}>
       <Image source={{ uri: item.imageUrl }} style={styles.productImage} resizeMode="contain" />
       <View style={styles.productInfo}>
-        <Text style={styles.productPrice}>$ {item.price.toLocaleString()}</Text>
+        <View style={styles.productPriceRow}>
+          <Text style={styles.productPrice}>$ {item.price.toLocaleString()}</Text>
+          {hasDiscount(item.discountPercent) && (
+            <>
+              <Text style={styles.productOldPrice}>${getOriginalPrice(item.price, item.discountPercent)?.toLocaleString()}</Text>
+              <Text style={styles.productDiscount}>-{item.discountPercent}%</Text>
+            </>
+          )}
+        </View>
         <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
         <Text style={styles.productUnitLabel}>{categoryLabel} - kg</Text>
+        {!!storeName && (
+          <TouchableOpacity onPress={onStorePress} accessibilityRole="link">
+            <Text style={styles.storeName} numberOfLines={1}>🏪 {storeName}</Text>
+          </TouchableOpacity>
+        )}
       </View>
       <View style={styles.actionsRow}>
         {currentQty === 0 ? (
@@ -493,8 +521,12 @@ const styles = StyleSheet.create({
   productImage: { width: 110, height: 110, marginBottom: 12 },
   productInfo: { width: '100%', paddingHorizontal: 2, marginBottom: 10 },
   productPrice: { fontSize: 17, fontWeight: "bold", color: "#222" },
+  productPriceRow: { flexDirection: "row", alignItems: "center", flexWrap: "wrap" },
+  productOldPrice: { fontSize: 11, color: "#999", textDecorationLine: "line-through", marginLeft: 6 },
+  productDiscount: { fontSize: 10, color: "#D32F2F", fontWeight: "bold", marginLeft: 5 },
   productName: { fontSize: 13, color: "#555", marginTop: 2, height: 34 },
   productUnitLabel: { fontSize: 11, color: "#999", marginTop: 4 },
+  storeName: { fontSize: 10, color: "#5E8D10", fontWeight: "600", marginTop: 4 },
   actionsRow: { flexDirection: 'row', width: '100%', justifyContent: 'center', alignItems: 'center', marginTop: 5, height: 40 },
   addToCartFullBtn: {
     flexDirection: 'row', backgroundColor: '#4CAF50', borderRadius: 20,
