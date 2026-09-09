@@ -19,13 +19,14 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  Alert,
+  ActivityIndicator,
 } from "react-native";
 
 import GoogleLoginModal from "@/components/GoogleLoginModal";
 
 import { auth, db } from "@/src/config/firebase";
 import { GOOGLE_AUTH } from "@/src/config/googleAuth";
+import { traducirErrorAuth, esCorreoValido } from "@/src/utils/authErrors";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -33,12 +34,12 @@ export default function LoginScreen() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [loginStatus, setLoginStatus] = useState<'loading' | 'success'>('loading');
 
-  // Flujo nativo de Google: abre el selector de cuenta del sistema
-  // (o el navegador) y devuelve un id_token que le pasamos a Firebase.
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     clientId: GOOGLE_AUTH.webClientId,
     androidClientId: GOOGLE_AUTH.androidClientId,
@@ -51,30 +52,36 @@ export default function LoginScreen() {
       finishGoogleSignIn(id_token);
     } else if (response?.type === "error") {
       setModalVisible(false);
-      Alert.alert("Error", "No se pudo iniciar sesión con Google.");
-    }
-    // Si el usuario cierra el selector de cuenta (type === "cancel"),
-    // no mostramos error, simplemente cerramos el modal.
-    else if (response?.type === "cancel" || response?.type === "dismiss") {
+      setErrorMsg("No se pudo iniciar sesión con Google.");
+    } else if (response?.type === "cancel" || response?.type === "dismiss") {
       setModalVisible(false);
     }
   }, [response]);
 
   const handleLogin = async () => {
+    setErrorMsg(null);
+
     if (!email || !password) {
-      Alert.alert("Campos vacíos", "Por favor, ingresa tu correo y contraseña.");
+      setErrorMsg("Ingresa tu correo y contraseña.");
       return;
     }
+    if (!esCorreoValido(email)) {
+      setErrorMsg("Escribe un correo válido (ej: nombre@correo.com).");
+      return;
+    }
+
+    setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
       router.push("/(tabs)/home");
     } catch (error: any) {
-      Alert.alert("Error al iniciar sesión", error.message);
+      console.log(error);
+      setErrorMsg(traducirErrorAuth(error));
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Crea el perfil en Firestore si es la primera vez, y navega a home.
-  // Se usa tanto para el flujo nativo (id_token) como para el de web (popup).
   const afterGoogleSignIn = async (user: User) => {
     const userDocRef = doc(db, "users", user.uid);
     const userDoc = await getDoc(userDocRef);
@@ -106,16 +113,12 @@ export default function LoginScreen() {
       await afterGoogleSignIn(result.user);
     } catch (error: any) {
       setModalVisible(false);
-      Alert.alert("Error", "Fallo al iniciar con Google: " + error.message);
+      setErrorMsg(traducirErrorAuth(error));
     }
   };
 
   const handleGoogle = async () => {
-    // En web, expo-auth-session abre un popup y detecta que se cerró
-    // sondeando `window.closed`, pero el dev server de Expo manda una
-    // cabecera Cross-Origin-Opener-Policy que bloquea justo eso, así
-    // que el login se queda colgado para siempre. En web usamos el
-    // popup nativo de Firebase, que no depende de `window.closed`.
+    setErrorMsg(null);
     if (Platform.OS === "web") {
       setLoginStatus("loading");
       setModalVisible(true);
@@ -125,25 +128,18 @@ export default function LoginScreen() {
         await afterGoogleSignIn(result.user);
       } catch (error: any) {
         setModalVisible(false);
-        // Si el usuario simplemente cerró el popup, no mostramos error.
         if (
           error?.code !== "auth/popup-closed-by-user" &&
           error?.code !== "auth/cancelled-popup-request"
         ) {
-          Alert.alert("Error", "Fallo al iniciar con Google: " + error.message);
+          setErrorMsg(traducirErrorAuth(error));
         }
       }
       return;
     }
 
-    if (
-      GOOGLE_AUTH.webClientId.startsWith("TU_") ||
-      !request
-    ) {
-      Alert.alert(
-        "Falta configuración",
-        "Todavía no configuraste los Client ID de Google. Revisa src/config/googleAuth.ts"
-      );
+    if (GOOGLE_AUTH.webClientId.startsWith("TU_") || !request) {
+      setErrorMsg("Falta configurar los Client ID de Google (revisa src/config/googleAuth.ts).");
       return;
     }
 
@@ -163,6 +159,12 @@ export default function LoginScreen() {
         />
 
         <Text style={styles.title}>Inicia sesión</Text>
+
+        {errorMsg ? (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>{errorMsg}</Text>
+          </View>
+        ) : null}
 
         <Text style={styles.label}>Correo ó teléfono</Text>
         <TextInput
@@ -185,8 +187,8 @@ export default function LoginScreen() {
           onChangeText={setPassword}
         />
 
-        <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-          <Text style={styles.loginButtonText}>Ingresar</Text>
+        <TouchableOpacity style={styles.loginButton} onPress={handleLogin} disabled={loading}>
+          {loading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.loginButtonText}>Ingresar</Text>}
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.googleButton} onPress={handleGoogle}>
@@ -224,13 +226,26 @@ const styles = StyleSheet.create({
     width: 390,
     height: 124,
     resizeMode: "contain",
-    marginBottom: 40,
+    marginBottom: 30,
   },
   title: {
     fontSize: 26,
     fontWeight: "bold",
     color: "#5D5D5D",
-    marginBottom: 30,
+    marginBottom: 15,
+  },
+  errorBox: {
+    backgroundColor: "#FFEBEE",
+    borderRadius: 10,
+    padding: 12,
+    width: "100%",
+    marginBottom: 15,
+  },
+  errorText: {
+    color: "#D32F2F",
+    fontSize: 13,
+    textAlign: "center",
+    fontWeight: "600",
   },
   label: {
     alignSelf: "flex-start",
@@ -253,7 +268,7 @@ const styles = StyleSheet.create({
   },
   loginButton: {
     width: "60%",
-    backgroundColor: "#DCDCDC",
+    backgroundColor: "#83c41a",
     borderRadius: 25,
     paddingVertical: 14,
     alignItems: "center",

@@ -61,6 +61,7 @@ export default function CartScreen() {
   const [upsellProducts, setUpsellProducts] = useState<any[]>([]);
   const [loadingUpsell, setLoadingUpsell] = useState(true);
   const [clearModalVisible, setClearModalVisible] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   const totalPrice = useMemo(() => {
     return cart.reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0);
@@ -156,8 +157,9 @@ export default function CartScreen() {
   };
 
   const handlePay = async () => {
+    setCheckoutError(null);
     if (!user) {
-       Alert.alert("Error", "Debes iniciar sesión para confirmar el pedido.");
+       setCheckoutError("Debes iniciar sesión para confirmar el pedido.");
        return;
     }
     if (addresses.length === 0) {
@@ -172,18 +174,18 @@ export default function CartScreen() {
        return;
     }
     if (!selectedAddress) {
-       Alert.alert("Error", "Selecciona una dirección de entrega");
+       setCheckoutError("Selecciona una dirección de entrega.");
        return;
     }
     if (paymentMethod === 'card') {
         if (cardNumber.length < 13 || cardDate.length < 5 || cardCVC.length < 3) {
-            Alert.alert("Error", "Verifica los datos de la tarjeta");
+            setCheckoutError("Verifica los datos de la tarjeta.");
             return;
         }
     }
     if (paymentMethod === 'nequi') {
         if (nequiPhone.replace(/\D/g, '').length < 10) {
-            Alert.alert("Error", "Escribe un número de celular válido para Nequi");
+            setCheckoutError("Escribe un número de celular válido para Nequi.");
             return;
         }
     }
@@ -210,7 +212,7 @@ export default function CartScreen() {
     } catch (error: any) {
         console.log("Error creando pedido:", error);
         setProcessingPayment(false);
-        Alert.alert("Error", error?.message || "No se pudo confirmar el pedido. Intenta de nuevo.");
+        setCheckoutError(error?.message || "No se pudo confirmar el pedido. Intenta de nuevo.");
     }
   };
   if (!cart || cart.length === 0) {
@@ -296,7 +298,7 @@ export default function CartScreen() {
         <TouchableOpacity 
           disabled={!isMinMet}
           style={[styles.payButton, !isMinMet ? styles.payButtonDisabled : styles.payButtonActive]}
-          onPress={() => { fetchAddresses(); setCheckoutVisible(true); }}
+          onPress={() => { fetchAddresses(); setCheckoutError(null); setCheckoutVisible(true); }}
         >
           <Text style={styles.payButtonText}>Ir a Pagar</Text>
           <Ionicons name="arrow-forward" size={20} color="#FFF" style={{marginLeft: 5}}/>
@@ -444,6 +446,12 @@ export default function CartScreen() {
             </ScrollView>
 
             <View style={styles.checkoutFooter}>
+                {checkoutError && (
+                  <View style={styles.checkoutErrorBanner}>
+                    <Ionicons name="alert-circle" size={18} color="#D32F2F" />
+                    <Text style={styles.checkoutErrorText}>{checkoutError}</Text>
+                  </View>
+                )}
                 <TouchableOpacity style={styles.confirmButton} onPress={handlePay} disabled={processingPayment}>
                     {processingPayment ? <ActivityIndicator color="#FFF" /> : <Text style={styles.confirmButtonText}>Confirmar Pedido</Text>}
                 </TouchableOpacity>
@@ -617,6 +625,8 @@ const styles = StyleSheet.create({
   totalBigLabel: { fontSize: 18, fontWeight: 'bold' },
   totalBigValue: { fontSize: 18, fontWeight: 'bold', color: '#83c41a' },
   checkoutFooter: { padding: 20, backgroundColor: '#FFF', borderTopWidth: 1, borderTopColor: '#EEE' },
+  checkoutErrorBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFEBEE', padding: 10, borderRadius: 10, marginBottom: 12 },
+  checkoutErrorText: { color: '#D32F2F', marginLeft: 8, fontSize: 12, flex: 1, fontWeight: '600' },
   confirmButton: { backgroundColor: '#83c41a', padding: 18, borderRadius: 15, alignItems: 'center' },
   confirmButtonText: { color: '#FFF', fontWeight: 'bold', fontSize: 18 },
   successOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' },

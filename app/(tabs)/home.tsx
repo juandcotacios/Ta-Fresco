@@ -424,9 +424,19 @@ function ProductCard({ item, categoryLabel, storeName, onStorePress, currentQty,
     if (currentQty > 1) onRemove(); else onDelete();
   };
 
+  const sinStock = (item.stock ?? 0) <= 0;
+  const alTope = currentQty >= (item.stock ?? 0);
+
   return (
     <View style={styles.productCard}>
-      <Image source={{ uri: item.imageUrl }} style={styles.productImage} resizeMode="contain" />
+      <View>
+        <Image source={{ uri: item.imageUrl }} style={styles.productImage} resizeMode="contain" />
+        {sinStock && (
+          <View style={styles.agotadoBadge}>
+            <Text style={styles.agotadoBadgeText}>AGOTADO</Text>
+          </View>
+        )}
+      </View>
       <View style={styles.productInfo}>
         <View style={styles.productPriceRow}>
           <Text style={styles.productPrice}>$ {item.price.toLocaleString()}</Text>
@@ -444,9 +454,16 @@ function ProductCard({ item, categoryLabel, storeName, onStorePress, currentQty,
             <Text style={styles.storeName} numberOfLines={1}>🏪 {storeName}</Text>
           </TouchableOpacity>
         )}
+        {!sinStock && item.stock <= 10 && (
+          <Text style={styles.stockText}>Quedan {item.stock} disponibles</Text>
+        )}
       </View>
       <View style={styles.actionsRow}>
-        {currentQty === 0 ? (
+        {sinStock ? (
+          <View style={[styles.addToCartFullBtn, { backgroundColor: "#ccc" }]}>
+            <Text style={{ color: "#666", fontWeight: "bold" }}>Agotado</Text>
+          </View>
+        ) : currentQty === 0 ? (
           <TouchableOpacity style={styles.addToCartFullBtn} onPress={onAdd}>
              <Ionicons name="cart-outline" size={20} color="#FFF" style={{marginRight:5}} />
              <Text style={{color:'#FFF', fontWeight:'bold'}}>Agregar</Text>
@@ -457,7 +474,11 @@ function ProductCard({ item, categoryLabel, storeName, onStorePress, currentQty,
                 <Ionicons name={currentQty === 1 ? "trash-outline" : "remove"} size={16} color="#D32F2F" />
              </TouchableOpacity>
              <Text style={styles.qtyText}>{currentQty}</Text>
-             <TouchableOpacity onPress={onAdd} style={styles.qtyBtn}>
+             <TouchableOpacity
+                onPress={alTope ? undefined : onAdd}
+                disabled={alTope}
+                style={[styles.qtyBtn, alTope && { opacity: 0.3 }]}
+             >
                 <Ionicons name="add" size={16} color="#4CAF50" />
              </TouchableOpacity>
           </View>
@@ -466,8 +487,12 @@ function ProductCard({ item, categoryLabel, storeName, onStorePress, currentQty,
     </View>
   );
 }
-
 const styles = StyleSheet.create({
+  
+    agotadoBadge: { position: 'absolute', top: 6, left: 6, backgroundColor: '#D32F2F', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, zIndex: 2 },
+  agotadoBadgeText: { color: '#FFF', fontSize: 10, fontWeight: 'bold' },
+  stockText: { fontSize: 10, color: '#F57C00', marginTop: 2 },
+
   mainContainer: { flex: 1, backgroundColor: "#FAFAFA" },
   scrollContainer: { flex: 1, paddingHorizontal: 16 },
 

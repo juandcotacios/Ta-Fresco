@@ -16,12 +16,16 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  Alert,
   ActivityIndicator,
 } from "react-native";
 
 import { auth, db } from "@/src/config/firebase";
 import { GOOGLE_AUTH } from "@/src/config/googleAuth";
+import {
+  traducirErrorAuth,
+  validarContrasenaFuerte,
+  esCorreoValido,
+} from "@/src/utils/authErrors";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -31,6 +35,7 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     clientId: GOOGLE_AUTH.webClientId,
@@ -43,28 +48,38 @@ export default function RegisterScreen() {
       const { id_token } = response.params;
       finishGoogleSignIn(id_token);
     } else if (response?.type === "error") {
-      Alert.alert("Error", "No se pudo iniciar sesión con Google.");
+      setErrorMsg("No se pudo iniciar sesión con Google.");
     }
   }, [response]);
 
   const handleRegister = async () => {
+    setErrorMsg(null);
+
     if (!email || !password || !confirm) {
-      Alert.alert("Campos vacíos", "Por favor, completa todos los campos.");
+      setErrorMsg("Completa todos los campos.");
+      return;
+    }
+    if (!esCorreoValido(email)) {
+      setErrorMsg("Escribe un correo válido (ej: nombre@correo.com).");
+      return;
+    }
+    const errorContrasena = validarContrasenaFuerte(password);
+    if (errorContrasena) {
+      setErrorMsg(errorContrasena);
       return;
     }
     if (password !== confirm) {
-      Alert.alert("Error", "Las contraseñas no coinciden");
+      setErrorMsg("Las contraseñas no coinciden.");
       return;
     }
 
     setLoading(true);
     try {
-      
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
       await setDoc(doc(db, "users", user.uid), {
-        nickname: "Usuario Nuevo", 
+        nickname: "Usuario Nuevo",
         email: user.email,
         photoURL: "",
         phone: "",
@@ -74,9 +89,9 @@ export default function RegisterScreen() {
 
       console.log("Perfil creado exitosamente en Firestore");
       router.push("/(tabs)/home");
-      
     } catch (error: any) {
-      Alert.alert("Error al registrar", error.message);
+      console.log(error);
+      setErrorMsg(traducirErrorAuth(error));
     } finally {
       setLoading(false);
     }
@@ -103,16 +118,14 @@ export default function RegisterScreen() {
 
       router.push("/(tabs)/home");
     } catch (error: any) {
-      Alert.alert("Error al iniciar con Google", error.message);
+      setErrorMsg(traducirErrorAuth(error));
     }
   };
 
   const handleGoogle = async () => {
+    setErrorMsg(null);
     if (GOOGLE_AUTH.webClientId.startsWith("TU_") || !request) {
-      Alert.alert(
-        "Falta configuración",
-        "Todavía no configuraste los Client ID de Google. Revisa src/config/googleAuth.ts"
-      );
+      setErrorMsg("Falta configurar los Client ID de Google (revisa src/config/googleAuth.ts).");
       return;
     }
     await promptAsync();
@@ -128,6 +141,12 @@ export default function RegisterScreen() {
 
         <Text style={styles.title}>Crea una cuenta</Text>
 
+        {errorMsg ? (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>{errorMsg}</Text>
+          </View>
+        ) : null}
+
         <Text style={styles.label}>Correo ó teléfono</Text>
         <TextInput
           style={styles.input}
@@ -142,7 +161,7 @@ export default function RegisterScreen() {
         <Text style={styles.label}>Contraseña</Text>
         <TextInput
           style={styles.input}
-          placeholder="Ingresa tu contraseña"
+          placeholder="Mínimo 8 caracteres, con letras y números"
           placeholderTextColor="#AAA"
           secureTextEntry
           value={password}
@@ -159,8 +178,8 @@ export default function RegisterScreen() {
           onChangeText={setConfirm}
         />
 
-        <TouchableOpacity 
-            style={styles.createButton} 
+        <TouchableOpacity
+            style={styles.createButton}
             onPress={handleRegister}
             disabled={loading}
         >
@@ -206,13 +225,26 @@ const styles = StyleSheet.create({
     width: 390,
     height: 124,
     resizeMode: "contain",
-    marginBottom: 40,
+    marginBottom: 30,
   },
   title: {
     fontSize: 26,
     fontWeight: "bold",
     color: "#5D5D5D",
-    marginBottom: 30,
+    marginBottom: 15,
+  },
+  errorBox: {
+    backgroundColor: "#FFEBEE",
+    borderRadius: 10,
+    padding: 12,
+    width: "100%",
+    marginBottom: 15,
+  },
+  errorText: {
+    color: "#D32F2F",
+    fontSize: 13,
+    textAlign: "center",
+    fontWeight: "600",
   },
   label: {
     alignSelf: "flex-start",
@@ -235,16 +267,16 @@ const styles = StyleSheet.create({
   },
   createButton: {
     width: "60%",
-    backgroundColor: "#FFFFFF", 
+    backgroundColor: "#FFFFFF",
     borderRadius: 25,
     paddingVertical: 14,
     alignItems: "center",
     marginBottom: 16,
     borderWidth: 2,
-    borderColor: "#83c41a", 
+    borderColor: "#83c41a",
   },
   createButtonText: {
-    color: "#83c41a", 
+    color: "#83c41a",
     fontSize: 16,
     fontWeight: "bold",
   },
