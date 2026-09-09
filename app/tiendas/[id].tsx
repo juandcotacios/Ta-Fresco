@@ -92,6 +92,8 @@ export default function TiendaDetalleScreen() {
           const hasDiscount = !!item.discountPercent && item.discountPercent > 0;
           const finalPrice = item.price;
           const originalPrice = getOriginalPrice(item.price, item.discountPercent);
+          const sinStock = (item.stock ?? 0) <= 0;
+          const alTope = qty >= (item.stock ?? 0);
 
           return (
             <View style={styles.card}>
@@ -100,11 +102,22 @@ export default function TiendaDetalleScreen() {
                   <Text style={styles.discountBadgeText}>-{item.discountPercent}%</Text>
                 </View>
               )}
-              <Image
-                source={{ uri: item.imageUrl || "https://via.placeholder.com/150" }}
-                style={styles.image}
-              />
+              <View>
+                <Image
+                  source={{ uri: item.imageUrl || "https://via.placeholder.com/150" }}
+                  style={styles.image}
+                />
+                {sinStock && (
+                  <View style={styles.agotadoBadge}>
+                    <Text style={styles.agotadoBadgeText}>AGOTADO</Text>
+                  </View>
+                )}
+              </View>
               <Text style={styles.name} numberOfLines={2}>{item.name}</Text>
+              {!sinStock && item.stock <= 10 && (
+                <Text style={styles.stockText}>Quedan {item.stock}</Text>
+              )}
+              
               {ratings[item.id] && ratings[item.id].cantidad > 0 && (
                 <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 2 }}>
                   <Ionicons name="star" size={11} color="#f0a500" />
@@ -118,7 +131,11 @@ export default function TiendaDetalleScreen() {
                 {!!originalPrice && <Text style={styles.oldPrice}>${originalPrice.toLocaleString()}</Text>}
               </View>
 
-              {qty === 0 ? (
+              {sinStock ? (
+                <View style={[styles.addBtn, { backgroundColor: "#ccc" }]}>
+                  <Text style={[styles.addBtnText, { color: "#666" }]}>Agotado</Text>
+                </View>
+              ) : qty === 0 ? (
                 <TouchableOpacity
                   style={styles.addBtn}
                   onPress={() => addToCart({ ...item, quantity: 1 })}
@@ -136,8 +153,9 @@ export default function TiendaDetalleScreen() {
                   </TouchableOpacity>
                   <Text style={styles.qtyText}>{qty}</Text>
                   <TouchableOpacity
-                    style={[styles.qtyBtn, { backgroundColor: "#83c41a" }]}
-                    onPress={() => addToCart({ ...item, quantity: 1 })}
+                    style={[styles.qtyBtn, { backgroundColor: alTope ? "#ccc" : "#83c41a" }]}
+                    onPress={alTope ? undefined : () => addToCart({ ...item, quantity: 1 })}
+                    disabled={alTope}
                   >
                     <Ionicons name="add" size={14} color="#fff" />
                   </TouchableOpacity>
@@ -187,6 +205,9 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   discountBadgeText: { color: "#fff", fontSize: 10, fontWeight: "bold" },
+  agotadoBadge: { position: "absolute", top: 4, left: 4, backgroundColor: "#D32F2F", borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, zIndex: 2 },
+  agotadoBadgeText: { color: "#fff", fontSize: 9, fontWeight: "bold" },
+  stockText: { fontSize: 10, color: "#F57C00", marginBottom: 2 },
   image: { width: "100%", height: 90, resizeMode: "contain", marginBottom: 6 },
   name: { fontSize: 13, fontWeight: "600", color: "#333", height: 34 },
   priceRow: { flexDirection: "row", alignItems: "center", marginVertical: 4 },

@@ -128,6 +128,7 @@ export default function CartScreen() {
   }, [cart]);
 
   const handleIncrease = (item: any) => {
+    if (item.quantity >= (item.stock ?? Infinity)) return; // no dejar superar el stock disponible
     addToCart({ ...item, quantity: 1 });
   };
 
@@ -502,7 +503,13 @@ const CartItemRow = ({ item, onIncrease, onDecrease }: any) => (
         <Ionicons name={item.quantity === 1 ? "trash-outline" : "remove"} size={16} color={item.quantity === 1 ? "#FFF" : "#555"} />
       </TouchableOpacity>
       <Text style={styles.qtyText}>{item.quantity}</Text>
-      <TouchableOpacity style={[styles.qtyBtn, styles.qtyBtnGreen]} onPress={onIncrease}><Ionicons name="add" size={16} color="#FFF" /></TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.qtyBtn, styles.qtyBtnGreen, item.quantity >= (item.stock ?? Infinity) && { opacity: 0.3 }]}
+        onPress={item.quantity >= (item.stock ?? Infinity) ? undefined : onIncrease}
+        disabled={item.quantity >= (item.stock ?? Infinity)}
+      >
+        <Ionicons name="add" size={16} color="#FFF" />
+      </TouchableOpacity>
     </View>
   </View>
 );
