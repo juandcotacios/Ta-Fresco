@@ -51,7 +51,10 @@ export interface Pedido {
   subtotal: number;
   envio: number;
   total: number;
+  /** Estado "resumen": el más atrasado entre todas las tiendas del pedido. */
   status: EstadoPedido;
+  /** Estado independiente de cada tienda dentro de este pedido. */
+  estadosPorProveedor: Record<string, EstadoPedido>;
   address: PedidoAddress | null;
   paymentMethod: "cash" | "card" | "nequi";
   proveedorIds: string[];
@@ -68,11 +71,35 @@ function mapPedido(docSnap: any): Pedido {
     envio: data.envio || 0,
     total: data.total || 0,
     status: (data.status || "pendiente") as EstadoPedido,
+    estadosPorProveedor: data.estadosPorProveedor || {},
     address: data.address || null,
     paymentMethod: (data.paymentMethod || "cash") as "cash" | "card" | "nequi",
     proveedorIds: data.proveedorIds || [],
     createdAt: data.createdAt || null,
   };
+}
+
+/**
+ * Calcula el estado "resumen" de un pedido a partir del estado de cada tienda:
+ * es el más atrasado de todos (si una tienda va en "pendiente" y otra en
+ * "en_camino", el resumen sigue en "pendiente" hasta que la más lenta avance).
+ * Las tiendas canceladas no cuentan para este cálculo, salvo que todas lo estén.
+ */
+function calcularEstadoGlobal(
+  estadosPorProveedor: Record<string, EstadoPedido>,
+  proveedorIds: string[]
+): EstadoPedido {
+  const estados = proveedorIds.map((id) => estadosPorProveedor[id] || "pendiente");
+  const activos = estados.filter((e) => e !== "cancelado");
+  if (activos.length === 0) return "cancelado";
+  const indices = activos.map((e) => ORDEN_ESTADOS.indexOf(e));
+  const minIndex = Math.min(...indices);
+  return ORDEN_ESTADOS[minIndex];
+}
+
+/** Devuelve el estado de UNA tienda puntual dentro de un pedido. */
+export function obtenerEstadoProveedor(pedido: Pedido, proveedorId: string): EstadoPedido {
+  return pedido.estadosPorProveedor?.[proveedorId] ?? pedido.status;
 }
 
 /**
@@ -97,6 +124,10 @@ export async function crearPedido(
   const proveedorIds = Array.from(
     new Set(items.map((i) => i.proveedorId).filter((id): id is string => !!id))
   );
+  const estadosPorProveedor: Record<string, EstadoPedido> = {};
+  proveedorIds.forEach((id) => {
+    estadosPorProveedor[id] = "pendiente";
+  });
 
   const pedidoRef = doc(collection(db, "pedidos"));
 
@@ -134,6 +165,7 @@ export async function crearPedido(
       envio,
       total,
       status: "pendiente" as EstadoPedido,
+      estadosPorProveedor,
       address: address || null,
       paymentMethod,
       proveedorIds,
@@ -202,12 +234,55 @@ export function suscribirseTodosLosPedidos(
   });
 }
 
-/** Actualiza el estado de un pedido (usado por el panel de admin y por el tendero). */
+/**
+ * Uso del ADMIN: fuerza el mismo estado para TODAS las tiendas de un pedido
+ * a la vez (una anulación general por encima de cada tendero individual).
+ */
 export async function actualizarEstadoPedido(
   pedidoId: string,
   nuevoEstado: EstadoPedido
 ): Promise<void> {
-  await updateDoc(doc(db, "pedidos", pedidoId), { status: nuevoEstado });
+  const pedidoRef = doc(db, "pedidos", pedidoId);
+  await runTransaction(db, async (transaction) => {
+    const snap = await transaction.get(pedidoRef);
+    if (!snap.exists()) throw new Error("El pedido ya no existe.");
+    const data = snap.data() as any;
+    const proveedorIds: string[] = data.proveedorIds || [];
+    const nuevosEstados: Record<string, EstadoPedido> = {};
+    proveedorIds.forEach((id) => {
+      nuevosEstados[id] = nuevoEstado;
+    });
+    transaction.update(pedidoRef, {
+      estadosPorProveedor: nuevosEstados,
+      status: nuevoEstado,
+    });
+  });
+}
+
+/**
+ * Uso del TENDERO: actualiza el estado de SU tienda dentro del pedido, sin
+ * afectar a las demás tiendas del mismo pedido. El estado "resumen" del
+ * pedido se recalcula solo, como el más atrasado entre todas.
+ */
+export async function actualizarEstadoProveedor(
+  pedidoId: string,
+  proveedorId: string,
+  nuevoEstado: EstadoPedido
+): Promise<void> {
+  const pedidoRef = doc(db, "pedidos", pedidoId);
+  await runTransaction(db, async (transaction) => {
+    const snap = await transaction.get(pedidoRef);
+    if (!snap.exists()) throw new Error("El pedido ya no existe.");
+    const data = snap.data() as any;
+    const proveedorIds: string[] = data.proveedorIds || [];
+    const estadosActuales: Record<string, EstadoPedido> = data.estadosPorProveedor || {};
+    const nuevosEstados = { ...estadosActuales, [proveedorId]: nuevoEstado };
+    const nuevoGlobal = calcularEstadoGlobal(nuevosEstados, proveedorIds);
+    transaction.update(pedidoRef, {
+      estadosPorProveedor: nuevosEstados,
+      status: nuevoGlobal,
+    });
+  });
 }
 
 /** Texto y color por estado, para mostrar en pantalla. */
