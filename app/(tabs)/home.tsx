@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useWindowDimensions } from "react-native";
 import { db } from "@/src/config/firebase";
 import { useCart } from "@/src/contexts/CartContext";
 import { getOriginalPrice, hasDiscount } from "@/src/utils/pricing";
@@ -47,6 +48,7 @@ const CATEGORIES = [
 
 export default function Home() {
   const router = useRouter();
+  const { width: winWidth } = useWindowDimensions();
   const [products, setProducts] = useState<Product[]>([]);
   const [storeNames, setStoreNames] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
@@ -201,20 +203,23 @@ export default function Home() {
 
         <View style={styles.categoriesSection}>
           <Text style={styles.sectionTitle}>Categorias</Text>
-          <FlatList
-
-            data={CATEGORIES}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingLeft: 4 }}
-            renderItem={({ item }) => {
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingLeft: 4 }}>
+            {CATEGORIES.map((item) => {
               const isSelected = selectedCategory === item.name;
+              const circleSize = winWidth * 0.16;
               return (
                 <TouchableOpacity
-                  style={styles.categoryItem}
+                  key={item.name}
+                  style={[styles.categoryItem, { width: winWidth * 0.18 }]}
                   onPress={() => setSelectedCategory(isSelected ? null : item.name)}
                 >
-                  <View style={[styles.categoryCircle, isSelected && { borderWidth: 2, borderColor: "#83c41a" }]}>
+                  <View
+                    style={[
+                      styles.categoryCircle,
+                      { width: circleSize, height: circleSize, borderRadius: circleSize / 2 },
+                      isSelected && { borderWidth: 2, borderColor: "#83c41a" },
+                    ]}
+                  >
                     <Image source={item.icon} style={styles.categoryImage} resizeMode="contain" />
                   </View>
                   <Text style={[styles.categoryLabel, isSelected && { color: "#83c41a", fontWeight: "bold" }]}>
@@ -222,9 +227,8 @@ export default function Home() {
                   </Text>
                 </TouchableOpacity>
               );
-            }}
-            keyExtractor={(item) => item.name}
-          />
+            })}
+          </ScrollView>
         </View>
 
         {topDescuentos.length > 0 && (() => {
@@ -374,7 +378,11 @@ export default function Home() {
                                     />
                                  </TouchableOpacity>
                                  <Text style={styles.miniCtrlText}>{item.quantity}</Text>
-                                 <TouchableOpacity onPress={() => addToCart({...item, quantity: 1})} style={[styles.miniCtrlBtn, {backgroundColor:'#4CAF50', borderColor:'#4CAF50'}]}>
+                                 <TouchableOpacity
+                                    onPress={item.quantity >= (item.stock ?? Infinity) ? undefined : () => addToCart({...item, quantity: 1})}
+                                    disabled={item.quantity >= (item.stock ?? Infinity)}
+                                    style={[styles.miniCtrlBtn, {backgroundColor:'#4CAF50', borderColor:'#4CAF50'}, item.quantity >= (item.stock ?? Infinity) && { opacity: 0.3 }]}
+                                 >
                                     <Ionicons name="add" size={16} color="#FFF" />
                                  </TouchableOpacity>
                               </View>
