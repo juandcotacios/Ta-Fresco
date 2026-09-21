@@ -10,6 +10,8 @@ import {
   query,
   where,
   serverTimestamp,
+  Timestamp,
+  QueryDocumentSnapshot,
 } from "firebase/firestore";
 import { db } from "@/src/config/firebase";
 
@@ -17,6 +19,8 @@ export interface Tienda {
   ownerId: string;
   nombre: string;
   descripcion: string;
+  /** Se escribe en cada guardado (guardarMiTienda). */
+  updatedAt?: Timestamp;
 }
 
 export interface TiendaConId extends Tienda {
@@ -31,7 +35,10 @@ export interface ProductoTendero {
   imageUrl: string;
   stock: number;
   proveedorId: string;
-  discountPercent?: number;
+  /** Porcentaje de descuento; 0 = sin descuento. Siempre es un número al leerlo (ver docAProducto). */
+  discountPercent: number;
+  /** Lo escribe crearProducto; los productos cargados con el seed no lo tienen. */
+  createdAt?: Timestamp;
 }
 
 /** Trae la tienda del proveedor logueado (o null si aún no la ha creado). */
@@ -66,10 +73,20 @@ export async function guardarMiTienda(
 }
 
 /** Trae los productos de un proveedor dado (sirve tanto para "mis productos" como para ver la vitrina de otra tienda). */
+/**
+ * Convierte un documento de `Productos` en `ProductoTendero`.
+ * `discountPercent` se normaliza a 0 porque los productos cargados con el seed
+ * no traen el campo, así que las pantallas siempre reciben un número.
+ */
+function docAProducto(d: QueryDocumentSnapshot): ProductoTendero {
+  const data = d.data() as any;
+  return { id: d.id, ...data, discountPercent: Number(data.discountPercent) || 0 };
+}
+
 export async function obtenerMisProductos(uid: string): Promise<ProductoTendero[]> {
   const q = query(collection(db, "Productos"), where("proveedorId", "==", uid));
   const snapshot = await getDocs(q);
-  return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+  return snapshot.docs.map(docAProducto);
 }
 
 /** Crea un producto nuevo para el catálogo, asociado al proveedor. */
@@ -88,7 +105,6 @@ export async function crearProducto(
     ...data,
     discountPercent: data.discountPercent || 0,
     proveedorId: uid,
-    featured: false,
     createdAt: serverTimestamp(),
   });
   return docRef.id;
@@ -111,7 +127,7 @@ export async function actualizarProducto(
 /** Trae TODOS los productos del catálogo (uso del panel de administración). */
 export async function obtenerTodosLosProductos(): Promise<ProductoTendero[]> {
   const snapshot = await getDocs(collection(db, "Productos"));
-  return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+  return snapshot.docs.map(docAProducto);
 }
 
 export async function eliminarProducto(productoId: string): Promise<void> {

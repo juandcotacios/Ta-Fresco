@@ -32,30 +32,17 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/src/config/firebase';
 import { subirImagenCloudinary } from '@/src/services/cloudinaryService';
+import { Usuario, Direccion } from '@/src/services/usuariosService';
 
 const auth = getAuth();
 const { width, height } = Dimensions.get('window');
-
-interface UserProfileData {
-  nickname?: string;
-  photoURL?: string;
-  email?: string;
-  phone?: string;
-  role?: 'cliente' | 'tendero' | 'admin';
-}
-
-interface UserAddress {
-  id: string;
-  name: string;
-  addressLine: string;
-}
 
 export default function ProfileScreen() {
   const router = useRouter();
   const user = auth.currentUser;
 
   const [loading, setLoading] = useState(true);
-  const [userData, setUserData] = useState<UserProfileData | null>(null);
+  const [userData, setUserData] = useState<Usuario | null>(null);
   
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
@@ -64,7 +51,7 @@ export default function ProfileScreen() {
   const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
   
   const [addressModalVisible, setAddressModalVisible] = useState(false);
-  const [userAddresses, setUserAddresses] = useState<UserAddress[]>([]);
+  const [userAddresses, setUserAddresses] = useState<Direccion[]>([]);
   const [loadingAddresses, setLoadingAddresses] = useState(false);
   const [showAddAddressForm, setShowAddAddressForm] = useState(false);
   const [newAddrName, setNewAddrName] = useState('');
@@ -93,16 +80,16 @@ export default function ProfileScreen() {
         const docSnap = await getDoc(userDocRef);
 
         if (docSnap.exists()) {
-          setUserData(docSnap.data() as UserProfileData);
+          setUserData(docSnap.data() as Usuario);
         } else {
-          const initialData: UserProfileData = {
+          const initialData: Usuario = {
             email: user.email ?? undefined,
             nickname: user.displayName || 'Invitado',
             phone: '',
             photoURL: user.photoURL || '',
             role: 'cliente',
           };
-          await setDoc(userDocRef, initialData);
+          await setDoc(userDocRef, { ...initialData, createdAt: serverTimestamp() });
           setUserData(initialData);
         }
       } catch (error) {
@@ -186,7 +173,7 @@ export default function ProfileScreen() {
     try {
       const addrRef = collection(db, `users/${user.uid}/addresses`);
       const snapshot = await getDocs(addrRef);
-      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserAddress));
+      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Direccion));
       setUserAddresses(list);
     } catch (error) {
       console.log(error);

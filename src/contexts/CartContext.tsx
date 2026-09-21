@@ -19,8 +19,9 @@ interface CartItem {
 interface CartContextType {
   cart: CartItem[];
   addToCart: (item: CartItem) => void;
-  removeFromCart: (id: string) => void;
+  increaseCart: (id: string) => void;
   decreaseCart: (id: string) => void;
+  removeFromCart: (id: string) => void;
   clearCart: () => void;
 }
 
@@ -95,15 +96,25 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     });
   };
 
+  /** Suma 1 a una línea que ya está en el carrito, sin pasar del stock disponible. */
+  const increaseCart = (id: string) => {
+    setCart((prevCart) =>
+      prevCart.map((item) =>
+        item.id === id && item.quantity < (item.stock ?? Infinity)
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
+      )
+    );
+  };
+
+  /** Resta 1 a la línea; si solo tenía 1 unidad, la quita del carrito. */
   const decreaseCart = (id: string) => {
-    setCart((prevCart) => {
-      return prevCart.map((item) => {
-        if (item.id === id) {
-          return { ...item, quantity: Math.max(1, item.quantity - 1) };
-        }
-        return item;
-      });
-    });
+    setCart((prevCart) =>
+      prevCart.flatMap((item) => {
+        if (item.id !== id) return [item];
+        return item.quantity > 1 ? [{ ...item, quantity: item.quantity - 1 }] : [];
+      })
+    );
   };
 
   const removeFromCart = (id: string) => {
@@ -116,7 +127,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <CartContext.Provider
-      value={{ cart, addToCart, removeFromCart, decreaseCart, clearCart }}
+      value={{ cart, addToCart, increaseCart, decreaseCart, removeFromCart, clearCart }}
     >
       {children}
     </CartContext.Provider>

@@ -6,6 +6,7 @@ import {
   where,
   serverTimestamp,
   setDoc,
+  Timestamp,
 } from "firebase/firestore";
 import { db } from "@/src/config/firebase";
 
@@ -18,6 +19,7 @@ export interface Valoracion {
   userId: string;
   rating: number; // 1 a 5
   comentario: string;
+  createdAt?: Timestamp;
 }
 
 /** Crea la calificación de UN producto comprado, dentro de un pedido. */

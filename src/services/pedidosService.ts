@@ -16,6 +16,10 @@ import {
 import { db } from "@/src/config/firebase";
 
 export interface PedidoItem {
+  /**
+   * Id del documento en `Productos`. En `valoraciones` este mismo dato se llama
+   * `productoId`; el nombre `id` se conserva aquí para no romper los pedidos ya guardados.
+   */
   id: string;
   name: string;
   price: number;
@@ -103,6 +107,27 @@ export function obtenerEstadoProveedor(pedido: Pedido, proveedorId: string): Est
 }
 
 /**
+ * Reduce un ítem al shape exacto de `PedidoItem`.
+ *
+ * TypeScript no marca error de propiedades excedentes cuando se pasa una
+ * variable (p. ej. el `CartItem[]` del carrito) donde se espera `PedidoItem[]`,
+ * así que sin este paso Firestore terminaba guardando también `category`,
+ * `stock` y `discountPercent`. Los opcionales solo se incluyen si tienen valor,
+ * porque Firestore rechaza campos `undefined`.
+ */
+function toPedidoItem(item: PedidoItem): PedidoItem {
+  const limpio: PedidoItem = {
+    id: item.id,
+    name: item.name,
+    price: item.price,
+    quantity: item.quantity,
+  };
+  if (item.imageUrl) limpio.imageUrl = item.imageUrl;
+  if (item.proveedorId) limpio.proveedorId = item.proveedorId;
+  return limpio;
+}
+
+/**
  * Crea un pedido y descuenta el stock de cada producto, todo dentro de una
  * misma transacción: si algún producto ya no tiene stock suficiente en el
  * momento exacto de confirmar, NADA se guarda (ni el pedido ni el descuento)
@@ -119,6 +144,9 @@ export async function crearPedido(
 ): Promise<string> {
   if (!userId) throw new Error("Usuario no autenticado.");
   if (!items || items.length === 0) throw new Error("El carrito está vacío.");
+
+  // Lo que se persiste es exactamente PedidoItem, sin campos extra del carrito.
+  const itemsPedido = items.map(toPedidoItem);
 
   const total = subtotal + envio;
   const proveedorIds = Array.from(
@@ -160,7 +188,7 @@ export async function crearPedido(
 
     transaction.set(pedidoRef, {
       userId,
-      items,
+      items: itemsPedido,
       subtotal,
       envio,
       total,

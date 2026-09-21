@@ -17,6 +17,12 @@ const OPCIONES = [
     route: "/admin-productos",
   },
   {
+    label: "Solicitudes de tienda",
+    desc: "Aprobar o rechazar quién quiere vender en la app",
+    icon: "storefront-outline" as const,
+    route: "/admin/solicitudes",
+  },
+  {
     label: "Usuarios",
     desc: "Ver usuarios y cambiar su rol (cliente / tendero / admin)",
     icon: "people-outline" as const,

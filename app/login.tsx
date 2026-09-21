@@ -8,7 +8,7 @@ import {
   GoogleAuthProvider,
   User,
 } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
   Image,
@@ -93,7 +93,7 @@ export default function LoginScreen() {
         photoURL: user.photoURL || "",
         phone: "",
         role: "cliente",
-        createdAt: new Date(),
+        createdAt: serverTimestamp(),
       });
       console.log("Perfil de Google creado en Firestore");
     }

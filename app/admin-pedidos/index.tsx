@@ -19,12 +19,7 @@ import {
   ESTADO_LABELS,
   ORDEN_ESTADOS,
 } from "@/src/services/pedidosService";
-
-interface Comprador {
-  nickname?: string;
-  phone?: string;
-  email?: string;
-}
+import { Comprador } from "@/src/services/usuariosService";
 
 export default function AdminPedidosScreen() {
   const router = useRouter();

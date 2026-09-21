@@ -20,7 +20,7 @@ import { getOriginalPrice } from "@/src/utils/pricing";
 export default function TiendaDetalleScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { cart, addToCart, decreaseCart, removeFromCart } = useCart();
+  const { cart, addToCart, decreaseCart } = useCart();
 
   const [tienda, setTienda] = useState<TiendaConId | null>(null);
   const [productos, setProductos] = useState<ProductoTendero[]>([]);
@@ -147,7 +147,7 @@ export default function TiendaDetalleScreen() {
                 <View style={styles.qtyRow}>
                   <TouchableOpacity
                     style={styles.qtyBtn}
-                    onPress={() => (qty > 1 ? decreaseCart(item.id) : removeFromCart(item.id))}
+                    onPress={() => decreaseCart(item.id)}
                   >
                     <Ionicons name={qty === 1 ? "trash-outline" : "remove"} size={14} color="#D32F2F" />
                   </TouchableOpacity>

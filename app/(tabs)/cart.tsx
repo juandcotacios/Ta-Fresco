@@ -23,6 +23,7 @@ import { getAuth } from "firebase/auth";
 import { db } from "@/src/config/firebase"; 
 import { useCart } from "@/src/contexts/CartContext"; 
 import { crearPedido } from "@/src/services/pedidosService";
+import { Direccion } from "@/src/services/usuariosService";
 import { getOriginalPrice } from "@/src/utils/pricing";
 import OpenChatbotButton from "../../components/OpenChatbotButton"; 
 
@@ -41,13 +42,13 @@ export default function CartScreen() {
   const router = useRouter();
   const user = auth.currentUser;
   
-  const { cart, addToCart, removeFromCart, clearCart, decreaseCart } = useCart(); 
+  const { cart, addToCart, increaseCart, decreaseCart, clearCart } = useCart(); 
   
   const [checkoutVisible, setCheckoutVisible] = useState(false);
   const [successVisible, setSuccessVisible] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
   
-  const [addresses, setAddresses] = useState<any[]>([]);
+  const [addresses, setAddresses] = useState<Direccion[]>([]);
   const [loadingAddresses, setLoadingAddresses] = useState(true);
   const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
 
@@ -78,10 +79,9 @@ export default function CartScreen() {
     try {
       const q = collection(db, `users/${user.uid}/addresses`);
       const snapshot = await getDocs(q);
-      const addressList = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const addressList = snapshot.docs.map(
+        doc => ({ id: doc.id, ...doc.data() } as Direccion)
+      );
 
       setAddresses(addressList);
       if (addressList.length > 0) {
@@ -127,19 +127,12 @@ export default function CartScreen() {
     fetchUpsellProducts();
   }, [cart]);
 
-  const handleIncrease = (item: any) => {
-    if (item.quantity >= (item.stock ?? Infinity)) return; // no dejar superar el stock disponible
-    addToCart({ ...item, quantity: 1 });
-  };
+  const handleIncrease = (item: any) => increaseCart(item.id);
 
   const handleDecrease = (item: any) => {
-    if (item.quantity > 1) {
-      if (decreaseCart) decreaseCart(item.id);
-      else addToCart({ ...item, quantity: -1 }); 
-    } else {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      removeFromCart(item.id);
-    }
+    // Con 1 unidad, decreaseCart quita la línea: se anima la salida.
+    if (item.quantity <= 1) LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    decreaseCart(item.id);
   };
 
   const handleCardNumberChange = (text: string) => setCardNumber(text.replace(/[^0-9]/g, ''));

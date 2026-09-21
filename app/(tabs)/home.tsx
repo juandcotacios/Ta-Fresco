@@ -33,7 +33,6 @@ interface Product {
   imageUrl: string;
   category: string;
   stock: number;
-  quantity?: number;
   proveedorId?: string;
   discountPercent?: number;
 }
@@ -57,7 +56,7 @@ export default function Home() {
   const [miniCartVisible, setMiniCartVisible] = useState(false);
   const [isLoadingCart, setIsLoadingCart] = useState(false);
 
-  const { cart, addToCart, decreaseCart, removeFromCart } = useCart();
+  const { cart, addToCart, increaseCart, decreaseCart, removeFromCart } = useCart();
 
   const totalPrice = useMemo(() => cart.reduce((acc, item) => acc + (item.price * item.quantity), 0), [cart]);
   const totalItems = useMemo(() => cart.reduce((acc, item) => acc + item.quantity, 0), [cart]);
@@ -368,7 +367,7 @@ export default function Home() {
                               
                               <View style={styles.miniControls}>
                                  <TouchableOpacity 
-                                    onPress={() => item.quantity > 1 ? decreaseCart(item.id) : removeFromCart(item.id)}
+                                    onPress={() => decreaseCart(item.id)}
                                     style={[styles.miniCtrlBtn, item.quantity === 1 ? {backgroundColor:'#FFEBEE', borderColor:'#FFCDD2'} : {backgroundColor:'#EEE'}]}
                                  >
                                     <Ionicons 
@@ -379,7 +378,7 @@ export default function Home() {
                                  </TouchableOpacity>
                                  <Text style={styles.miniCtrlText}>{item.quantity}</Text>
                                  <TouchableOpacity
-                                    onPress={item.quantity >= (item.stock ?? Infinity) ? undefined : () => addToCart({...item, quantity: 1})}
+                                    onPress={item.quantity >= (item.stock ?? Infinity) ? undefined : () => increaseCart(item.id)}
                                     disabled={item.quantity >= (item.stock ?? Infinity)}
                                     style={[styles.miniCtrlBtn, {backgroundColor:'#4CAF50', borderColor:'#4CAF50'}, item.quantity >= (item.stock ?? Infinity) && { opacity: 0.3 }]}
                                  >

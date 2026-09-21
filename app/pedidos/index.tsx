@@ -9,6 +9,7 @@ import {
   Modal,
   TextInput,
   ScrollView,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { onAuthStateChanged } from "firebase/auth";
@@ -141,10 +142,15 @@ export default function PedidosScreen() {
     const user = auth.currentUser;
     if (!user || !pedidoActivo || !proveedorActivo) return;
 
-    const entradas = Object.entries(ratingsPorProducto).filter(([, rating]) => rating > 0);
+    // Solo los productos con estrellas que aún no fueron calificados: una calificación
+    // guardada no se puede modificar, así que reenviarla fallaría.
+    const entradas = Object.entries(ratingsPorProducto).filter(
+      ([productoId, rating]) => rating > 0 && !calificados.has(`${pedidoActivo.id}:${productoId}`)
+    );
     if (entradas.length === 0) return;
 
     setGuardando(true);
+    const guardados: string[] = [];
     try {
       for (const [productoId, rating] of entradas) {
         const item = pedidoActivo.items.find((i) => i.id === productoId);
@@ -157,16 +163,26 @@ export default function PedidosScreen() {
           rating,
           comentario
         );
+        guardados.push(productoId);
       }
-      setCalificados((prev) => {
-        const nuevo = new Set(prev);
-        entradas.forEach(([productoId]) => nuevo.add(`${pedidoActivo.id}:${productoId}`));
-        return nuevo;
-      });
       setModalVisible(false);
     } catch (error) {
       console.log(error);
+      Alert.alert(
+        "No se pudo guardar",
+        guardados.length > 0
+          ? "Se guardaron algunas calificaciones, pero otra falló. Las ya enviadas no se pueden modificar; vuelve a intentarlo con las que faltan."
+          : "No pudimos guardar tu calificación. Revisa tu conexión e inténtalo de nuevo."
+      );
     } finally {
+      // Se marcan como calificados los que sí se guardaron, aunque otro haya fallado.
+      if (guardados.length > 0) {
+        setCalificados((prev) => {
+          const nuevo = new Set(prev);
+          guardados.forEach((productoId) => nuevo.add(`${pedidoActivo.id}:${productoId}`));
+          return nuevo;
+        });
+      }
       setGuardando(false);
     }
   };

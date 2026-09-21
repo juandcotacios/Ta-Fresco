@@ -49,7 +49,7 @@ const CATEGORIES = [
 
 export default function OfertasScreen() {
   const router = useRouter();
-  const { cart, addToCart, decreaseCart, removeFromCart } = useCart();
+  const { cart, addToCart, increaseCart, decreaseCart } = useCart();
   
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -173,7 +173,6 @@ export default function OfertasScreen() {
                     currentQty={currentQty}
                     addToCart={addToCart} 
                     decreaseCart={decreaseCart}
-                    removeFromCart={removeFromCart}
                  />
                );
             }}
@@ -227,7 +226,6 @@ export default function OfertasScreen() {
                   currentQty={currentQty}
                   addToCart={addToCart}
                   decreaseCart={decreaseCart}
-                  removeFromCart={removeFromCart}
                />
              );
           })}
@@ -291,7 +289,7 @@ export default function OfertasScreen() {
                               
                               <View style={styles.miniControls}>
                                  <TouchableOpacity 
-                                    onPress={() => item.quantity > 1 ? decreaseCart(item.id) : removeFromCart(item.id)}
+                                    onPress={() => decreaseCart(item.id)}
                                     style={[styles.miniCtrlBtn, item.quantity === 1 ? {backgroundColor:'#FFEBEE', borderColor:'#FFCDD2'} : {backgroundColor:'#EEE'}]}
                                  >
                                     <Ionicons 
@@ -301,7 +299,7 @@ export default function OfertasScreen() {
                                     />
                                  </TouchableOpacity>
                                  <Text style={styles.miniCtrlText}>{item.quantity}</Text>
-                                 <TouchableOpacity onPress={() => addToCart({...item, quantity: 1})} style={[styles.miniCtrlBtn, {backgroundColor:'#4CAF50', borderColor:'#4CAF50'}]}>
+                                 <TouchableOpacity onPress={() => increaseCart(item.id)} style={[styles.miniCtrlBtn, {backgroundColor:'#4CAF50', borderColor:'#4CAF50'}]}>
                                     <Ionicons name="add" size={16} color="#FFF" />
                                  </TouchableOpacity>
                               </View>
@@ -346,12 +344,9 @@ export default function OfertasScreen() {
   );
 }
 
-const TopOfferItem = ({ item, currentQty, addToCart, decreaseCart, removeFromCart }: any) => {
+const TopOfferItem = ({ item, currentQty, addToCart, decreaseCart }: any) => {
   
-  const handleDecrease = () => {
-    if (currentQty > 1) decreaseCart(item.id);
-    else removeFromCart(item.id);
-  };
+  const handleDecrease = () => decreaseCart(item.id);
 
   return (
     <View style={styles.offerCard}>
@@ -393,12 +388,9 @@ const TopOfferItem = ({ item, currentQty, addToCart, decreaseCart, removeFromCar
   );
 };
 
-const SuperDiscountItem = ({ item, currentQty, addToCart, decreaseCart, removeFromCart }: any) => {
+const SuperDiscountItem = ({ item, currentQty, addToCart, decreaseCart }: any) => {
   
-  const handleDecrease = () => {
-    if (currentQty > 1) decreaseCart(item.id);
-    else removeFromCart(item.id);
-  };
+  const handleDecrease = () => decreaseCart(item.id);
 
   return (
     <View style={styles.superCard}>

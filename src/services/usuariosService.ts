@@ -1,13 +1,32 @@
-import { collection, getDocs, doc, updateDoc } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, Timestamp } from "firebase/firestore";
 import { db } from "@/src/config/firebase";
 
 export type Rol = "cliente" | "tendero" | "admin";
 
-export interface UsuarioConId {
-  id: string;
+/** Documento `users/{uid}` con los 6 campos que realmente se guardan en Firestore. */
+export interface Usuario {
   nickname?: string;
   email?: string;
+  photoURL?: string;
+  phone?: string;
   role?: Rol;
+  createdAt?: Timestamp;
+}
+
+/** Usuario junto con el id de su documento (el uid de Firebase Auth). */
+export interface UsuarioConId extends Usuario {
+  id: string;
+}
+
+/** Datos de contacto del comprador que ven el tendero y el admin en los pedidos. */
+export type Comprador = Pick<Usuario, "nickname" | "phone" | "email">; 
+
+/** Documento `users/{uid}/addresses/{id}`: dirección de entrega guardada por el usuario. */
+export interface Direccion {
+  id: string;
+  name: string;
+  addressLine: string;
+  createdAt?: Timestamp;
 }
 
 /** Trae todos los usuarios registrados. Uso: panel de administración. */

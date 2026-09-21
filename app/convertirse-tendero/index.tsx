@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -11,9 +11,15 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { getAuth } from "firebase/auth";
-import { addDoc, collection, doc, getDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/src/config/firebase";
 import { guardarMiTienda } from "@/src/services/tiendaService";
+import {
+  crearSolicitud,
+  obtenerMiSolicitud,
+  SolicitudTiendaConId,
+} from "@/src/services/solicitudesService";
+import { Rol } from "@/src/services/usuariosService";
 
 export default function ConvertirseTenderoScreen() {
   const router = useRouter();
@@ -23,8 +29,46 @@ export default function ConvertirseTenderoScreen() {
   const [nombre, setNombre] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [saving, setSaving] = useState(false);
-  const [rol, setRol] = useState<"cliente" | "tendero" | "admin" | null>(null);
+  const [cargando, setCargando] = useState(true);
+  const [rol, setRol] = useState<Rol>("cliente");
+  const [solicitud, setSolicitud] = useState<SolicitudTiendaConId | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const esVendedor = rol === "tendero" || rol === "admin";
+  const pendiente = !esVendedor && solicitud?.estado === "pendiente";
+  const rechazada = !esVendedor && solicitud?.estado === "rechazada";
+  const aprobada = rol === "tendero" && solicitud?.estado === "aprobada";
+
+  // Al entrar se consulta el rol y el estado de la última solicitud, para mostrar
+  // en qué va el trámite en vez de dejar al usuario sin saber qué pasó.
+  useEffect(() => {
+    const cargar = async () => {
+      if (!user) {
+        setCargando(false);
+        return;
+      }
+      try {
+        const [userSnap, miSolicitud] = await Promise.all([
+          getDoc(doc(db, "users", user.uid)),
+          obtenerMiSolicitud(user.uid),
+        ]);
+        const rolActual: Rol = userSnap.data()?.role || "cliente";
+        setRol(rolActual);
+        setSolicitud(miSolicitud);
+
+        // Con la solicitud aprobada se precargan los datos que ya había escrito.
+        if (rolActual === "tendero" && miSolicitud?.estado === "aprobada") {
+          setNombre(miSolicitud.nombre);
+          setDescripcion(miSolicitud.descripcion);
+        }
+      } catch (error) {
+        console.log(error);
+      } finally {
+        setCargando(false);
+      }
+    };
+    cargar();
+  }, [user]);
 
   const handleCrear = async () => {
     if (!user) return;
@@ -37,8 +81,9 @@ export default function ConvertirseTenderoScreen() {
 
     setSaving(true);
     try {
+      // Se vuelve a leer el rol por si un admin lo cambió mientras la pantalla estaba abierta.
       const userSnapshot = await getDoc(doc(db, "users", user.uid));
-      const userRole = userSnapshot.data()?.role || "cliente";
+      const userRole: Rol = userSnapshot.data()?.role || "cliente";
       setRol(userRole);
 
       if (userRole === "tendero" || userRole === "admin") {
@@ -48,22 +93,29 @@ export default function ConvertirseTenderoScreen() {
       }
 
       // La app no se autoasigna privilegios: un administrador debe aprobar
-      // la solicitud y otorgar el rol de tendero desde un entorno autorizado.
-      await addDoc(collection(db, "solicitudesTienda"), {
-        userId: user.uid,
-        nombre: nombre.trim(),
-        descripcion: descripcion.trim(),
-        estado: "pendiente",
-        createdAt: serverTimestamp(),
-      });
-      setErrorMsg("Solicitud enviada. Un administrador debe aprobar tu tienda antes de activarla.");
+      // la solicitud desde el panel de administración.
+      const ultima = await obtenerMiSolicitud(user.uid);
+      if (ultima?.estado === "pendiente") {
+        setSolicitud(ultima);
+        return;
+      }
+      await crearSolicitud(user.uid, nombre.trim(), descripcion.trim());
+      setSolicitud(await obtenerMiSolicitud(user.uid));
     } catch (error: any) {
       console.log(error);
-      setErrorMsg(error?.message || "No se pudo crear tu tienda. Intenta de nuevo.");
+      setErrorMsg(error?.message || "No se pudo completar la operación. Intenta de nuevo.");
     } finally {
       setSaving(false);
     }
   };
+
+  if (cargando) {
+    return (
+      <View style={[styles.container, { justifyContent: "center" }]}>
+        <ActivityIndicator size="large" color="#83c41a" />
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 20, paddingTop: 55 }}>
@@ -82,6 +134,30 @@ export default function ConvertirseTenderoScreen() {
         </Text>
       </View>
 
+      {pendiente && (
+        <View style={styles.infoBox}>
+          <Text style={styles.infoText}>
+            {`Tu solicitud de "${solicitud?.nombre}" está pendiente. Un administrador la revisará y, cuando la apruebe, podrás crear tu tienda desde aquí.`}
+          </Text>
+        </View>
+      )}
+
+      {rechazada && (
+        <View style={styles.errorBox}>
+          <Text style={styles.errorText}>
+            Tu solicitud anterior no fue aprobada. Puedes enviar una nueva.
+          </Text>
+        </View>
+      )}
+
+      {aprobada && (
+        <View style={styles.successBox}>
+          <Text style={styles.successText}>
+            ¡Tu solicitud fue aprobada! Ya puedes crear tu tienda.
+          </Text>
+        </View>
+      )}
+
       {errorMsg && (
         <View style={styles.errorBox}>
           <Text style={styles.errorText}>{errorMsg}</Text>
@@ -94,6 +170,7 @@ export default function ConvertirseTenderoScreen() {
         value={nombre}
         onChangeText={setNombre}
         placeholder="Ej: Frutas y Verduras El Paisa"
+        editable={!pendiente}
       />
 
       <Text style={styles.label}>Descripción (opcional)</Text>
@@ -103,13 +180,20 @@ export default function ConvertirseTenderoScreen() {
         onChangeText={setDescripcion}
         placeholder="Cuéntale a los tenderos qué vendes"
         multiline
+        editable={!pendiente}
       />
 
-      <TouchableOpacity style={styles.createBtn} onPress={handleCrear} disabled={saving}>
+      <TouchableOpacity
+        style={[styles.createBtn, pendiente && { backgroundColor: "#ccc" }]}
+        onPress={handleCrear}
+        disabled={saving || pendiente}
+      >
         {saving ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.createBtnText}>{rol === "tendero" || rol === "admin" ? "Crear mi tienda" : "Solicitar tienda"}</Text>
+          <Text style={styles.createBtnText}>
+            {esVendedor ? "Crear mi tienda" : pendiente ? "Solicitud en revisión" : "Solicitar tienda"}
+          </Text>
         )}
       </TouchableOpacity>
 
@@ -140,6 +224,10 @@ const styles = StyleSheet.create({
   },
   errorBox: { backgroundColor: "#FFEBEE", padding: 10, borderRadius: 8, marginBottom: 14 },
   errorText: { color: "#D32F2F", fontSize: 13 },
+  infoBox: { backgroundColor: "#FFF8E1", padding: 12, borderRadius: 8, marginBottom: 14 },
+  infoText: { color: "#8a6d00", fontSize: 13, lineHeight: 18 },
+  successBox: { backgroundColor: "#EAF6D8", padding: 12, borderRadius: 8, marginBottom: 14 },
+  successText: { color: "#3d6b00", fontSize: 13, lineHeight: 18 },
   label: { fontSize: 13, color: "#666", marginBottom: 6, marginTop: 10, fontWeight: "600" },
   input: { backgroundColor: "#F5F5F5", borderRadius: 10, padding: 14, fontSize: 15 },
   createBtn: {
