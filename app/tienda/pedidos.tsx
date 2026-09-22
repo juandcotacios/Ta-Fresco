@@ -5,7 +5,6 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -21,6 +20,7 @@ import {
   ESTADO_LABELS,
   ORDEN_ESTADOS,
 } from "@/src/services/pedidosService";
+import { avisar, confirmar } from "@/src/utils/dialogos";
 import { Comprador } from "@/src/services/usuariosService";
 
 export default function PedidosDeMiTiendaScreen() {
@@ -71,25 +71,25 @@ export default function PedidosDeMiTiendaScreen() {
       await actualizarEstadoProveedor(pedido.id, user.uid, siguiente);
     } catch (error) {
       console.log(error);
-      Alert.alert("Error", "No se pudo actualizar el estado.");
+      avisar("Error", "No se pudo actualizar el estado.");
     }
   };
 
   const cancelarPedido = (pedido: Pedido) => {
-    Alert.alert("Cancelar pedido", `¿Cancelar el pedido #${pedido.id.slice(0, 6).toUpperCase()}?`, [
-      { text: "No", style: "cancel" },
-      {
-        text: "Sí, cancelar",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            if (user) await actualizarEstadoProveedor(pedido.id, user.uid, "cancelado" as EstadoPedido);
-          } catch (error) {
-            console.log(error);
-          }
-        },
+    confirmar(
+      "Cancelar pedido",
+      `¿Cancelar el pedido #${pedido.id.slice(0, 6).toUpperCase()}? Las unidades volverán al inventario.`,
+      async () => {
+        try {
+          if (user) await actualizarEstadoProveedor(pedido.id, user.uid, "cancelado" as EstadoPedido);
+        } catch (error) {
+          console.log(error);
+          avisar("Error", "No se pudo cancelar el pedido.");
+        }
       },
-    ]);
+      "Sí, cancelar",
+      true
+    );
   };
 
   return (

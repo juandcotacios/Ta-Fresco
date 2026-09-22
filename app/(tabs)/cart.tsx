@@ -24,7 +24,7 @@ import { db } from "@/src/config/firebase";
 import { useCart } from "@/src/contexts/CartContext"; 
 import { crearPedido } from "@/src/services/pedidosService";
 import { Direccion } from "@/src/services/usuariosService";
-import { getOriginalPrice } from "@/src/utils/pricing";
+import { getOriginalPrice, hasDiscount } from "@/src/utils/pricing";
 import OpenChatbotButton from "../../components/OpenChatbotButton"; 
 
 const { width, height } = Dimensions.get('window');
@@ -42,7 +42,7 @@ export default function CartScreen() {
   const router = useRouter();
   const user = auth.currentUser;
   
-  const { cart, addToCart, increaseCart, decreaseCart, clearCart } = useCart(); 
+  const { cart, addToCart, increaseCart, decreaseCart, removeFromCart, clearCart } = useCart(); 
   
   const [checkoutVisible, setCheckoutVisible] = useState(false);
   const [successVisible, setSuccessVisible] = useState(false);
@@ -64,9 +64,15 @@ export default function CartScreen() {
   const [clearModalVisible, setClearModalVisible] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
+  // Los productos agotados quedan visibles en el carrito, pero no se cobran
+  // ni cuentan para el pedido: no se pueden comprar hasta que vuelvan a tener stock.
+  const itemsComprables = useMemo(
+    () => cart.filter((item: any) => (item.stock ?? Infinity) > 0),
+    [cart]
+  );
   const totalPrice = useMemo(() => {
-    return cart.reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0);
-  }, [cart]);
+    return itemsComprables.reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0);
+  }, [itemsComprables]);
 
   const isMinMet = totalPrice >= MIN_ORDER_AMOUNT;
 
@@ -184,12 +190,17 @@ export default function CartScreen() {
         }
     }
 
+    if (itemsComprables.length === 0) {
+        setCheckoutError("Los productos de tu carrito están agotados. Quítalos o espera a que vuelvan a tener stock.");
+        return;
+    }
+
     setProcessingPayment(true);
     try {
         const addressObj = addresses.find(a => a.id === selectedAddress);
         await crearPedido(
           user.uid,
-          cart,
+          itemsComprables,
           totalPrice,
           3500,
           addressObj ? { name: addressObj.name, addressLine: addressObj.addressLine } : null,
@@ -252,6 +263,7 @@ export default function CartScreen() {
               item={item} 
               onIncrease={() => handleIncrease(item)}
               onDecrease={() => handleDecrease(item)}
+              onRemove={() => removeFromCart(item.id)}
             />
           ))}
         </View>
@@ -272,9 +284,18 @@ export default function CartScreen() {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 10 }}
                 keyExtractor={item => item.id}
-                renderItem={({item}) => (
-                  <UpsellCard item={item} onAdd={() => addToCart({...item, quantity: 1})} />
-                )}
+                renderItem={({item}) => {
+                  const enCarrito = cart.find((c: any) => c.id === item.id);
+                  return (
+                    <UpsellCard
+                      item={item}
+                      cantidad={enCarrito?.quantity || 0}
+                      onAdd={() => addToCart({ ...item, quantity: 1 })}
+                      onIncrease={() => increaseCart(item.id)}
+                      onDecrease={() => decreaseCart(item.id)}
+                    />
+                  );
+                }}
               />
             )}
         </View>
@@ -475,9 +496,18 @@ const Header = ({ title, onBack }: any) => (
   </View>
 );
 
-const CartItemRow = ({ item, onIncrease, onDecrease }: any) => (
+const CartItemRow = ({ item, onIncrease, onDecrease, onRemove }: any) => {
+  const sinStock = (item.stock ?? Infinity) <= 0;
+  return (
   <View style={styles.cartItem}>
-    <Image source={{ uri: item.imageUrl }} style={styles.itemImage} />
+    <View>
+      <Image source={{ uri: item.imageUrl }} style={styles.itemImage} />
+      {sinStock && (
+        <View style={styles.itemAgotadoBadge}>
+          <Text style={styles.itemAgotadoBadgeText}>AGOTADO</Text>
+        </View>
+      )}
+    </View>
     <View style={styles.itemInfo}>
       <Text style={styles.itemName} numberOfLines={2}>{item.name}</Text>
       <Text style={styles.itemCategory}>{item.category}</Text>
@@ -491,32 +521,85 @@ const CartItemRow = ({ item, onIncrease, onDecrease }: any) => (
         )}
       </View>
     </View>
-    <View style={styles.qtyContainer}>
-      <TouchableOpacity style={[styles.qtyBtn, item.quantity === 1 ? styles.qtyBtnRed : styles.qtyBtnGray]} onPress={onDecrease}>
-        <Ionicons name={item.quantity === 1 ? "trash-outline" : "remove"} size={16} color={item.quantity === 1 ? "#FFF" : "#555"} />
-      </TouchableOpacity>
-      <Text style={styles.qtyText}>{item.quantity}</Text>
-      <TouchableOpacity
-        style={[styles.qtyBtn, styles.qtyBtnGreen, item.quantity >= (item.stock ?? Infinity) && { opacity: 0.3 }]}
-        onPress={item.quantity >= (item.stock ?? Infinity) ? undefined : onIncrease}
-        disabled={item.quantity >= (item.stock ?? Infinity)}
-      >
-        <Ionicons name="add" size={16} color="#FFF" />
-      </TouchableOpacity>
-    </View>
+    {sinStock ? (
+      <View style={styles.itemAgotadoActions}>
+        <View style={styles.itemAgotadoPill}>
+          <Text style={styles.itemAgotadoPillText}>Agotado</Text>
+        </View>
+        <TouchableOpacity onPress={onRemove} style={styles.itemAgotadoRemove}>
+          <Ionicons name="trash-outline" size={16} color="#D32F2F" />
+        </TouchableOpacity>
+      </View>
+    ) : (
+      <View style={styles.qtyContainer}>
+        <TouchableOpacity style={[styles.qtyBtn, item.quantity === 1 ? styles.qtyBtnRed : styles.qtyBtnGray]} onPress={onDecrease}>
+          <Ionicons name={item.quantity === 1 ? "trash-outline" : "remove"} size={16} color={item.quantity === 1 ? "#FFF" : "#555"} />
+        </TouchableOpacity>
+        <Text style={styles.qtyText}>{item.quantity}</Text>
+        <TouchableOpacity
+          style={[styles.qtyBtn, styles.qtyBtnGreen, item.quantity >= (item.stock ?? Infinity) && { opacity: 0.3 }]}
+          onPress={item.quantity >= (item.stock ?? Infinity) ? undefined : onIncrease}
+          disabled={item.quantity >= (item.stock ?? Infinity)}
+        >
+          <Ionicons name="add" size={16} color="#FFF" />
+        </TouchableOpacity>
+      </View>
+    )}
   </View>
-);
+  );
+};
 
-const UpsellCard = ({ item, onAdd }: any) => (
-  <View style={styles.upsellCard}>
-     <TouchableOpacity style={styles.addFloating} onPress={onAdd}><Ionicons name="add" size={20} color="#FFF" /></TouchableOpacity>
-     <View style={styles.imageContainer}><Image source={{ uri: item.imageUrl }} style={styles.upsellImage} /></View>
-     <View style={{paddingHorizontal: 5}}> 
-        <Text style={styles.upsellPrice}>${item.price.toLocaleString()}</Text>
+const UpsellCard = ({ item, cantidad, onAdd, onIncrease, onDecrease }: any) => {
+  const stock = item.stock ?? Infinity;
+  const sinStock = stock <= 0;
+  const alTope = cantidad >= stock;
+  const originalPrice = getOriginalPrice(item.price, item.discountPercent);
+
+  return (
+    <View style={styles.upsellCard}>
+      {hasDiscount(item.discountPercent) && (
+        <View style={styles.upsellDiscountTag}>
+          <Text style={styles.upsellDiscountText}>-{item.discountPercent}%</Text>
+        </View>
+      )}
+      <View style={styles.imageContainer}>
+        <Image source={{ uri: item.imageUrl }} style={styles.upsellImage} />
+      </View>
+      <View style={{ paddingHorizontal: 5 }}>
+        <View style={styles.upsellPriceRow}>
+          <Text style={styles.upsellPrice}>${item.price.toLocaleString()}</Text>
+          {!!originalPrice && <Text style={styles.upsellOldPrice}>${originalPrice.toLocaleString()}</Text>}
+        </View>
         <Text style={styles.upsellName} numberOfLines={2}>{item.name}</Text>
-     </View>
-  </View>
-);
+      </View>
+
+      {sinStock ? (
+        <View style={[styles.upsellAddBtn, { backgroundColor: "#ccc" }]}>
+          <Text style={styles.upsellAddBtnText}>Agotado</Text>
+        </View>
+      ) : cantidad === 0 ? (
+        <TouchableOpacity style={styles.upsellAddBtn} onPress={onAdd}>
+          <Ionicons name="add" size={16} color="#FFF" />
+          <Text style={styles.upsellAddBtnText}>Agregar</Text>
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.upsellQtyRow}>
+          <TouchableOpacity style={styles.upsellQtyBtn} onPress={onDecrease}>
+            <Ionicons name={cantidad === 1 ? "trash-outline" : "remove"} size={13} color="#D32F2F" />
+          </TouchableOpacity>
+          <Text style={styles.upsellQtyText}>{cantidad}</Text>
+          <TouchableOpacity
+            style={[styles.upsellQtyBtn, { backgroundColor: alTope ? "#ccc" : "#83c41a" }]}
+            onPress={alTope ? undefined : onIncrease}
+            disabled={alTope}
+          >
+            <Ionicons name="add" size={13} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
+  );
+};
 
 const CustomModal = ({ visible, onClose, onConfirm }: any) => (
   <Modal transparent visible={visible} animationType="fade">
@@ -550,6 +633,12 @@ const styles = StyleSheet.create({
   listContainer: { padding: 20, backgroundColor: '#FFF', marginTop: 10, borderRadius: 20, marginHorizontal: 15 },
   cartItem: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, borderBottomWidth: 1, borderBottomColor: '#F9F9F9', paddingBottom: 15 },
   itemImage: { width: 65, height: 65, resizeMode: 'contain', marginRight: 15, backgroundColor:'#F9F9F9', borderRadius: 10 },
+  itemAgotadoBadge: { position: 'absolute', top: 2, left: 2, backgroundColor: '#D32F2F', paddingHorizontal: 5, paddingVertical: 2, borderRadius: 5, zIndex: 2 },
+  itemAgotadoBadgeText: { color: '#FFF', fontSize: 8, fontWeight: 'bold' },
+  itemAgotadoActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  itemAgotadoPill: { backgroundColor: '#EEE', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 7 },
+  itemAgotadoPillText: { color: '#888', fontWeight: '700', fontSize: 12 },
+  itemAgotadoRemove: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#FFEBEE', justifyContent: 'center', alignItems: 'center' },
   itemInfo: { flex: 1 },
   itemName: { fontSize: 15, fontWeight: '600', color: '#333', marginBottom: 2 },
   itemCategory: { fontSize: 12, color: '#999', marginBottom: 5 },
@@ -569,9 +658,17 @@ const styles = StyleSheet.create({
   upsellSection: { marginTop: 10, paddingLeft: 20 },
   upsellTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15, color: '#333' },
   upsellCard: { width: width * 0.4, backgroundColor: '#FFF', borderRadius: 16, padding: 10, marginRight: 15, elevation: 2, shadowColor: "#000", shadowOpacity: 0.05, shadowOffset: {width: 0, height: 2}, marginBottom: 10 },
+  upsellDiscountTag: { position: 'absolute', top: 6, left: 6, zIndex: 2, backgroundColor: '#E53935', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 },
+  upsellDiscountText: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
+  upsellPriceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 5 },
+  upsellOldPrice: { fontSize: 11, color: '#999', textDecorationLine: 'line-through' },
+  upsellAddBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#83c41a', borderRadius: 16, paddingVertical: 6, marginTop: 6, gap: 4 },
+  upsellAddBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  upsellQtyRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 },
+  upsellQtyBtn: { width: 26, height: 26, borderRadius: 13, backgroundColor: '#EFEFEF', justifyContent: 'center', alignItems: 'center' },
+  upsellQtyText: { fontSize: 14, fontWeight: '700', color: '#333' },
   imageContainer: { width: '100%', height: 90, justifyContent: 'center', alignItems: 'center', marginBottom: 5 },
   upsellImage: { width: '100%', height: '100%', resizeMode: 'contain' },
-  addFloating: { position: 'absolute', top: 5, right: 5, backgroundColor: '#83c41a', width: 30, height: 30, borderRadius: 15, justifyContent: 'center', alignItems: 'center', zIndex: 2, elevation: 3 },
   upsellPrice: { fontSize: 15, fontWeight: 'bold', color: '#333' },
   upsellName: { fontSize: 12, color: '#666', marginTop: 2, height: 32 },
   footerCard: { position: 'absolute', bottom: 80, left: 20, right: 20, backgroundColor: '#FFF', paddingHorizontal: 20, paddingVertical: 15, borderRadius: 25, shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', zIndex: 1000 },

@@ -9,11 +9,12 @@ import {
   Modal,
   TextInput,
   ScrollView,
-  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/src/config/firebase";
+import { avisar } from "@/src/utils/dialogos";
 import {
   suscribirsePedidosUsuario,
   Pedido,
@@ -79,6 +80,7 @@ function StatusStepper({ status }: { status: EstadoPedido }) {
 }
 
 export default function PedidosScreen() {
+  const router = useRouter();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
   // Set de "pedidoId:productoId" ya calificados
@@ -168,7 +170,7 @@ export default function PedidosScreen() {
       setModalVisible(false);
     } catch (error) {
       console.log(error);
-      Alert.alert(
+      avisar(
         "No se pudo guardar",
         guardados.length > 0
           ? "Se guardaron algunas calificaciones, pero otra falló. Las ya enviadas no se pueden modificar; vuelve a intentarlo con las que faltan."
@@ -201,8 +203,16 @@ export default function PedidosScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#83c41a" />
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backCircle}>
+            <Ionicons name="chevron-back" size={24} color="#333" />
+          </TouchableOpacity>
+          <Text style={styles.title}>Mis pedidos</Text>
+        </View>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color="#83c41a" />
+        </View>
       </View>
     );
   }
@@ -213,11 +223,22 @@ export default function PedidosScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Mis pedidos</Text>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backCircle}>
+          <Ionicons name="chevron-back" size={24} color="#333" />
+        </TouchableOpacity>
+        <Text style={styles.title}>Mis pedidos</Text>
+      </View>
 
       {pedidos.length === 0 ? (
-        <View style={styles.centered}>
-          <Text style={styles.empty}>Todavía no has hecho ningún pedido.</Text>
+        <View style={styles.emptyState}>
+          <View style={styles.emptyIconCircle}>
+            <Ionicons name="receipt-outline" size={32} color="#9CB98A" />
+          </View>
+          <Text style={styles.emptyTitle}>Todavía no has hecho pedidos</Text>
+          <Text style={styles.emptySubtitle}>
+            Cuando compres algo, aparecerá aquí con su estado y seguimiento.
+          </Text>
         </View>
       ) : (
         <FlatList
@@ -227,18 +248,36 @@ export default function PedidosScreen() {
           renderItem={({ item }) => (
             <View style={styles.card}>
               <View style={styles.cardHeader}>
-                <Text style={styles.pedidoId}>Pedido #{item.id.slice(0, 6).toUpperCase()}</Text>
-                <Text style={styles.fecha}>{formatFecha(item.createdAt)}</Text>
+                <View>
+                  <Text style={styles.pedidoId}>Pedido #{item.id.slice(0, 6).toUpperCase()}</Text>
+                  <Text style={styles.fecha}>{formatFecha(item.createdAt)}</Text>
+                </View>
+                <View style={[styles.statusPill, { backgroundColor: ESTADO_LABELS[item.status].color + "22" }]}>
+                  <Text style={[styles.statusPillText, { color: ESTADO_LABELS[item.status].color }]}>
+                    {ESTADO_LABELS[item.status].label}
+                  </Text>
+                </View>
               </View>
 
               <StatusStepper status={item.status} />
 
+              {item.status === "cancelado" &&
+                item.proveedorIds.length === 1 &&
+                !!item.motivosCancelacion?.[item.proveedorIds[0]] && (
+                  <Text style={styles.motivoLine}>
+                    Motivo: {item.motivosCancelacion[item.proveedorIds[0]]}
+                  </Text>
+                )}
+
               <View style={styles.divider} />
 
               {item.items.map((prod) => (
-                <Text key={prod.id} style={styles.itemLine}>
-                  {prod.quantity}x {prod.name}
-                </Text>
+                <View key={prod.id} style={styles.itemRow}>
+                  <View style={styles.itemQtyBadge}>
+                    <Text style={styles.itemQtyText}>{prod.quantity}</Text>
+                  </View>
+                  <Text style={styles.itemLine} numberOfLines={1}>{prod.name}</Text>
+                </View>
               ))}
 
               {item.proveedorIds.length > 1 && (
@@ -246,12 +285,18 @@ export default function PedidosScreen() {
                   <Text style={styles.storeStatusesTitle}>Estado por tienda</Text>
                   {item.proveedorIds.map((proveedorId, index) => {
                     const estadoTienda = obtenerEstadoProveedor(item, proveedorId);
+                    const motivoTienda = item.motivosCancelacion?.[proveedorId];
                     return (
-                      <View key={proveedorId} style={styles.storeStatusRow}>
-                        <Text style={styles.storeStatusName}>Tienda {index + 1}</Text>
-                        <Text style={[styles.storeStatusValue, { color: ESTADO_LABELS[estadoTienda].color }]}>
-                          {ESTADO_LABELS[estadoTienda].label}
-                        </Text>
+                      <View key={proveedorId} style={styles.storeStatusBlock}>
+                        <View style={styles.storeStatusRow}>
+                          <Text style={styles.storeStatusName}>Tienda {index + 1}</Text>
+                          <Text style={[styles.storeStatusValue, { color: ESTADO_LABELS[estadoTienda].color }]}>
+                            {ESTADO_LABELS[estadoTienda].label}
+                          </Text>
+                        </View>
+                        {estadoTienda === "cancelado" && !!motivoTienda && (
+                          <Text style={styles.motivoLineSmall}>Motivo: {motivoTienda}</Text>
+                        )}
                       </View>
                     );
                   })}
@@ -374,40 +419,74 @@ export default function PedidosScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
+  container: { flex: 1, backgroundColor: "#F9F9F9" },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
-  title: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#333",
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 10,
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    paddingTop: 55,
+    paddingHorizontal: 16,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F0F0",
   },
+  backCircle: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: "#F5F5F5",
+    justifyContent: "center", alignItems: "center",
+    marginRight: 14,
+  },
+  title: { fontSize: 20, fontWeight: "bold", color: "#333" },
   empty: { color: "#999", fontSize: 16 },
-  card: {
-    backgroundColor: "#f9f9f9",
-    borderRadius: 14,
-    padding: 16,
+  emptyState: { alignItems: "center", paddingHorizontal: 40, marginTop: 60 },
+  emptyIconCircle: {
+    width: 72, height: 72, borderRadius: 36,
+    backgroundColor: "#EAF6D8",
+    justifyContent: "center", alignItems: "center",
     marginBottom: 14,
-    borderWidth: 1,
-    borderColor: "#eee",
+  },
+  emptyTitle: { fontSize: 16, fontWeight: "700", color: "#333", marginBottom: 6, textAlign: "center" },
+  emptySubtitle: { fontSize: 13, color: "#888", textAlign: "center", lineHeight: 18 },
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 18,
+    padding: 18,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
   },
   cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
     marginBottom: 4,
   },
+  statusPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  statusPillText: { fontSize: 11, fontWeight: "700" },
   pedidoId: { fontWeight: "bold", fontSize: 15, color: "#333" },
-  fecha: { color: "#888", fontSize: 12 },
+  fecha: { color: "#888", fontSize: 12, marginTop: 2 },
   divider: { height: 1, backgroundColor: "#eee", marginVertical: 10 },
-  itemLine: { color: "#555", fontSize: 14, marginBottom: 2 },
-  storeStatuses: { marginTop: 10, padding: 10, backgroundColor: "#fff", borderRadius: 10 },
+  itemRow: { flexDirection: "row", alignItems: "center", marginBottom: 6 },
+  itemQtyBadge: {
+    minWidth: 22, height: 22, borderRadius: 11,
+    backgroundColor: "#EAF6D8",
+    justifyContent: "center", alignItems: "center",
+    marginRight: 8, paddingHorizontal: 4,
+  },
+  itemQtyText: { fontSize: 11, fontWeight: "bold", color: "#5E8D10" },
+  itemLine: { color: "#555", fontSize: 14, flex: 1 },
+  storeStatuses: { marginTop: 10, padding: 10, backgroundColor: "#F7F9F4", borderRadius: 10 },
   storeStatusesTitle: { color: "#555", fontSize: 12, fontWeight: "bold", marginBottom: 5 },
-  storeStatusRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 2 },
+  storeStatusBlock: { paddingVertical: 2 },
+  storeStatusRow: { flexDirection: "row", justifyContent: "space-between" },
   storeStatusName: { color: "#777", fontSize: 12 },
   storeStatusValue: { fontWeight: "bold", fontSize: 12 },
+  motivoLine: { color: "#D32F2F", fontSize: 12, marginTop: 4, fontStyle: "italic" },
+  motivoLineSmall: { color: "#D32F2F", fontSize: 11, marginTop: 2, fontStyle: "italic" },
   addressLine: { color: "#666", fontSize: 12, marginTop: 8 },
   total: { marginTop: 8, fontWeight: "bold", fontSize: 15, color: "#83c41a" },
   rateSection: { marginTop: 12, borderTopWidth: 1, borderTopColor: "#eee", paddingTop: 10 },

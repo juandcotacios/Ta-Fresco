@@ -55,6 +55,7 @@ export default function OfertasScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [discountedProducts, setDiscountedProducts] = useState<Product[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [storeNames, setStoreNames] = useState<Record<string, string>>({});
 
   const normalizar = (s: string) =>
     s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -115,6 +116,22 @@ export default function OfertasScreen() {
     return () => unsubscribe();
   }, []);
 
+  // Nombre real de cada tienda, para mostrarlo en las tarjetas (igual que en home.tsx).
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      collection(db, "tiendas"),
+      (snapshot) => {
+        const names: Record<string, string> = {};
+        snapshot.docs.forEach((store) => {
+          names[store.id] = String(store.data().nombre || "Tienda de Corabastos");
+        });
+        setStoreNames(names);
+      },
+      (error) => console.log(error)
+    );
+    return () => unsubscribe();
+  }, []);
+
   const onRefresh = () => {
     setRefreshing(true);
     setTimeout(() => setRefreshing(false), 400); // los datos ya llegan solos por tiempo real
@@ -156,29 +173,6 @@ export default function OfertasScreen() {
         }
       >
         
-        <View style={styles.carouselSection}>
-          <FlatList
-            data={topOffers}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingLeft: 20, paddingRight: 10, paddingTop: 15 }}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => {
-               const cartItem = cart.find((c) => c.id === item.id);
-               const currentQty = cartItem ? cartItem.quantity : 0;
-
-               return (
-                 <TopOfferItem 
-                    item={item} 
-                    currentQty={currentQty}
-                    addToCart={addToCart} 
-                    decreaseCart={decreaseCart}
-                 />
-               );
-            }}
-          />
-        </View>
-
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>Busca por categoría</Text>
           <FlatList
@@ -206,30 +200,75 @@ export default function OfertasScreen() {
           />
         </View>
 
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Super descuentos</Text>
-
-          {filteredOffers.length === 0 && (
-            <Text style={{ color: "#999", paddingHorizontal: 20 }}>
-              No hay ofertas activas por ahora.
+        {filteredOffers.length === 0 ? (
+          <View style={styles.emptyState}>
+            <View style={styles.emptyIconCircle}>
+              <Ionicons name="pricetags-outline" size={32} color="#9CB98A" />
+            </View>
+            <Text style={styles.emptyTitle}>
+              {selectedCategory ? `Sin ofertas en ${selectedCategory}` : "No hay ofertas activas"}
             </Text>
-          )}
+            <Text style={styles.emptySubtitle}>
+              {selectedCategory
+                ? "Prueba con otra categoría o vuelve más tarde."
+                : "Vuelve más tarde, los tenderos actualizan sus descuentos seguido."}
+            </Text>
+          </View>
+        ) : (
+          <>
+            <View style={styles.carouselSection}>
+              <Text style={styles.sectionTitle}>Ofertas destacadas</Text>
+              <FlatList
+                data={topOffers}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingLeft: 20, paddingRight: 10, paddingTop: 5 }}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => {
+                   const cartItem = cart.find((c) => c.id === item.id);
+                   const currentQty = cartItem ? cartItem.quantity : 0;
 
-          {superDiscounts.map((item) => {
-             const cartItem = cart.find((c) => c.id === item.id);
-             const currentQty = cartItem ? cartItem.quantity : 0;
+                   return (
+                     <TopOfferItem 
+                        item={item} 
+                        currentQty={currentQty}
+                        addToCart={addToCart} 
+                        decreaseCart={decreaseCart}
+                        storeName={item.proveedorId ? storeNames[item.proveedorId] : undefined}
+                        onStorePress={item.proveedorId ? () => router.push({ pathname: "/tiendas/[id]", params: { id: item.proveedorId! } }) : undefined}
+                     />
+                   );
+                }}
+              />
+            </View>
 
-             return (
-               <SuperDiscountItem 
-                  key={item.id} 
-                  item={item} 
-                  currentQty={currentQty}
-                  addToCart={addToCart}
-                  decreaseCart={decreaseCart}
-               />
-             );
-          })}
-        </View>
+            {superDiscounts.length > 0 && (
+              <View style={styles.sectionContainer}>
+                <Text style={styles.sectionTitle}>Más ofertas</Text>
+                <View style={styles.gridWrap}>
+                  {superDiscounts.map((item) => {
+                     const cartItem = cart.find((c) => c.id === item.id);
+                     const currentQty = cartItem ? cartItem.quantity : 0;
+
+                     return (
+                       <View key={item.id} style={styles.gridItem}>
+                         <TopOfferItem
+                            item={item}
+                            currentQty={currentQty}
+                            addToCart={addToCart}
+                            decreaseCart={decreaseCart}
+                            cardStyle={styles.gridCard}
+                            storeName={item.proveedorId ? storeNames[item.proveedorId] : undefined}
+                            onStorePress={item.proveedorId ? () => router.push({ pathname: "/tiendas/[id]", params: { id: item.proveedorId! } }) : undefined}
+                         />
+                       </View>
+                     );
+                  })}
+                </View>
+              </View>
+            )}
+          </>
+        )}
 
       </ScrollView>
 
@@ -344,17 +383,28 @@ export default function OfertasScreen() {
   );
 }
 
-const TopOfferItem = ({ item, currentQty, addToCart, decreaseCart }: any) => {
-  
+const TopOfferItem = ({ item, currentQty, addToCart, decreaseCart, cardStyle, storeName, onStorePress }: any) => {
+  // Firestore ya entrega el stock en tiempo real (el listener de arriba usa
+  // onSnapshot), así que esto siempre refleja el stock real, sin fotos viejas.
+  const sinStock = (item.stock ?? 0) <= 0;
+  const alTope = currentQty >= (item.stock ?? 0);
+
   const handleDecrease = () => decreaseCart(item.id);
 
   return (
-    <View style={styles.offerCard}>
+    <View style={[styles.offerCard, cardStyle]}>
       <View style={styles.yellowBadge}>
         <Text style={styles.yellowBadgeText}>{item.discountTag}</Text>
       </View>
 
-      <Image source={{ uri: item.imageUrl }} style={styles.offerImage} />
+      <View style={styles.offerImageWrap}>
+        <Image source={{ uri: item.imageUrl }} style={styles.offerImage} />
+        {sinStock && (
+          <View style={styles.agotadoBadge}>
+            <Text style={styles.agotadoBadgeText}>AGOTADO</Text>
+          </View>
+        )}
+      </View>
       
       <View style={{paddingHorizontal: 5, width: '100%'}}>
         <Text style={styles.priceText}>${item.price.toLocaleString()}</Text>
@@ -362,10 +412,19 @@ const TopOfferItem = ({ item, currentQty, addToCart, decreaseCart }: any) => {
             <Text style={styles.oldPriceText}>Antes ${item.oldPrice.toLocaleString()}</Text>
         )}
         <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
+        {!!storeName && (
+          <TouchableOpacity onPress={onStorePress} accessibilityRole="link">
+            <Text style={styles.offerStoreName} numberOfLines={1}>🏪 {storeName}</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <View style={styles.actionsContainer}>
-        {currentQty === 0 ? (
+        {sinStock ? (
+            <View style={[styles.addBtnFloating, styles.addBtnAgotado]}>
+               <Text style={styles.agotadoBtnText}>Agotado</Text>
+            </View>
+        ) : currentQty === 0 ? (
             <TouchableOpacity 
                style={styles.addBtnFloating}
                onPress={() => addToCart({ ...item, quantity: 1 })}
@@ -378,56 +437,15 @@ const TopOfferItem = ({ item, currentQty, addToCart, decreaseCart }: any) => {
                     <Ionicons name={currentQty === 1 ? "trash-outline" : "remove"} size={14} color="#D32F2F" />
                 </TouchableOpacity>
                 <Text style={styles.qtyTextSmall}>{currentQty}</Text>
-                <TouchableOpacity onPress={() => addToCart({ ...item, quantity: 1 })} style={styles.qtyBtnSmall}>
+                <TouchableOpacity
+                    onPress={alTope ? undefined : () => addToCart({ ...item, quantity: 1 })}
+                    disabled={alTope}
+                    style={[styles.qtyBtnSmall, alTope && { opacity: 0.3 }]}
+                >
                     <Ionicons name="add" size={14} color="#4CAF50" />
                 </TouchableOpacity>
             </View>
         )}
-      </View>
-    </View>
-  );
-};
-
-const SuperDiscountItem = ({ item, currentQty, addToCart, decreaseCart }: any) => {
-  
-  const handleDecrease = () => decreaseCart(item.id);
-
-  return (
-    <View style={styles.superCard}>
-      
-      <View style={styles.imageWrapper}>
-         <Image source={{ uri: item.imageUrl }} style={styles.superImage} />
-         <View style={styles.discountCircle}>
-            <Text style={styles.discountCircleText}>{item.discountTag}</Text>
-         </View>
-      </View>
-
-      <View style={styles.superInfo}>
-        <Text style={styles.superName} numberOfLines={2}>{item.name}</Text>
-        <View style={styles.priceRow}>
-          <Text style={styles.superPrice}>${item.price.toLocaleString()}</Text>
-          {item.oldPrice && (
-            <Text style={styles.superOldPrice}>${item.oldPrice.toLocaleString()}</Text>
-          )}
-        </View>
-      </View>
-
-      <View style={styles.superActions}>
-         {currentQty === 0 ? (
-            <TouchableOpacity style={styles.addBtnSquare} onPress={() => addToCart({ ...item, quantity: 1 })}>
-               <Ionicons name="cart-outline" size={22} color="#FFF" />
-            </TouchableOpacity>
-         ) : (
-            <View style={styles.qtyVertical}>
-               <TouchableOpacity onPress={() => addToCart({ ...item, quantity: 1 })} style={styles.qtyBtnVert}>
-                  <Ionicons name="add" size={14} color="#FFF" />
-               </TouchableOpacity>
-               <Text style={styles.qtyTextVert}>{currentQty}</Text>
-               <TouchableOpacity onPress={handleDecrease} style={[styles.qtyBtnVert, {backgroundColor:'#FFEBEE'}]}>
-                  <Ionicons name={currentQty === 1 ? "trash-outline" : "remove"} size={14} color="#D32F2F" />
-               </TouchableOpacity>
-            </View>
-         )}
       </View>
     </View>
   );
@@ -484,13 +502,18 @@ const styles = StyleSheet.create({
   },
   yellowBadge: {
     position: 'absolute',
-    top: 10, left: 10,
+    top: 10, right: 10,
     backgroundColor: '#FFEB3B',
     paddingHorizontal: 8, paddingVertical: 4,
     borderRadius: 8,
     zIndex: 10,
   },
   yellowBadgeText: { fontSize: 11, fontWeight: '800', color: '#E65100' },
+  agotadoBadge: { position: 'absolute', top: 6, left: 6, backgroundColor: '#D32F2F', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, zIndex: 2 },
+  agotadoBadgeText: { color: '#FFF', fontSize: 10, fontWeight: 'bold' },
+  // Ancho explícito: el 80% de offerImage necesita un padre con ancho
+  // determinado para calcularse. Sin esto, la imagen colapsaba a 0 y no se veía.
+  offerImageWrap: { width: '100%', alignItems: 'center' },
   offerImage: {
     width: '80%', height: 90,
     resizeMode: 'contain',
@@ -498,7 +521,8 @@ const styles = StyleSheet.create({
   },
   priceText: { fontSize: 17, fontWeight: 'bold', color: '#000' },
   oldPriceText: { fontSize: 11, color: '#999', textDecorationLine: 'line-through', marginBottom: 4 },
-  productName: { fontSize: 13, color: '#444', marginBottom: 15, height: 34, textAlign: 'center' },
+  productName: { fontSize: 13, color: '#444', marginBottom: 4, height: 34, textAlign: 'center' },
+  offerStoreName: { fontSize: 10, color: '#5E8D10', fontWeight: '600', marginBottom: 10, textAlign: 'center' },
   
   actionsContainer: { width: '100%', alignItems: 'center', height: 40, justifyContent: 'center' },
   addBtnFloating: {
@@ -508,6 +532,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
     shadowColor: "#00E600", shadowOpacity: 0.4, shadowOffset:{width:0, height:3}, elevation: 3
   },
+  addBtnAgotado: { backgroundColor: '#ccc', width: 'auto', paddingHorizontal: 10, shadowOpacity: 0, elevation: 0 },
+  agotadoBtnText: { color: '#666', fontWeight: 'bold', fontSize: 11 },
   qtyPill: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: '#F5F5F5', borderRadius: 25,
@@ -529,53 +555,27 @@ const styles = StyleSheet.create({
   catImage: { width: 35, height: 35, resizeMode: 'contain' },
   catText: { fontSize: 11, color: '#555', fontWeight: '500' },
 
-  superCard: {
+  // Grilla de 2 columnas para "Más ofertas": reutiliza la misma tarjeta que
+  // el carrusel de arriba (TopOfferItem con cardStyle), así toda la pantalla
+  // se ve consistente en vez de mezclar dos diseños de tarjeta distintos.
+  gridWrap: {
     flexDirection: 'row',
-    backgroundColor: '#FFF',
-    marginHorizontal: 20, marginBottom: 15,
-    borderRadius: 20,
-    padding: 15,
-    shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 5, elevation: 2,
-    alignItems: 'center',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
   },
-  imageWrapper: { position: 'relative', marginRight: 15 },
-  superImage: { width: 70, height: 70, resizeMode: 'contain' },
-  discountCircle: {
-    position: 'absolute', top: -5, left: -5,
-    backgroundColor: '#D32F2F', borderRadius: 10,
-    paddingHorizontal: 5, paddingVertical: 2
-  },
-  discountCircleText: { color: '#FFF', fontSize: 9, fontWeight: 'bold' },
-  
-  superInfo: { flex: 1 },
-  superName: { fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 5 },
-  priceRow: { flexDirection: 'row', alignItems: 'center' },
-  superPrice: { fontSize: 16, fontWeight: 'bold', color: '#000', marginRight: 8 },
-  superOldPrice: { fontSize: 12, color: '#999', textDecorationLine: 'line-through' },
+  gridItem: { width: '48%', marginBottom: 15 },
+  gridCard: { width: '100%', marginRight: 0, marginBottom: 0 },
 
-  superActions: { marginLeft: 10 },
-  addBtnSquare: {
-    backgroundColor: '#83c41a',
-    width: 44, height: 44,
-    borderRadius: 14,
+  emptyState: { alignItems: 'center', paddingHorizontal: 40, paddingTop: 30, paddingBottom: 10 },
+  emptyIconCircle: {
+    width: 72, height: 72, borderRadius: 36,
+    backgroundColor: '#EAF6D8',
     justifyContent: 'center', alignItems: 'center',
-    elevation: 2
+    marginBottom: 14,
   },
-  qtyVertical: {
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    borderRadius: 12,
-    padding: 3,
-    borderWidth: 1, borderColor: '#EEE'
-  },
-  qtyBtnVert: {
-    width: 32, height: 28,
-    justifyContent: 'center', alignItems: 'center',
-    backgroundColor: '#83c41a',
-    borderRadius: 8,
-    marginVertical: 2
-  },
-  qtyTextVert: { fontSize: 14, fontWeight: 'bold', marginVertical: 2 },
+  emptyTitle: { fontSize: 16, fontWeight: '700', color: '#333', marginBottom: 6, textAlign: 'center' },
+  emptySubtitle: { fontSize: 13, color: '#888', textAlign: 'center', lineHeight: 18 },
 
   chatbotContainer: { position: "absolute", bottom: BOTTOM_TAB_HEIGHT + 10, right: 20, zIndex: 999 },
   floatingCartBtn: {

@@ -13,7 +13,7 @@ import { useRouter } from "expo-router";
 import { getAuth } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/src/config/firebase";
-import { guardarMiTienda } from "@/src/services/tiendaService";
+import { guardarMiTienda, obtenerMiTienda } from "@/src/services/tiendaService";
 import {
   crearSolicitud,
   obtenerMiSolicitud,
@@ -37,10 +37,13 @@ export default function ConvertirseTenderoScreen() {
   const esVendedor = rol === "tendero" || rol === "admin";
   const pendiente = !esVendedor && solicitud?.estado === "pendiente";
   const rechazada = !esVendedor && solicitud?.estado === "rechazada";
-  const aprobada = rol === "tendero" && solicitud?.estado === "aprobada";
 
-  // Al entrar se consulta el rol y el estado de la última solicitud, para mostrar
-  // en qué va el trámite en vez de dejar al usuario sin saber qué pasó.
+  // Al entrar se consulta el rol, la última solicitud y si la tienda ya existe.
+  // Cuando el admin aprueba, la tienda se crea sola con esos mismos datos, así
+  // que si ya existe no tiene sentido mostrar el formulario otra vez: se manda
+  // directo a agregar productos. El formulario solo queda como respaldo para
+  // un caso raro: alguien con rol de tendero que, por lo que sea, no tiene
+  // tienda todavía (por ejemplo, si un admin le dio el rol a mano).
   useEffect(() => {
     const cargar = async () => {
       if (!user) {
@@ -48,24 +51,23 @@ export default function ConvertirseTenderoScreen() {
         return;
       }
       try {
-        const [userSnap, miSolicitud] = await Promise.all([
+        const [userSnap, miSolicitud, miTienda] = await Promise.all([
           getDoc(doc(db, "users", user.uid)),
           obtenerMiSolicitud(user.uid),
+          obtenerMiTienda(user.uid),
         ]);
         const rolActual: Rol = userSnap.data()?.role || "cliente";
         setRol(rolActual);
         setSolicitud(miSolicitud);
 
-        // Con la solicitud aprobada se precargan los datos que ya había escrito.
-        if (rolActual === "tendero" && miSolicitud?.estado === "aprobada") {
-          setNombre(miSolicitud.nombre);
-          setDescripcion(miSolicitud.descripcion);
+        if ((rolActual === "tendero" || rolActual === "admin") && miTienda) {
+          router.replace("/tienda/productos");
+          return; // se deja "cargando": la pantalla de destino toma el control
         }
       } catch (error) {
         console.log(error);
-      } finally {
-        setCargando(false);
       }
+      setCargando(false);
     };
     cargar();
   }, [user]);
@@ -150,14 +152,6 @@ export default function ConvertirseTenderoScreen() {
         </View>
       )}
 
-      {aprobada && (
-        <View style={styles.successBox}>
-          <Text style={styles.successText}>
-            ¡Tu solicitud fue aprobada! Ya puedes crear tu tienda.
-          </Text>
-        </View>
-      )}
-
       {errorMsg && (
         <View style={styles.errorBox}>
           <Text style={styles.errorText}>{errorMsg}</Text>
@@ -226,8 +220,6 @@ const styles = StyleSheet.create({
   errorText: { color: "#D32F2F", fontSize: 13 },
   infoBox: { backgroundColor: "#FFF8E1", padding: 12, borderRadius: 8, marginBottom: 14 },
   infoText: { color: "#8a6d00", fontSize: 13, lineHeight: 18 },
-  successBox: { backgroundColor: "#EAF6D8", padding: 12, borderRadius: 8, marginBottom: 14 },
-  successText: { color: "#3d6b00", fontSize: 13, lineHeight: 18 },
   label: { fontSize: 13, color: "#666", marginBottom: 6, marginTop: 10, fontWeight: "600" },
   input: { backgroundColor: "#F5F5F5", borderRadius: 10, padding: 14, fontSize: 15 },
   createBtn: {

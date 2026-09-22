@@ -6,7 +6,6 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -30,9 +29,13 @@ export default function AdminSolicitudesScreen() {
   const [loading, setLoading] = useState(true);
   const [resolviendoId, setResolviendoId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  // Confirmación en línea (dentro de la misma tarjeta) en vez de una ventana
+  // emergente: null cuando no se está confirmando nada.
+  const [confirmando, setConfirmando] = useState<{ id: string; aprobar: boolean } | null>(null);
 
   const cargar = async () => {
     setLoading(true);
+    setConfirmando(null);
     try {
       const data = await obtenerSolicitudesPendientes();
       setSolicitudes(data);
@@ -81,24 +84,6 @@ export default function AdminSolicitudesScreen() {
     }
   };
 
-  const confirmar = (solicitud: SolicitudTiendaConId, aprobar: boolean) => {
-    const quien = solicitantes[solicitud.userId]?.nickname || "este usuario";
-    Alert.alert(
-      aprobar ? "Aprobar solicitud" : "Rechazar solicitud",
-      aprobar
-        ? `${quien} pasará a ser tendero y podrá crear la tienda "${solicitud.nombre}".`
-        : `Se rechazará la solicitud de ${quien}. Podrá enviar una nueva.`,
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: aprobar ? "Aprobar" : "Rechazar",
-          style: aprobar ? "default" : "destructive",
-          onPress: () => resolver(solicitud, aprobar),
-        },
-      ]
-    );
-  };
-
   const formatFecha = (s: SolicitudTiendaConId) => {
     if (!s.createdAt?.toDate) return "";
     return s.createdAt.toDate().toLocaleDateString("es-CO", {
@@ -145,26 +130,59 @@ export default function AdminSolicitudesScreen() {
                 </Text>
                 {!!formatFecha(item) && <Text style={styles.date}>Enviada el {formatFecha(item)}</Text>}
 
-                <View style={styles.actionsRow}>
-                  <TouchableOpacity
-                    disabled={resolviendo}
-                    onPress={() => confirmar(item, false)}
-                    style={[styles.btn, styles.rejectBtn]}
-                  >
-                    <Text style={styles.rejectText}>Rechazar</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    disabled={resolviendo}
-                    onPress={() => confirmar(item, true)}
-                    style={[styles.btn, styles.approveBtn]}
-                  >
-                    {resolviendo ? (
-                      <ActivityIndicator size="small" color="#fff" />
-                    ) : (
-                      <Text style={styles.approveText}>Aprobar</Text>
-                    )}
-                  </TouchableOpacity>
-                </View>
+                {confirmando?.id === item.id ? (
+                  <View style={styles.confirmRow}>
+                    <Text style={styles.confirmText}>
+                      {confirmando.aprobar
+                        ? `${persona?.nickname || "Este usuario"} pasará a ser tendero.`
+                        : "Se rechazará esta solicitud."}
+                    </Text>
+                    <View style={styles.confirmButtons}>
+                      <TouchableOpacity
+                        onPress={() => setConfirmando(null)}
+                        style={styles.confirmCancelBtn}
+                      >
+                        <Text style={styles.confirmCancelText}>Cancelar</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => {
+                          const aprobar = confirmando.aprobar;
+                          setConfirmando(null);
+                          resolver(item, aprobar);
+                        }}
+                        style={[
+                          styles.confirmYesBtn,
+                          confirmando.aprobar ? styles.approveBtn : styles.rejectSolidBtn,
+                        ]}
+                      >
+                        <Text style={styles.confirmYesText}>
+                          {confirmando.aprobar ? "Sí, aprobar" : "Sí, rechazar"}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ) : (
+                  <View style={styles.actionsRow}>
+                    <TouchableOpacity
+                      disabled={resolviendo}
+                      onPress={() => setConfirmando({ id: item.id, aprobar: false })}
+                      style={[styles.btn, styles.rejectBtn]}
+                    >
+                      <Text style={styles.rejectText}>Rechazar</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      disabled={resolviendo}
+                      onPress={() => setConfirmando({ id: item.id, aprobar: true })}
+                      style={[styles.btn, styles.approveBtn]}
+                    >
+                      {resolviendo ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <Text style={styles.approveText}>Aprobar</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
             );
           }}
@@ -218,4 +236,25 @@ const styles = StyleSheet.create({
   rejectText: { color: "#D32F2F", fontWeight: "600", fontSize: 13 },
   approveBtn: { backgroundColor: "#83c41a" },
   approveText: { color: "#fff", fontWeight: "600", fontSize: 13 },
+  confirmRow: {
+    marginTop: 14,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#eee",
+  },
+  confirmText: { color: "#333", fontSize: 13, marginBottom: 10 },
+  confirmButtons: { flexDirection: "row", justifyContent: "flex-end" },
+  confirmCancelBtn: {
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginLeft: 10,
+    backgroundColor: "#F0F0F0",
+  },
+  confirmCancelText: { color: "#555", fontWeight: "600", fontSize: 13 },
+  confirmYesBtn: { borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8, marginLeft: 10 },
+  confirmYesText: { color: "#fff", fontWeight: "600", fontSize: 13 },
+  rejectSolidBtn: { backgroundColor: "#D32F2F" },
 });

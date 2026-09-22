@@ -74,8 +74,11 @@ export async function obtenerSolicitudesPendientes(): Promise<SolicitudTiendaCon
 }
 
 /**
- * Aprueba la solicitud: marca la solicitud como aprobada y le da el rol de tendero
- * al solicitante, ambas cosas en una sola operación para que no queden a medias.
+ * Aprueba la solicitud: marca la solicitud como aprobada, le da el rol de
+ * tendero al solicitante y crea su tienda con el nombre y la descripción que
+ * ya había enviado, todo en una sola operación para que no queden a medias.
+ * Así, cuando la persona vuelve a abrir la app, su tienda ya existe: no tiene
+ * que volver a escribir esos datos, solo entra a agregar productos.
  * Si el usuario ya no es "cliente" (p. ej. ya es admin) no se le cambia el rol.
  */
 export async function aprobarSolicitud(
@@ -88,6 +91,16 @@ export async function aprobarSolicitud(
 
   const batch = writeBatch(db);
   if (rolActual === "cliente") batch.update(userRef, { role: "tendero" });
+  batch.set(
+    doc(db, "tiendas", solicitud.userId),
+    {
+      ownerId: solicitud.userId,
+      nombre: solicitud.nombre,
+      descripcion: solicitud.descripcion,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true }
+  );
   batch.update(doc(db, COLECCION, solicitud.id), {
     estado: "aprobada" as EstadoSolicitud,
     resueltaPor: adminUid,

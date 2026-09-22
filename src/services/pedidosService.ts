@@ -12,6 +12,8 @@ import {
   serverTimestamp,
   Timestamp,
   Unsubscribe,
+  Transaction,
+  DocumentReference,
 } from "firebase/firestore";
 import { db } from "@/src/config/firebase";
 
@@ -63,6 +65,8 @@ export interface Pedido {
   paymentMethod: "cash" | "card" | "nequi";
   proveedorIds: string[];
   createdAt: Timestamp | null;
+  /** Motivo que dio cada tienda (o el admin) al cancelar su parte del pedido. */
+  motivosCancelacion?: Record<string, string>;
 }
 
 function mapPedido(docSnap: any): Pedido {
@@ -80,6 +84,7 @@ function mapPedido(docSnap: any): Pedido {
     paymentMethod: (data.paymentMethod || "cash") as "cash" | "card" | "nequi",
     proveedorIds: data.proveedorIds || [],
     createdAt: data.createdAt || null,
+    motivosCancelacion: data.motivosCancelacion || undefined,
   };
 }
 
@@ -99,6 +104,48 @@ function calcularEstadoGlobal(
   const indices = activos.map((e) => ORDEN_ESTADOS.indexOf(e));
   const minIndex = Math.min(...indices);
   return ORDEN_ESTADOS[minIndex];
+}
+
+/**
+ * Unidades que hay que devolver al inventario al cancelar, por id de producto.
+ * Solo cuentan los ítems de tiendas que todavía NO estaban canceladas, para no
+ * devolver dos veces lo mismo. `soloProveedorId` limita el cálculo a una tienda
+ * (cancelación hecha por el tendero); sin él aplica a todo el pedido (admin).
+ */
+export function unidadesADevolver(
+  items: PedidoItem[],
+  estadosPorProveedor: Record<string, EstadoPedido>,
+  estadoGlobal: EstadoPedido,
+  soloProveedorId?: string
+): Record<string, number> {
+  const unidades: Record<string, number> = {};
+  for (const item of items) {
+    if (soloProveedorId && item.proveedorId !== soloProveedorId) continue;
+    const estadoPrevio = item.proveedorId
+      ? estadosPorProveedor[item.proveedorId] ?? estadoGlobal
+      : estadoGlobal;
+    if (estadoPrevio === "cancelado") continue;
+    unidades[item.id] = (unidades[item.id] || 0) + item.quantity;
+  }
+  return unidades;
+}
+
+/**
+ * Lee el stock actual de los productos a los que hay que devolver unidades.
+ * Va antes de cualquier escritura (regla de las transacciones). Si un producto
+ * ya fue eliminado del catálogo no hay a dónde devolver, y se omite.
+ */
+async function leerStockParaDevolver(
+  transaction: Transaction,
+  unidades: Record<string, number>
+): Promise<{ ref: DocumentReference; stock: number; cantidad: number }[]> {
+  const lecturas: { ref: DocumentReference; stock: number; cantidad: number }[] = [];
+  for (const [productoId, cantidad] of Object.entries(unidades)) {
+    const ref = doc(db, "Productos", productoId);
+    const snap = await transaction.get(ref);
+    if (snap.exists()) lecturas.push({ ref, stock: (snap.data() as any).stock ?? 0, cantidad });
+  }
+  return lecturas;
 }
 
 /** Devuelve el estado de UNA tienda puntual dentro de un pedido. */
@@ -268,7 +315,8 @@ export function suscribirseTodosLosPedidos(
  */
 export async function actualizarEstadoPedido(
   pedidoId: string,
-  nuevoEstado: EstadoPedido
+  nuevoEstado: EstadoPedido,
+  motivo?: string
 ): Promise<void> {
   const pedidoRef = doc(db, "pedidos", pedidoId);
   await runTransaction(db, async (transaction) => {
@@ -280,10 +328,29 @@ export async function actualizarEstadoPedido(
     proveedorIds.forEach((id) => {
       nuevosEstados[id] = nuevoEstado;
     });
-    transaction.update(pedidoRef, {
+
+    // Al cancelar, las unidades vuelven al inventario (lecturas antes de escribir).
+    const devolver =
+      nuevoEstado === "cancelado"
+        ? unidadesADevolver(data.items || [], data.estadosPorProveedor || {}, data.status || "pendiente")
+        : {};
+    const reposiciones = await leerStockParaDevolver(transaction, devolver);
+    reposiciones.forEach((r) => transaction.update(r.ref, { stock: r.stock + r.cantidad }));
+
+    const updateData: Record<string, unknown> = {
       estadosPorProveedor: nuevosEstados,
       status: nuevoEstado,
-    });
+    };
+    // El admin cancela TODO el pedido de una vez: el mismo motivo aplica a cada tienda.
+    if (nuevoEstado === "cancelado" && motivo?.trim()) {
+      const motivosPrevios: Record<string, string> = data.motivosCancelacion || {};
+      const motivosNuevos = { ...motivosPrevios };
+      proveedorIds.forEach((id) => {
+        motivosNuevos[id] = motivo.trim();
+      });
+      updateData.motivosCancelacion = motivosNuevos;
+    }
+    transaction.update(pedidoRef, updateData);
   });
 }
 
@@ -295,7 +362,8 @@ export async function actualizarEstadoPedido(
 export async function actualizarEstadoProveedor(
   pedidoId: string,
   proveedorId: string,
-  nuevoEstado: EstadoPedido
+  nuevoEstado: EstadoPedido,
+  motivo?: string
 ): Promise<void> {
   const pedidoRef = doc(db, "pedidos", pedidoId);
   await runTransaction(db, async (transaction) => {
@@ -306,10 +374,26 @@ export async function actualizarEstadoProveedor(
     const estadosActuales: Record<string, EstadoPedido> = data.estadosPorProveedor || {};
     const nuevosEstados = { ...estadosActuales, [proveedorId]: nuevoEstado };
     const nuevoGlobal = calcularEstadoGlobal(nuevosEstados, proveedorIds);
-    transaction.update(pedidoRef, {
+
+    // Al cancelar, solo se devuelven las unidades de ESTA tienda.
+    const devolver =
+      nuevoEstado === "cancelado"
+        ? unidadesADevolver(data.items || [], estadosActuales, data.status || "pendiente", proveedorId)
+        : {};
+    const reposiciones = await leerStockParaDevolver(transaction, devolver);
+    reposiciones.forEach((r) => transaction.update(r.ref, { stock: r.stock + r.cantidad }));
+
+    const updateData: Record<string, unknown> = {
       estadosPorProveedor: nuevosEstados,
       status: nuevoGlobal,
-    });
+    };
+    // El tendero solo cancela SU tienda: el motivo se guarda solo para esa tienda,
+    // sin tocar lo que otras tiendas del mismo pedido hayan escrito.
+    if (nuevoEstado === "cancelado" && motivo?.trim()) {
+      const motivosPrevios: Record<string, string> = data.motivosCancelacion || {};
+      updateData.motivosCancelacion = { ...motivosPrevios, [proveedorId]: motivo.trim() };
+    }
+    transaction.update(pedidoRef, updateData);
   });
 }
 
