@@ -1,3 +1,6 @@
+import Logo from "@/components/Logo";
+import { colors, radius, shadow, spacing } from "@/constants/designSystem";
+import { Ionicons } from "@expo/vector-icons";
 import * as Font from 'expo-font';
 import { useRouter } from "expo-router";
 import * as SplashScreen from 'expo-splash-screen';
@@ -34,14 +37,14 @@ export default function WelcomeScreen() {
 
   return (
     <View style={styles.container}>
+      <View style={styles.blobTop} />
+      <View style={styles.blobBottom} />
+
       <View style={styles.topContent}>
-        <Image
-          source={require("./assets/images/logo.png")}
-          style={styles.logo}
-        />
+        <Logo variant="light" size="lg" />
         <Text style={styles.welcome}>Bienvenido!</Text>
         <Text style={styles.description}>
-          En Frescapp, somos tu plaza online, ¡permítenos ir a la plaza por ti!
+          En Ta Fresco, somos tu plaza online, ¡permítenos ir a la plaza por ti!
         </Text>
       </View>
 
@@ -52,11 +55,12 @@ export default function WelcomeScreen() {
 
       <TouchableOpacity
         style={styles.button}
+        activeOpacity={0.85}
         onPress={() => router.push("/login")}
       >
-        <Text style={styles.buttonText}>Iniciar 🡺</Text>
+        <Text style={styles.buttonText}>Iniciar</Text>
+        <Ionicons name="arrow-forward" size={20} color={colors.textPrimary} />
       </TouchableOpacity>
-
     </View>
   );
 }
@@ -64,37 +68,51 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#212121",
+    backgroundColor: colors.ink,
     alignItems: "center",
     justifyContent: "space-between",
     paddingVertical: 40,
-    paddingHorizontal: 20,
+    paddingHorizontal: spacing.xl,
+    overflow: "hidden",
+  },
+  blobTop: {
+    position: "absolute",
+    top: -90,
+    right: -70,
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: colors.primaryDark,
+    opacity: 0.55,
+  },
+  blobBottom: {
+    position: "absolute",
+    bottom: 120,
+    right: -60,
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: colors.accent,
+    opacity: 0.18,
   },
   topContent: {
     alignItems: "center",
     paddingTop: 60,
   },
-  logo: {
-    width: 220,
-    height: 120,
-    resizeMode: "contain",
-    marginBottom: 25,
-  },
   welcome: {
-    fontSize: 64,
-    color: "#fff",
+    fontSize: 56,
+    color: colors.white,
     fontFamily: "LiuJianMaoCao-Regular",
-    marginBottom: 20,
+    marginTop: 28,
+    marginBottom: 14,
   },
   description: {
-    color: "#fff",
-    fontSize: 20,
+    color: "rgba(255,255,255,0.85)",
+    fontSize: 17,
     textAlign: "center",
-    maxWidth: "85%",
-    lineHeight: 26,
+    maxWidth: "88%",
+    lineHeight: 24,
     fontFamily: "Poppins-Regular",
-    position: "relative",
-    top: 21,
   },
   fruits: {
     width: 280,
@@ -103,32 +121,23 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 0,
     left: -20,
+    opacity: 0.95,
   },
   button: {
-    position: "absolute",
-    bottom: 30,
-    right: 30,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    alignSelf: "flex-end",
+    backgroundColor: colors.accent,
+    paddingVertical: 16,
+    paddingHorizontal: 26,
+    borderRadius: radius.pill,
+    ...shadow.button,
   },
   buttonText: {
-    color: "#fff",
-    fontSize: 20,
-    fontFamily: "Poppins-Regular",
-    left: 20,
-    position: "relative",
-    top: 21,
-  },
-  chatbotButton: {
-    position: "absolute",
-    bottom: 30,
-    left: 30,
-    backgroundColor: "#83c41a",
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    borderRadius: 25,
-  },
-  chatbotButtonText: {
-    color: "#fff",
-    fontSize: 18,
+    color: colors.textPrimary,
+    fontSize: 17,
+    fontWeight: "800",
     fontFamily: "Poppins-Regular",
   },
 });

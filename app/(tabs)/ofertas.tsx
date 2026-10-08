@@ -1,24 +1,25 @@
-import React, { useEffect, useState, useMemo } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  Image,
-  ScrollView,
-  TouchableOpacity,
-  FlatList,
-  ActivityIndicator,
-  RefreshControl,
-  Modal,
-  Dimensions,
-  Platform
-} from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { collection, onSnapshot } from "firebase/firestore"; 
-import { db } from "@/src/config/firebase"; 
+import { colors, radius, shadow } from "@/constants/designSystem";
+import { db } from "@/src/config/firebase";
 import { useCart } from "@/src/contexts/CartContext";
 import { getOriginalPrice } from "@/src/utils/pricing";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { collection, onSnapshot } from "firebase/firestore";
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  Dimensions,
+  FlatList,
+  Image,
+  Modal,
+  Platform,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from "react-native";
 import OpenChatbotButton from "../../components/OpenChatbotButton";
 
 const { width, height } = Dimensions.get('window');
@@ -35,7 +36,7 @@ interface Product {
   oldPrice?: number;
   discountTag?: string;
   discountPercent?: number;
-  quantity?: number; 
+  quantity?: number;
   proveedorId?: string;
 }
 
@@ -50,7 +51,7 @@ const CATEGORIES = [
 export default function OfertasScreen() {
   const router = useRouter();
   const { cart, addToCart, increaseCart, decreaseCart } = useCart();
-  
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [discountedProducts, setDiscountedProducts] = useState<Product[]>([]);
@@ -58,7 +59,7 @@ export default function OfertasScreen() {
   const [storeNames, setStoreNames] = useState<Record<string, string>>({});
 
   const normalizar = (s: string) =>
-    s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 
   const filteredOffers = useMemo(() => {
     if (!selectedCategory) return discountedProducts;
@@ -149,7 +150,7 @@ export default function OfertasScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#83c41a" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -159,20 +160,20 @@ export default function OfertasScreen() {
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <View style={styles.backCircle}>
-            <Ionicons name="chevron-back" size={24} color="#555" />
+            <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
           </View>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Ofertas</Text>
       </View>
 
-      <ScrollView 
+      <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: BOTTOM_TAB_HEIGHT + 120 }} 
+        contentContainerStyle={{ paddingBottom: BOTTOM_TAB_HEIGHT + 120 }}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#83c41a']} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
         }
       >
-        
+
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>Busca por categoría</Text>
           <FlatList
@@ -188,10 +189,10 @@ export default function OfertasScreen() {
                   style={styles.catItem}
                   onPress={() => setSelectedCategory(isSelected ? null : item.name)}
                 >
-                  <View style={[styles.catCircle, isSelected && { borderWidth: 2, borderColor: "#83c41a" }]}>
+                  <View style={[styles.catCircle, isSelected && { borderWidth: 2, borderColor: colors.primary, backgroundColor: colors.primaryLight }]}>
                     <Image source={item.icon} style={styles.catImage} />
                   </View>
-                  <Text style={[styles.catText, isSelected && { color: "#83c41a", fontWeight: "bold" }]}>
+                  <Text style={[styles.catText, isSelected && { color: colors.primary, fontWeight: "bold" }]}>
                     {item.name}
                   </Text>
                 </TouchableOpacity>
@@ -203,7 +204,7 @@ export default function OfertasScreen() {
         {filteredOffers.length === 0 ? (
           <View style={styles.emptyState}>
             <View style={styles.emptyIconCircle}>
-              <Ionicons name="pricetags-outline" size={32} color="#9CB98A" />
+              <Ionicons name="pricetags-outline" size={32} color={colors.primary} />
             </View>
             <Text style={styles.emptyTitle}>
               {selectedCategory ? `Sin ofertas en ${selectedCategory}` : "No hay ofertas activas"}
@@ -229,10 +230,10 @@ export default function OfertasScreen() {
                    const currentQty = cartItem ? cartItem.quantity : 0;
 
                    return (
-                     <TopOfferItem 
-                        item={item} 
+                     <TopOfferItem
+                        item={item}
                         currentQty={currentQty}
-                        addToCart={addToCart} 
+                        addToCart={addToCart}
                         decreaseCart={decreaseCart}
                         storeName={item.proveedorId ? storeNames[item.proveedorId] : undefined}
                         onStorePress={item.proveedorId ? () => router.push({ pathname: "/tiendas/[id]", params: { id: item.proveedorId! } }) : undefined}
@@ -276,12 +277,12 @@ export default function OfertasScreen() {
         <OpenChatbotButton />
       </View>
 
-      <TouchableOpacity 
-        style={styles.floatingCartBtn} 
+      <TouchableOpacity
+        style={styles.floatingCartBtn}
         onPress={() => setMiniCartVisible(true)}
         activeOpacity={0.8}
       >
-        <Ionicons name="basket-outline" size={28} color="#333" />
+        <Ionicons name="basket-outline" size={28} color={colors.textPrimary} />
         {totalItems > 0 && (
           <View style={styles.floatingBadge}>
              <Text style={styles.badgeText}>{totalItems}</Text>
@@ -292,16 +293,16 @@ export default function OfertasScreen() {
       <Modal visible={miniCartVisible} transparent animationType="slide" onRequestClose={() => setMiniCartVisible(false)}>
          <TouchableOpacity style={styles.miniCartOverlay} activeOpacity={1} onPress={() => setMiniCartVisible(false)}>
             <TouchableOpacity activeOpacity={1} style={styles.miniCartContent}>
-               
+
                <View style={styles.miniHeader}>
                   <View style={{flexDirection:'row', alignItems:'center'}}>
                      <TouchableOpacity onPress={() => setMiniCartVisible(false)}>
-                        <Ionicons name="chevron-back-circle" size={30} color="#888" />
+                        <Ionicons name="chevron-back-circle" size={30} color={colors.textMuted} />
                      </TouchableOpacity>
                      <Text style={styles.miniTitle}>Tu compra</Text>
                   </View>
-                  
-                  <TouchableOpacity 
+
+                  <TouchableOpacity
                      disabled={!isMinMet}
                      style={[styles.miniGoCartBtn, !isMinMet ? styles.btnDisabled : styles.btnActive]}
                      onPress={goToFullCart}
@@ -314,7 +315,7 @@ export default function OfertasScreen() {
                   {cart.length === 0 ? (
                      <Text style={styles.emptyText}>El carrito está vacío.</Text>
                   ) : (
-                     <FlatList 
+                     <FlatList
                         data={cart}
                         keyExtractor={item => item.id}
                         showsVerticalScrollIndicator={false}
@@ -325,21 +326,21 @@ export default function OfertasScreen() {
                                  <Text style={styles.miniItemName} numberOfLines={1}>{item.name}</Text>
                                  <Text style={styles.miniItemPrice}>${item.price.toLocaleString()}</Text>
                               </View>
-                              
+
                               <View style={styles.miniControls}>
-                                 <TouchableOpacity 
+                                 <TouchableOpacity
                                     onPress={() => decreaseCart(item.id)}
-                                    style={[styles.miniCtrlBtn, item.quantity === 1 ? {backgroundColor:'#FFEBEE', borderColor:'#FFCDD2'} : {backgroundColor:'#EEE'}]}
+                                    style={[styles.miniCtrlBtn, item.quantity === 1 ? {backgroundColor: colors.dangerLight, borderColor:'#FFCDD2'} : {backgroundColor:'#EEE'}]}
                                  >
-                                    <Ionicons 
-                                       name={item.quantity === 1 ? "trash-outline" : "remove"} 
-                                       size={16} 
-                                       color={item.quantity === 1 ? "#D32F2F" : "#555"} 
+                                    <Ionicons
+                                       name={item.quantity === 1 ? "trash-outline" : "remove"}
+                                       size={16}
+                                       color={item.quantity === 1 ? colors.danger : "#555"}
                                     />
                                  </TouchableOpacity>
                                  <Text style={styles.miniCtrlText}>{item.quantity}</Text>
-                                 <TouchableOpacity onPress={() => increaseCart(item.id)} style={[styles.miniCtrlBtn, {backgroundColor:'#4CAF50', borderColor:'#4CAF50'}]}>
-                                    <Ionicons name="add" size={16} color="#FFF" />
+                                 <TouchableOpacity onPress={() => increaseCart(item.id)} style={[styles.miniCtrlBtn, {backgroundColor: colors.primary, borderColor: colors.primary}]}>
+                                    <Ionicons name="add" size={16} color={colors.white} />
                                  </TouchableOpacity>
                               </View>
                            </View>
@@ -349,13 +350,13 @@ export default function OfertasScreen() {
                </View>
 
                <View>
-                  <View style={[styles.minOrderBanner, isMinMet ? {backgroundColor:'#B9F6CA'} : {backgroundColor:'#FFE0B2'}]}>
-                     <Ionicons 
-                        name={isMinMet ? "checkmark-circle-outline" : "alert-circle-outline"} 
-                        size={18} 
-                        color={isMinMet ? "#00C853" : "#EF6C00"} 
+                  <View style={[styles.minOrderBanner, isMinMet ? {backgroundColor: colors.successLight} : {backgroundColor: colors.warningLight}]}>
+                     <Ionicons
+                        name={isMinMet ? "checkmark-circle-outline" : "alert-circle-outline"}
+                        size={18}
+                        color={isMinMet ? colors.primary : colors.warning}
                      />
-                     <Text style={[styles.minOrderText, {color: isMinMet ? '#00C853' : '#EF6C00'}]}>
+                     <Text style={[styles.minOrderText, {color: isMinMet ? colors.primaryDark : '#B45309'}]}>
                         {isMinMet ? "Mínimo de compra completado" : `Mínimo de compra: $${MIN_ORDER_AMOUNT.toLocaleString()}`}
                      </Text>
                   </View>
@@ -373,7 +374,7 @@ export default function OfertasScreen() {
       <Modal visible={isLoadingCart} transparent animationType="fade">
          <View style={styles.loadingOverlay}>
             <View style={styles.loadingCard}>
-               <ActivityIndicator size="large" color="#83c41a" />
+               <ActivityIndicator size="large" color={colors.primary} />
                <Text style={{marginTop:10, fontWeight:'bold', color:'#555'}}>Cargando carrito...</Text>
             </View>
          </View>
@@ -405,7 +406,7 @@ const TopOfferItem = ({ item, currentQty, addToCart, decreaseCart, cardStyle, st
           </View>
         )}
       </View>
-      
+
       <View style={{paddingHorizontal: 5, width: '100%'}}>
         <Text style={styles.priceText}>${item.price.toLocaleString()}</Text>
         {item.oldPrice && (
@@ -425,16 +426,16 @@ const TopOfferItem = ({ item, currentQty, addToCart, decreaseCart, cardStyle, st
                <Text style={styles.agotadoBtnText}>Agotado</Text>
             </View>
         ) : currentQty === 0 ? (
-            <TouchableOpacity 
+            <TouchableOpacity
                style={styles.addBtnFloating}
                onPress={() => addToCart({ ...item, quantity: 1 })}
             >
-               <Ionicons name="cart-outline" size={20} color="#FFF" />
+               <Ionicons name="cart-outline" size={20} color={colors.white} />
             </TouchableOpacity>
         ) : (
             <View style={styles.qtyPill}>
                 <TouchableOpacity onPress={handleDecrease} style={styles.qtyBtnSmall}>
-                    <Ionicons name={currentQty === 1 ? "trash-outline" : "remove"} size={14} color="#D32F2F" />
+                    <Ionicons name={currentQty === 1 ? "trash-outline" : "remove"} size={14} color={colors.danger} />
                 </TouchableOpacity>
                 <Text style={styles.qtyTextSmall}>{currentQty}</Text>
                 <TouchableOpacity
@@ -442,7 +443,7 @@ const TopOfferItem = ({ item, currentQty, addToCart, decreaseCart, cardStyle, st
                     disabled={alTope}
                     style={[styles.qtyBtnSmall, alTope && { opacity: 0.3 }]}
                 >
-                    <Ionicons name="add" size={14} color="#4CAF50" />
+                    <Ionicons name="add" size={14} color={colors.primary} />
                 </TouchableOpacity>
             </View>
         )}
@@ -454,13 +455,13 @@ const TopOfferItem = ({ item, currentQty, addToCart, decreaseCart, cardStyle, st
 const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: colors.background,
   },
   loadingContainer: {
-    flex: 1, 
-    justifyContent: 'center', 
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FAFAFA'
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -468,49 +469,46 @@ const styles = StyleSheet.create({
     paddingTop: 50,
     paddingBottom: 15,
     paddingHorizontal: 20,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: colors.background,
   },
   backButton: { marginRight: 15 },
   backCircle: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#EEE',
+    backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
+    ...shadow.card,
   },
   headerTitle: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#000',
+    color: colors.textPrimary,
   },
   carouselSection: { marginTop: 10, marginBottom: 20 },
   offerCard: {
     width: width * 0.42,
-    backgroundColor: '#FFF',
-    borderRadius: 20,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
     padding: 10,
     marginRight: 15,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 4,
     marginBottom: 10,
     alignItems: 'center',
-    position: 'relative'
+    position: 'relative',
+    ...shadow.card,
   },
   yellowBadge: {
     position: 'absolute',
     top: 10, right: 10,
-    backgroundColor: '#FFEB3B',
+    backgroundColor: colors.accent,
     paddingHorizontal: 8, paddingVertical: 4,
     borderRadius: 8,
     zIndex: 10,
   },
-  yellowBadgeText: { fontSize: 11, fontWeight: '800', color: '#E65100' },
-  agotadoBadge: { position: 'absolute', top: 6, left: 6, backgroundColor: '#D32F2F', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, zIndex: 2 },
-  agotadoBadgeText: { color: '#FFF', fontSize: 10, fontWeight: 'bold' },
+  yellowBadgeText: { fontSize: 11, fontWeight: '800', color: colors.primaryDarker },
+  agotadoBadge: { position: 'absolute', top: 6, left: 6, backgroundColor: colors.danger, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, zIndex: 2 },
+  agotadoBadgeText: { color: colors.white, fontSize: 10, fontWeight: 'bold' },
   // Ancho explícito: el 80% de offerImage necesita un padre con ancho
   // determinado para calcularse. Sin esto, la imagen colapsaba a 0 y no se veía.
   offerImageWrap: { width: '100%', alignItems: 'center' },
@@ -519,41 +517,42 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
     marginTop: 15, marginBottom: 10,
   },
-  priceText: { fontSize: 17, fontWeight: 'bold', color: '#000' },
-  oldPriceText: { fontSize: 11, color: '#999', textDecorationLine: 'line-through', marginBottom: 4 },
-  productName: { fontSize: 13, color: '#444', marginBottom: 4, height: 34, textAlign: 'center' },
-  offerStoreName: { fontSize: 10, color: '#5E8D10', fontWeight: '600', marginBottom: 10, textAlign: 'center' },
-  
+  priceText: { fontSize: 17, fontWeight: 'bold', color: colors.textPrimary },
+  oldPriceText: { fontSize: 11, color: colors.textMuted, textDecorationLine: 'line-through', marginBottom: 4 },
+  productName: { fontSize: 13, color: "#444", marginBottom: 4, height: 34, textAlign: 'center' },
+  offerStoreName: { fontSize: 10, color: colors.primaryDark, fontWeight: '600', marginBottom: 10, textAlign: 'center' },
+
   actionsContainer: { width: '100%', alignItems: 'center', height: 40, justifyContent: 'center' },
   addBtnFloating: {
-    backgroundColor: '#00E600',
+    backgroundColor: colors.primary,
     width: 40, height: 40,
     borderRadius: 20,
     justifyContent: 'center', alignItems: 'center',
-    shadowColor: "#00E600", shadowOpacity: 0.4, shadowOffset:{width:0, height:3}, elevation: 3
+    ...shadow.button,
   },
   addBtnAgotado: { backgroundColor: '#ccc', width: 'auto', paddingHorizontal: 10, shadowOpacity: 0, elevation: 0 },
   agotadoBtnText: { color: '#666', fontWeight: 'bold', fontSize: 11 },
   qtyPill: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#F5F5F5', borderRadius: 25,
+    backgroundColor: colors.background, borderRadius: 25,
     paddingHorizontal: 5, height: 38,
     width: '100%', justifyContent: 'space-between',
-    borderWidth: 1, borderColor: '#EEE'
+    borderWidth: 1, borderColor: colors.border,
   },
   qtyBtnSmall: { padding: 8 },
-  qtyTextSmall: { fontWeight: 'bold', color: '#333', fontSize: 16 },
+  qtyTextSmall: { fontWeight: 'bold', color: colors.textPrimary, fontSize: 16 },
 
   sectionContainer: { marginBottom: 25 },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#222', marginBottom: 15, paddingHorizontal: 20 },
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: colors.textPrimary, marginBottom: 15, paddingHorizontal: 20 },
   catItem: { alignItems: 'center', marginRight: 20 },
   catCircle: {
     width: 60, height: 60, borderRadius: 30,
-    backgroundColor: '#FFF', borderWidth: 1, borderColor: '#EEE',
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
     justifyContent: 'center', alignItems: 'center', marginBottom: 5,
+    ...shadow.card,
   },
   catImage: { width: 35, height: 35, resizeMode: 'contain' },
-  catText: { fontSize: 11, color: '#555', fontWeight: '500' },
+  catText: { fontSize: 11, color: "#555", fontWeight: '500' },
 
   // Grilla de 2 columnas para "Más ofertas": reutiliza la misma tarjeta que
   // el carrusel de arriba (TopOfferItem con cardStyle), así toda la pantalla
@@ -570,57 +569,56 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: 'center', paddingHorizontal: 40, paddingTop: 30, paddingBottom: 10 },
   emptyIconCircle: {
     width: 72, height: 72, borderRadius: 36,
-    backgroundColor: '#EAF6D8',
+    backgroundColor: colors.primaryLight,
     justifyContent: 'center', alignItems: 'center',
     marginBottom: 14,
   },
-  emptyTitle: { fontSize: 16, fontWeight: '700', color: '#333', marginBottom: 6, textAlign: 'center' },
-  emptySubtitle: { fontSize: 13, color: '#888', textAlign: 'center', lineHeight: 18 },
+  emptyTitle: { fontSize: 16, fontWeight: '700', color: colors.textPrimary, marginBottom: 6, textAlign: 'center' },
+  emptySubtitle: { fontSize: 13, color: colors.textSecondary, textAlign: 'center', lineHeight: 18 },
 
   chatbotContainer: { position: "absolute", bottom: BOTTOM_TAB_HEIGHT + 10, right: 20, zIndex: 999 },
   floatingCartBtn: {
     position: "absolute",
-    bottom: BOTTOM_TAB_HEIGHT + 80, 
+    bottom: BOTTOM_TAB_HEIGHT + 80,
     right: 20,
-    backgroundColor: "#FFF",
+    backgroundColor: colors.surface,
     width: 60, height: 60,
     borderRadius: 30,
     justifyContent: "center", alignItems: "center",
-    elevation: 10, shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 5,
-    zIndex: 1000, 
-    borderWidth: 1, borderColor: '#FAFAFA'
+    zIndex: 1000,
+    borderWidth: 1, borderColor: colors.border, ...shadow.floating,
   },
-  floatingBadge: { position: "absolute", top: -2, right: -2, backgroundColor: '#00E600', width: 22, height: 22, borderRadius: 11, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#FFF' },
-  badgeText: { color: '#FFF', fontSize: 10, fontWeight: 'bold' },
+  floatingBadge: { position: "absolute", top: -2, right: -2, backgroundColor: colors.primary, width: 22, height: 22, borderRadius: 11, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: colors.surface },
+  badgeText: { color: colors.white, fontSize: 10, fontWeight: 'bold' },
 
   miniCartOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  miniCartContent: { 
-    backgroundColor: '#FFF', 
-    borderTopLeftRadius: 25, borderTopRightRadius: 25, 
+  miniCartContent: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 25, borderTopRightRadius: 25,
     padding: 20, paddingBottom: 30,
-    maxHeight: height * 0.7, 
-    shadowColor: "#000", shadowOffset: { width: 0, height: -5 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 20
+    maxHeight: height * 0.7,
+    ...shadow.floating,
   },
   miniHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  miniTitle: { fontSize: 22, fontWeight: 'bold', marginLeft: 10, color: '#333' },
+  miniTitle: { fontSize: 22, fontWeight: 'bold', marginLeft: 10, color: colors.textPrimary },
   miniGoCartBtn: { paddingVertical: 8, paddingHorizontal: 20, borderRadius: 20, elevation: 2 },
-  btnActive: { backgroundColor: '#00E600' },
+  btnActive: { backgroundColor: colors.primary },
   btnDisabled: { backgroundColor: '#DDD' },
-  miniGoCartText: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
+  miniGoCartText: { color: colors.white, fontWeight: 'bold', fontSize: 14 },
   miniListContainer: { maxHeight: height * 0.4, marginBottom: 20 },
-  emptyText: { textAlign: 'center', color: '#999', marginVertical: 20 },
-  miniItemRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 15, borderBottomWidth: 1, borderBottomColor: '#F5F5F5', paddingBottom: 10 },
+  emptyText: { textAlign: 'center', color: colors.textMuted, marginVertical: 20 },
+  miniItemRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 15, borderBottomWidth: 1, borderBottomColor: colors.divider, paddingBottom: 10 },
   miniItemImg: { width: 50, height: 50, resizeMode: 'contain', marginRight: 5 },
-  miniItemName: { fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 4 },
-  miniItemPrice: { fontSize: 14, fontWeight: 'bold', color: '#000' },
-  miniControls: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F9F9F9', borderRadius: 15, padding: 2, borderWidth: 1, borderColor: '#EEE' },
-  miniCtrlBtn: { width: 26, height: 26, borderRadius: 13, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#DDD' },
+  miniItemName: { fontSize: 14, fontWeight: '600', color: colors.textPrimary, marginBottom: 4 },
+  miniItemPrice: { fontSize: 14, fontWeight: 'bold', color: colors.textPrimary },
+  miniControls: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.background, borderRadius: 15, padding: 2, borderWidth: 1, borderColor: colors.border },
+  miniCtrlBtn: { width: 26, height: 26, borderRadius: 13, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.border },
   miniCtrlText: { marginHorizontal: 10, fontWeight: 'bold', fontSize: 14 },
   minOrderBanner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 8, borderRadius: 8, marginBottom: 15 },
   minOrderText: { marginLeft: 8, fontSize: 12, fontWeight: '600' },
-  miniTotalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, borderTopWidth: 1, borderTopColor: '#EEE' },
-  totalLabel: { fontSize: 18, fontWeight: 'bold', color: '#333' },
-  totalValue: { fontSize: 22, fontWeight: 'bold', color: '#000' },
+  miniTotalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.divider },
+  totalLabel: { fontSize: 18, fontWeight: 'bold', color: colors.textPrimary },
+  totalValue: { fontSize: 22, fontWeight: 'bold', color: colors.textPrimary },
   loadingOverlay: { flex: 1, backgroundColor: 'rgba(255,255,255,0.8)', justifyContent: 'center', alignItems: 'center' },
-  loadingCard: { backgroundColor: '#FFF', padding: 25, borderRadius: 20, alignItems: 'center', elevation: 5, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10 },
+  loadingCard: { backgroundColor: colors.surface, padding: 25, borderRadius: radius.lg, alignItems: 'center', ...shadow.floating },
 });

@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "frescapp-expo",
-    "slug": "frescapp-expo",
+    "name": "Ta Fresco",
+    "slug": "ta-fresco",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "frescappexpo",
+    "scheme": "tafresco",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {

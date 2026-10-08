@@ -1,32 +1,33 @@
-import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  ActivityIndicator,
-  TouchableOpacity,
-  Modal,
-  TextInput,
-  ScrollView,
-} from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { onAuthStateChanged } from "firebase/auth";
+import { colors, radius, shadow } from "@/constants/designSystem";
 import { auth } from "@/src/config/firebase";
-import { avisar } from "@/src/utils/dialogos";
 import {
-  suscribirsePedidosUsuario,
-  Pedido,
-  EstadoPedido,
   ESTADO_LABELS,
+  EstadoPedido,
   ORDEN_ESTADOS,
+  Pedido,
   obtenerEstadoProveedor,
+  suscribirsePedidosUsuario,
 } from "@/src/services/pedidosService";
 import {
   crearValoracion,
   obtenerValoracionesUsuario,
 } from "@/src/services/valoracionesService";
+import { avisar } from "@/src/utils/dialogos";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { onAuthStateChanged } from "firebase/auth";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 function StatusStepper({ status }: { status: EstadoPedido }) {
   if (status === "cancelado") {
@@ -58,7 +59,7 @@ function StatusStepper({ status }: { status: EstadoPedido }) {
               <Text
                 style={[
                   stepperStyles.stepLabel,
-                  { color: reached ? "#333" : "#AAA", fontWeight: reached ? "bold" : "normal" },
+                  { color: reached ? colors.textPrimary : "#AAA", fontWeight: reached ? "bold" : "normal" },
                 ]}
               >
                 {ESTADO_LABELS[estado].label}
@@ -206,12 +207,12 @@ export default function PedidosScreen() {
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backCircle}>
-            <Ionicons name="chevron-back" size={24} color="#333" />
+            <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
           </TouchableOpacity>
           <Text style={styles.title}>Mis pedidos</Text>
         </View>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#83c41a" />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       </View>
     );
@@ -225,7 +226,7 @@ export default function PedidosScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backCircle}>
-          <Ionicons name="chevron-back" size={24} color="#333" />
+          <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.title}>Mis pedidos</Text>
       </View>
@@ -233,7 +234,7 @@ export default function PedidosScreen() {
       {pedidos.length === 0 ? (
         <View style={styles.emptyState}>
           <View style={styles.emptyIconCircle}>
-            <Ionicons name="receipt-outline" size={32} color="#9CB98A" />
+            <Ionicons name="receipt-outline" size={32} color={colors.primary} />
           </View>
           <Text style={styles.emptyTitle}>Todavía no has hecho pedidos</Text>
           <Text style={styles.emptySubtitle}>
@@ -330,9 +331,9 @@ export default function PedidosScreen() {
                         <Ionicons
                           name={todoCalificado ? "checkmark-circle" : "star-outline"}
                           size={16}
-                          color={todoCalificado ? "#22c55e" : "#f0a500"}
+                          color={todoCalificado ? colors.primary : "#f0a500"}
                         />
-                        <Text style={[styles.rateBtnText, todoCalificado && { color: "#22c55e" }]}>
+                        <Text style={[styles.rateBtnText, todoCalificado && { color: colors.primaryDark }]}>
                           {todoCalificado
                             ? "Productos calificados"
                             : `Calificar ${pendientes.length} producto${pendientes.length > 1 ? "s" : ""}`}
@@ -388,6 +389,7 @@ export default function PedidosScreen() {
             <TextInput
               style={styles.commentInput}
               placeholder="Contanos cómo fue tu experiencia (opcional, aplica a todos)"
+              placeholderTextColor={colors.textMuted}
               value={comentario}
               onChangeText={setComentario}
               multiline
@@ -402,14 +404,14 @@ export default function PedidosScreen() {
               disabled={Object.values(ratingsPorProducto).every((r) => !r) || guardando}
             >
               {guardando ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={colors.white} />
               ) : (
                 <Text style={styles.submitBtnText}>Enviar calificaciones</Text>
               )}
             </TouchableOpacity>
 
             <TouchableOpacity onPress={() => setModalVisible(false)} style={{ marginTop: 12 }}>
-              <Text style={{ color: "#999", textAlign: "center" }}>Cancelar</Text>
+              <Text style={{ color: colors.textMuted, textAlign: "center" }}>Cancelar</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -419,45 +421,41 @@ export default function PedidosScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F9F9F9" },
+  container: { flex: 1, backgroundColor: colors.background },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: colors.surface,
     paddingTop: 55,
     paddingHorizontal: 16,
     paddingBottom: 14,
     borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
+    borderBottomColor: colors.divider,
   },
   backCircle: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: "#F5F5F5",
+    backgroundColor: colors.background,
     justifyContent: "center", alignItems: "center",
     marginRight: 14,
   },
-  title: { fontSize: 20, fontWeight: "bold", color: "#333" },
-  empty: { color: "#999", fontSize: 16 },
+  title: { fontSize: 20, fontWeight: "bold", color: colors.textPrimary },
+  empty: { color: colors.textMuted, fontSize: 16 },
   emptyState: { alignItems: "center", paddingHorizontal: 40, marginTop: 60 },
   emptyIconCircle: {
     width: 72, height: 72, borderRadius: 36,
-    backgroundColor: "#EAF6D8",
+    backgroundColor: colors.primaryLight,
     justifyContent: "center", alignItems: "center",
     marginBottom: 14,
   },
-  emptyTitle: { fontSize: 16, fontWeight: "700", color: "#333", marginBottom: 6, textAlign: "center" },
-  emptySubtitle: { fontSize: 13, color: "#888", textAlign: "center", lineHeight: 18 },
+  emptyTitle: { fontSize: 16, fontWeight: "700", color: colors.textPrimary, marginBottom: 6, textAlign: "center" },
+  emptySubtitle: { fontSize: 13, color: colors.textSecondary, textAlign: "center", lineHeight: 18 },
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 18,
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
     padding: 18,
     marginBottom: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
+    ...shadow.card,
   },
   cardHeader: {
     flexDirection: "row",
@@ -467,56 +465,56 @@ const styles = StyleSheet.create({
   },
   statusPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
   statusPillText: { fontSize: 11, fontWeight: "700" },
-  pedidoId: { fontWeight: "bold", fontSize: 15, color: "#333" },
-  fecha: { color: "#888", fontSize: 12, marginTop: 2 },
-  divider: { height: 1, backgroundColor: "#eee", marginVertical: 10 },
+  pedidoId: { fontWeight: "bold", fontSize: 15, color: colors.textPrimary },
+  fecha: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
+  divider: { height: 1, backgroundColor: colors.divider, marginVertical: 10 },
   itemRow: { flexDirection: "row", alignItems: "center", marginBottom: 6 },
   itemQtyBadge: {
     minWidth: 22, height: 22, borderRadius: 11,
-    backgroundColor: "#EAF6D8",
+    backgroundColor: colors.primaryLight,
     justifyContent: "center", alignItems: "center",
     marginRight: 8, paddingHorizontal: 4,
   },
-  itemQtyText: { fontSize: 11, fontWeight: "bold", color: "#5E8D10" },
+  itemQtyText: { fontSize: 11, fontWeight: "bold", color: colors.primaryDark },
   itemLine: { color: "#555", fontSize: 14, flex: 1 },
-  storeStatuses: { marginTop: 10, padding: 10, backgroundColor: "#F7F9F4", borderRadius: 10 },
+  storeStatuses: { marginTop: 10, padding: 10, backgroundColor: colors.background, borderRadius: 10 },
   storeStatusesTitle: { color: "#555", fontSize: 12, fontWeight: "bold", marginBottom: 5 },
   storeStatusBlock: { paddingVertical: 2 },
   storeStatusRow: { flexDirection: "row", justifyContent: "space-between" },
-  storeStatusName: { color: "#777", fontSize: 12 },
+  storeStatusName: { color: colors.textSecondary, fontSize: 12 },
   storeStatusValue: { fontWeight: "bold", fontSize: 12 },
-  motivoLine: { color: "#D32F2F", fontSize: 12, marginTop: 4, fontStyle: "italic" },
-  motivoLineSmall: { color: "#D32F2F", fontSize: 11, marginTop: 2, fontStyle: "italic" },
-  addressLine: { color: "#666", fontSize: 12, marginTop: 8 },
-  total: { marginTop: 8, fontWeight: "bold", fontSize: 15, color: "#83c41a" },
-  rateSection: { marginTop: 12, borderTopWidth: 1, borderTopColor: "#eee", paddingTop: 10 },
+  motivoLine: { color: colors.danger, fontSize: 12, marginTop: 4, fontStyle: "italic" },
+  motivoLineSmall: { color: colors.danger, fontSize: 11, marginTop: 2, fontStyle: "italic" },
+  addressLine: { color: colors.textSecondary, fontSize: 12, marginTop: 8 },
+  total: { marginTop: 8, fontWeight: "bold", fontSize: 15, color: colors.primary },
+  rateSection: { marginTop: 12, borderTopWidth: 1, borderTopColor: colors.divider, paddingTop: 10 },
   rateBtn: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFF8E1",
+    backgroundColor: colors.warningLight,
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 20,
     alignSelf: "flex-start",
     marginTop: 4,
   },
-  rateBtnDone: { backgroundColor: "#E8F5E9" },
-  rateBtnText: { marginLeft: 6, fontSize: 12, fontWeight: "600", color: "#EF6C00" },
+  rateBtnDone: { backgroundColor: colors.successLight },
+  rateBtnText: { marginLeft: 6, fontSize: 12, fontWeight: "600", color: "#B45309" },
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" },
-  modalContent: { backgroundColor: "#fff", width: "88%", borderRadius: 20, padding: 22 },
-  modalTitle: { fontSize: 17, fontWeight: "bold", color: "#333", textAlign: "center", marginBottom: 16 },
+  modalContent: { backgroundColor: colors.surface, width: "88%", borderRadius: radius.xl, padding: 22 },
+  modalTitle: { fontSize: 17, fontWeight: "bold", color: colors.textPrimary, textAlign: "center", marginBottom: 16 },
   productRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
+    borderBottomColor: colors.divider,
   },
-  productName: { flex: 1, fontSize: 13, color: "#333", marginRight: 8 },
-  yaCalificadoText: { fontSize: 12, color: "#22c55e", fontWeight: "600" },
+  productName: { flex: 1, fontSize: 13, color: colors.textPrimary, marginRight: 8 },
+  yaCalificadoText: { fontSize: 12, color: colors.primary, fontWeight: "600" },
   commentInput: {
-    backgroundColor: "#F5F5F5",
+    backgroundColor: colors.background,
     borderRadius: 10,
     padding: 12,
     height: 60,
@@ -524,9 +522,10 @@ const styles = StyleSheet.create({
     marginTop: 14,
     marginBottom: 16,
     fontSize: 13,
+    color: colors.textPrimary,
   },
-  submitBtn: { backgroundColor: "#83c41a", paddingVertical: 14, borderRadius: 22, alignItems: "center" },
-  submitBtnText: { color: "#fff", fontWeight: "bold", fontSize: 15 },
+  submitBtn: { backgroundColor: colors.primary, paddingVertical: 14, borderRadius: 22, alignItems: "center" },
+  submitBtnText: { color: colors.white, fontWeight: "bold", fontSize: 15 },
 });
 
 const stepperStyles = StyleSheet.create({

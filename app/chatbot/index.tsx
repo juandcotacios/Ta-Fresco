@@ -1,6 +1,9 @@
 // chatbot/index.tsx
+import { colors, radius, shadow, spacing } from "@/constants/designSystem";
+import { db } from "@/src/config/firebase";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { collection, onSnapshot } from "firebase/firestore";
 import React, { useEffect, useRef, useState } from "react";
 import {
   FlatList,
@@ -12,8 +15,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { collection, onSnapshot } from "firebase/firestore";
-import { db } from "@/src/config/firebase";
 
 interface ProductoChat {
   id: string;
@@ -28,7 +29,7 @@ interface ProductoChat {
 const CATEGORIAS = ["Verduras", "Frutas", "Tubérculos", "Hortalizas", "Abarrotes"];
 
 const normalizar = (s: string) =>
-  s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 
 interface Intencion {
   /** Si el mensaje contiene cualquiera de estas palabras (ya normalizadas), dispara la respuesta. */
@@ -45,7 +46,7 @@ const INTENCIONES: Intencion[] = [
   {
     palabras: ["hola", "buenas", "ola", "hey", "que mas", "buenos dias", "buenas tardes"],
     respuesta:
-      "¡Hola! 👋 Soy el asistente de Ta-Fresco. Puedo buscarte productos, o contarte cómo comprar, vender, pagar, hacer seguimiento a tu pedido o calificar productos. ¿Qué necesitas?",
+      "¡Hola! 👋 Soy el asistente de Ta Fresco. Puedo buscarte productos, o contarte cómo comprar, vender, pagar, hacer seguimiento a tu pedido o calificar productos. ¿Qué necesitas?",
   },
   {
     palabras: [
@@ -101,7 +102,7 @@ const INTENCIONES: Intencion[] = [
       "quiero vender",
     ],
     respuesta:
-      "Para vender, entra a tu perfil y toca \"Vende en Ta-Fresco\". Envías el nombre y la descripción de tu tienda, un administrador la revisa, y al aprobarla ya puedes agregar tus productos: no tienes que volver a escribir nada.",
+      "Para vender, entra a tu perfil y toca \"Vende en Ta Fresco\". Envías el nombre y la descripción de tu tienda, un administrador la revisa, y al aprobarla ya puedes agregar tus productos: no tienes que volver a escribir nada.",
   },
   {
     palabras: ["calificar", "resena", "reseña", "opinar", "dejar estrellas", "puntuar"],
@@ -160,7 +161,7 @@ export default function ChatbotScreen() {
   const [messages, setMessages] = useState<{ from: "user" | "bot"; text: string }[]>([
     {
       from: "bot",
-      text: "¡Hola! 👋 Soy tu asistente Ta-Fresco. Pregúntame por un producto, o por cómo comprar, vender, pagar, hacer seguimiento a tu pedido o calificar productos.",
+      text: "¡Hola! 👋 Soy tu asistente Ta Fresco. Pregúntame por un producto, o por cómo comprar, vender, pagar, hacer seguimiento a tu pedido o calificar productos.",
     },
   ]);
   const [input, setInput] = useState("");
@@ -238,10 +239,13 @@ export default function ChatbotScreen() {
     >
       {/* HEADER */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={26} color="#fff" />
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Ionicons name="arrow-back" size={22} color={colors.white} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Chatbot</Text>
+        <View style={styles.headerIconCircle}>
+          <Ionicons name="chatbubble-ellipses" size={16} color={colors.primary} />
+        </View>
+        <Text style={styles.headerTitle}>Asistente Ta Fresco</Text>
       </View>
 
       {/* MENSAJES */}
@@ -249,7 +253,7 @@ export default function ChatbotScreen() {
         ref={flatListRef}
         data={messages}
         keyExtractor={(_, index) => index.toString()}
-        contentContainerStyle={{ paddingVertical: 16, paddingHorizontal: 12 }}
+        contentContainerStyle={{ paddingVertical: spacing.lg, paddingHorizontal: spacing.md }}
         renderItem={({ item }) => (
           <View
             style={[
@@ -272,12 +276,12 @@ export default function ChatbotScreen() {
           placeholder="Escribe un mensaje..."
           value={input}
           onChangeText={setInput}
-          placeholderTextColor="#999"
+          placeholderTextColor={colors.textMuted}
           onSubmitEditing={sendMessage}
           returnKeyType="send"
         />
         <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
-          <Ionicons name="send" size={20} color="#fff" />
+          <Ionicons name="send" size={19} color={colors.white} />
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -285,64 +289,74 @@ export default function ChatbotScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F7F7F7" },
+  container: { flex: 1, backgroundColor: colors.background },
 
   header: {
-    backgroundColor: "#83c41a",
+    backgroundColor: colors.primary,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 14,
+    paddingHorizontal: spacing.lg,
     paddingTop: 55,
-    paddingVertical: 14,
-    elevation: 6,
+    paddingVertical: spacing.lg,
+    ...shadow.floating,
+  },
+  backBtn: { marginRight: spacing.md },
+  headerIconCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.white,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: spacing.sm,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "700",
-    color: "#fff",
-    marginLeft: 12,
+    color: colors.white,
   },
 
   message: {
     marginVertical: 6,
     marginHorizontal: 4,
-    padding: 12,
-    borderRadius: 12,
+    padding: spacing.md,
+    borderRadius: radius.lg,
     maxWidth: "80%",
   },
   userMessage: {
-    backgroundColor: "#83c41a",
+    backgroundColor: colors.primary,
     alignSelf: "flex-end",
   },
   botMessage: {
-    backgroundColor: "#e9e9e9",
+    backgroundColor: colors.surface,
     alignSelf: "flex-start",
+    ...shadow.card,
   },
-  messageText: { color: "#000", fontSize: 15, lineHeight: 20 },
-  userMessageText: { color: "#fff" },
+  messageText: { color: colors.textPrimary, fontSize: 15, lineHeight: 20 },
+  userMessageText: { color: colors.white },
 
   inputContainer: {
     flexDirection: "row",
-    padding: 10,
-    backgroundColor: "#fff",
+    padding: spacing.sm,
+    backgroundColor: colors.surface,
     borderTopWidth: 1,
-    borderColor: "#eee",
+    borderColor: colors.border,
     alignItems: "center",
   },
   input: {
     flex: 1,
     height: 42,
-    borderColor: "#e6e6e6",
+    borderColor: colors.border,
     borderWidth: 1,
-    borderRadius: 22,
-    paddingHorizontal: 14,
-    backgroundColor: "#fff",
-    color: "#222",
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.lg,
+    backgroundColor: colors.surface,
+    color: colors.textPrimary,
   },
   sendButton: {
-    backgroundColor: "#83c41a",
-    marginLeft: 10,
+    backgroundColor: colors.primary,
+    marginLeft: spacing.sm,
     padding: 10,
-    borderRadius: 20,
+    borderRadius: radius.pill,
   },
 });

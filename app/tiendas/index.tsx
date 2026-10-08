@@ -1,18 +1,19 @@
-import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  ActivityIndicator,
-} from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { collection, onSnapshot } from "firebase/firestore";
+import { colors, radius, shadow } from "@/constants/designSystem";
 import { db } from "@/src/config/firebase";
 import { TiendaConId } from "@/src/services/tiendaService";
 import { obtenerPromedioProveedor } from "@/src/services/valoracionesService";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { collection, onSnapshot } from "firebase/firestore";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 export default function TiendasScreen() {
   const router = useRouter();
@@ -44,14 +45,14 @@ export default function TiendasScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 10 }}>
-          <Ionicons name="chevron-back" size={24} color="#333" />
+        <TouchableOpacity onPress={() => router.back()} style={styles.backCircle}>
+          <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.title}>Tiendas</Text>
       </View>
 
       {loading ? (
-        <ActivityIndicator size="large" color="#83c41a" style={{ marginTop: 40 }} />
+        <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
       ) : (
         <FlatList
           data={tiendas}
@@ -66,7 +67,7 @@ export default function TiendasScreen() {
               onPress={() => router.push(`/tiendas/${item.id}`)}
             >
               <View style={styles.storeIcon}>
-                <Ionicons name="storefront" size={26} color="#83c41a" />
+                <Ionicons name="storefront" size={26} color={colors.primary} />
               </View>
               <View style={{ flex: 1, marginLeft: 14 }}>
                 <Text style={styles.name}>{item.nombre || "Tienda sin nombre"}</Text>
@@ -76,13 +77,13 @@ export default function TiendasScreen() {
                 {ratings[item.id] && ratings[item.id].cantidad > 0 && (
                   <View style={{ flexDirection: "row", alignItems: "center", marginTop: 4 }}>
                     <Ionicons name="star" size={13} color="#f0a500" />
-                    <Text style={{ fontSize: 12, color: "#666", marginLeft: 3 }}>
+                    <Text style={{ fontSize: 12, color: colors.textSecondary, marginLeft: 3 }}>
                       {ratings[item.id].promedio.toFixed(1)} ({ratings[item.id].cantidad})
                     </Text>
                   </View>
                 )}
               </View>
-              <Ionicons name="chevron-forward" size={20} color="#ccc" />
+              <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
             </TouchableOpacity>
           )}
         />
@@ -92,7 +93,7 @@ export default function TiendasScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
+  container: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -100,26 +101,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 10,
   },
-  title: { fontSize: 20, fontWeight: "bold", color: "#333" },
-  empty: { textAlign: "center", color: "#999", marginTop: 40 },
+  backCircle: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: colors.surface,
+    justifyContent: "center", alignItems: "center",
+    marginRight: 12,
+    ...shadow.card,
+  },
+  title: { fontSize: 20, fontWeight: "bold", color: colors.textPrimary },
+  empty: { textAlign: "center", color: colors.textMuted, marginTop: 40 },
   card: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f9f9f9",
-    borderRadius: 14,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
     padding: 14,
     marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#eee",
+    ...shadow.card,
   },
   storeIcon: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#EAF6D8",
+    backgroundColor: colors.primaryLight,
     justifyContent: "center",
     alignItems: "center",
   },
-  name: { fontWeight: "bold", fontSize: 15, color: "#333" },
-  desc: { color: "#888", fontSize: 12, marginTop: 3 },
+  name: { fontWeight: "bold", fontSize: 15, color: colors.textPrimary },
+  desc: { color: colors.textSecondary, fontSize: 12, marginTop: 3 },
 });

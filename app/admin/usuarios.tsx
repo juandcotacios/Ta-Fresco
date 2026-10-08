@@ -1,26 +1,27 @@
+import { colors, radius, shadow } from "@/constants/designSystem";
+import {
+  actualizarRolUsuario,
+  obtenerTodosLosUsuarios,
+  Rol,
+  UsuarioConId,
+} from "@/src/services/usuariosService";
+import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect, useRouter } from "expo-router";
+import { getAuth } from "firebase/auth";
 import React, { useCallback, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
   ActivityIndicator,
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter, useFocusEffect } from "expo-router";
-import { getAuth } from "firebase/auth";
-import {
-  obtenerTodosLosUsuarios,
-  actualizarRolUsuario,
-  UsuarioConId,
-  Rol,
-} from "@/src/services/usuariosService";
 
 const ROLES: { value: Rol; label: string; color: string }[] = [
-  { value: "cliente", label: "Cliente", color: "#888" },
-  { value: "tendero", label: "Tendero", color: "#3b82f6" },
-  { value: "admin", label: "Admin", color: "#D32F2F" },
+  { value: "cliente", label: "Cliente", color: colors.textMuted },
+  { value: "tendero", label: "Tendero", color: colors.info },
+  { value: "admin", label: "Admin", color: colors.danger },
 ];
 
 export default function AdminUsuariosScreen() {
@@ -82,8 +83,8 @@ export default function AdminUsuariosScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 10 }}>
-          <Ionicons name="chevron-back" size={24} color="#333" />
+        <TouchableOpacity onPress={() => router.back()} style={styles.backCircle}>
+          <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.title}>Usuarios</Text>
       </View>
@@ -95,7 +96,7 @@ export default function AdminUsuariosScreen() {
       )}
 
       {loading ? (
-        <ActivityIndicator size="large" color="#83c41a" style={{ marginTop: 40 }} />
+        <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
       ) : (
         <FlatList
           data={usuarios}
@@ -125,9 +126,9 @@ export default function AdminUsuariosScreen() {
                         ]}
                       >
                         {cambiando ? (
-                          <ActivityIndicator size="small" color={activo ? "#fff" : r.color} />
+                          <ActivityIndicator size="small" color={activo ? colors.white : r.color} />
                         ) : (
-                          <Text style={[styles.roleChipText, activo && { color: "#fff" }]}>
+                          <Text style={[styles.roleChipText, activo && { color: colors.white }]}>
                             {r.label}
                           </Text>
                         )}
@@ -145,7 +146,7 @@ export default function AdminUsuariosScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
+  container: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -153,26 +154,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 10,
   },
-  title: { fontSize: 20, fontWeight: "bold", color: "#333" },
-  empty: { textAlign: "center", color: "#999", marginTop: 40 },
+  backCircle: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: colors.surface,
+    justifyContent: "center", alignItems: "center",
+    marginRight: 10,
+    ...shadow.card,
+  },
+  title: { fontSize: 20, fontWeight: "bold", color: colors.textPrimary },
+  empty: { textAlign: "center", color: colors.textMuted, marginTop: 40 },
   errorBox: {
-    backgroundColor: "#FFEBEE",
+    backgroundColor: colors.dangerLight,
     marginHorizontal: 16,
     padding: 10,
     borderRadius: 8,
     marginBottom: 10,
   },
-  errorText: { color: "#D32F2F", fontSize: 13 },
+  errorText: { color: colors.danger, fontSize: 13 },
   card: {
-    backgroundColor: "#f9f9f9",
-    borderRadius: 14,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
     padding: 16,
     marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#eee",
+    ...shadow.card,
   },
-  name: { fontWeight: "bold", fontSize: 15, color: "#333" },
-  email: { color: "#888", fontSize: 12, marginTop: 2, marginBottom: 10 },
+  name: { fontWeight: "bold", fontSize: 15, color: colors.textPrimary },
+  email: { color: colors.textSecondary, fontSize: 12, marginTop: 2, marginBottom: 10 },
   rolesRow: { flexDirection: "row" },
   roleChip: {
     borderWidth: 1.5,
@@ -183,5 +190,5 @@ const styles = StyleSheet.create({
     minWidth: 70,
     alignItems: "center",
   },
-  roleChipText: { fontSize: 12, fontWeight: "600", color: "#333" },
+  roleChipText: { fontSize: 12, fontWeight: "600", color: colors.textPrimary },
 });

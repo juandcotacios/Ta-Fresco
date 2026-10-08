@@ -1,24 +1,25 @@
-import React, { useCallback, useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  ActivityIndicator,
-} from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter, useFocusEffect } from "expo-router";
-import { getAuth } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { colors, radius, shadow } from "@/constants/designSystem";
 import { db } from "@/src/config/firebase";
 import {
-  obtenerSolicitudesPendientes,
   aprobarSolicitud,
+  obtenerSolicitudesPendientes,
   rechazarSolicitud,
   SolicitudTiendaConId,
 } from "@/src/services/solicitudesService";
 import { Comprador } from "@/src/services/usuariosService";
+import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect, useRouter } from "expo-router";
+import { getAuth } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import React, { useCallback, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 export default function AdminSolicitudesScreen() {
   const router = useRouter();
@@ -96,8 +97,8 @@ export default function AdminSolicitudesScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 10 }}>
-          <Ionicons name="chevron-back" size={24} color="#333" />
+        <TouchableOpacity onPress={() => router.back()} style={styles.backCircle}>
+          <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.title}>Solicitudes de tienda</Text>
       </View>
@@ -109,7 +110,7 @@ export default function AdminSolicitudesScreen() {
       )}
 
       {loading ? (
-        <ActivityIndicator size="large" color="#83c41a" style={{ marginTop: 40 }} />
+        <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
       ) : (
         <FlatList
           data={solicitudes}
@@ -176,7 +177,7 @@ export default function AdminSolicitudesScreen() {
                       style={[styles.btn, styles.approveBtn]}
                     >
                       {resolviendo ? (
-                        <ActivityIndicator size="small" color="#fff" />
+                        <ActivityIndicator size="small" color={colors.white} />
                       ) : (
                         <Text style={styles.approveText}>Aprobar</Text>
                       )}
@@ -193,7 +194,7 @@ export default function AdminSolicitudesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
+  container: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -201,28 +202,34 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 10,
   },
-  title: { fontSize: 20, fontWeight: "bold", color: "#333" },
-  empty: { textAlign: "center", color: "#999", marginTop: 40 },
+  backCircle: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: colors.surface,
+    justifyContent: "center", alignItems: "center",
+    marginRight: 10,
+    ...shadow.card,
+  },
+  title: { fontSize: 20, fontWeight: "bold", color: colors.textPrimary },
+  empty: { textAlign: "center", color: colors.textMuted, marginTop: 40 },
   errorBox: {
-    backgroundColor: "#FFEBEE",
+    backgroundColor: colors.dangerLight,
     marginHorizontal: 16,
     padding: 10,
     borderRadius: 8,
     marginBottom: 10,
   },
-  errorText: { color: "#D32F2F", fontSize: 13 },
+  errorText: { color: colors.danger, fontSize: 13 },
   card: {
-    backgroundColor: "#f9f9f9",
-    borderRadius: 14,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
     padding: 16,
     marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#eee",
+    ...shadow.card,
   },
-  storeName: { fontWeight: "bold", fontSize: 16, color: "#333" },
+  storeName: { fontWeight: "bold", fontSize: 16, color: colors.textPrimary },
   desc: { color: "#555", fontSize: 13, marginTop: 4 },
-  person: { color: "#666", fontSize: 12, marginTop: 10 },
-  date: { color: "#999", fontSize: 11, marginTop: 2 },
+  person: { color: colors.textSecondary, fontSize: 12, marginTop: 10 },
+  date: { color: colors.textMuted, fontSize: 11, marginTop: 2 },
   actionsRow: { flexDirection: "row", justifyContent: "flex-end", marginTop: 14 },
   btn: {
     borderRadius: 20,
@@ -232,19 +239,17 @@ const styles = StyleSheet.create({
     minWidth: 96,
     alignItems: "center",
   },
-  rejectBtn: { borderWidth: 1.5, borderColor: "#D32F2F" },
-  rejectText: { color: "#D32F2F", fontWeight: "600", fontSize: 13 },
-  approveBtn: { backgroundColor: "#83c41a" },
-  approveText: { color: "#fff", fontWeight: "600", fontSize: 13 },
+  rejectBtn: { borderWidth: 1.5, borderColor: colors.danger },
+  rejectText: { color: colors.danger, fontWeight: "600", fontSize: 13 },
+  approveBtn: { backgroundColor: colors.primary },
+  approveText: { color: colors.white, fontWeight: "600", fontSize: 13 },
   confirmRow: {
     marginTop: 14,
-    backgroundColor: "#fff",
+    backgroundColor: colors.background,
     borderRadius: 12,
     padding: 12,
-    borderWidth: 1,
-    borderColor: "#eee",
   },
-  confirmText: { color: "#333", fontSize: 13, marginBottom: 10 },
+  confirmText: { color: colors.textPrimary, fontSize: 13, marginBottom: 10 },
   confirmButtons: { flexDirection: "row", justifyContent: "flex-end" },
   confirmCancelBtn: {
     borderRadius: 20,
@@ -255,6 +260,6 @@ const styles = StyleSheet.create({
   },
   confirmCancelText: { color: "#555", fontWeight: "600", fontSize: 13 },
   confirmYesBtn: { borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8, marginLeft: 10 },
-  confirmYesText: { color: "#fff", fontWeight: "600", fontSize: 13 },
-  rejectSolidBtn: { backgroundColor: "#D32F2F" },
+  confirmYesText: { color: colors.white, fontWeight: "600", fontSize: 13 },
+  rejectSolidBtn: { backgroundColor: colors.danger },
 });

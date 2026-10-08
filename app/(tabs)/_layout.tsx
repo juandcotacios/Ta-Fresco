@@ -1,6 +1,7 @@
-import { Tabs } from "expo-router";
-import { View, Platform } from "react-native";
+import { colors, radius } from "@/constants/designSystem";
 import { Ionicons } from "@expo/vector-icons";
+import { Tabs } from "expo-router";
+import { Platform } from "react-native";
 
 export default function TabLayout() {
   return (
@@ -8,28 +9,28 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
 
-        animation: 'fade', 
-        
+        animation: 'fade',
+
         tabBarStyle: {
-          backgroundColor: "#83c41a", 
-          height: Platform.OS === 'ios' ? 90 : 75, 
-          borderTopLeftRadius: 30,
-          borderTopRightRadius: 30,
+          backgroundColor: colors.primary,
+          height: Platform.OS === 'ios' ? 90 : 75,
+          borderTopLeftRadius: radius.xl,
+          borderTopRightRadius: radius.xl,
           position: 'absolute',
           bottom: 0,
           left: 0,
           right: 0,
           borderTopWidth: 0,
-          elevation: 10, 
-          shadowColor: "#000",
+          elevation: 10,
+          shadowColor: colors.primaryDarker,
           shadowOffset: { width: 0, height: -3 },
-          shadowOpacity: 0.1,
-          shadowRadius: 5,
+          shadowOpacity: 0.15,
+          shadowRadius: 8,
           paddingBottom: Platform.OS === 'ios' ? 25 : 10,
           paddingTop: 10,
         },
-        tabBarActiveTintColor: "#FFFFFF", 
-        tabBarInactiveTintColor: "#2b4a03", 
+        tabBarActiveTintColor: colors.white,
+        tabBarInactiveTintColor: "rgba(255,255,255,0.6)",
         tabBarLabelStyle: {
           fontSize: 10,
           fontWeight: 'bold',

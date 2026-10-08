@@ -1,26 +1,27 @@
-import React, { useEffect, useState } from "react";
+import { colors, radius, shadow } from "@/constants/designSystem";
+import { db } from "@/src/config/firebase";
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  TextInput,
-} from "react-native";
+  actualizarEstadoPedido,
+  ESTADO_LABELS,
+  EstadoPedido,
+  ORDEN_ESTADOS,
+  Pedido,
+  suscribirseTodosLosPedidos,
+} from "@/src/services/pedidosService";
+import { Comprador } from "@/src/services/usuariosService";
+import { avisar } from "@/src/utils/dialogos";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/src/config/firebase";
+import React, { useEffect, useState } from "react";
 import {
-  suscribirseTodosLosPedidos,
-  actualizarEstadoPedido,
-  Pedido,
-  EstadoPedido,
-  ESTADO_LABELS,
-  ORDEN_ESTADOS,
-} from "@/src/services/pedidosService";
-import { avisar } from "@/src/utils/dialogos";
-import { Comprador } from "@/src/services/usuariosService";
+  FlatList,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 export default function AdminPedidosScreen() {
   const router = useRouter();
@@ -88,7 +89,7 @@ export default function AdminPedidosScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={24} color="#333" />
+          <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Panel de Pedidos</Text>
       </View>
@@ -118,7 +119,7 @@ export default function AdminPedidosScreen() {
               </View>
 
               <View style={styles.compradorBox}>
-                <Ionicons name="person-circle-outline" size={16} color="#555" />
+                <Ionicons name="person-circle-outline" size={16} color={colors.textSecondary} />
                 <View style={{ marginLeft: 6, flex: 1 }}>
                   <Text style={styles.compradorNombre}>{comprador?.nickname || "Cargando..."}</Text>
                   {!!comprador?.phone && <Text style={styles.compradorDato}>📞 {comprador.phone}</Text>}
@@ -147,6 +148,7 @@ export default function AdminPedidosScreen() {
                     <TextInput
                       style={styles.cancelInput}
                       placeholder="Ej: el cliente pidió cancelar"
+                      placeholderTextColor={colors.textMuted}
                       value={motivoCancelacion}
                       onChangeText={setMotivoCancelacion}
                       multiline
@@ -198,7 +200,7 @@ export default function AdminPedidosScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
+  container: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -206,68 +208,72 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingBottom: 10,
   },
-  backBtn: { marginRight: 10 },
-  headerTitle: { fontSize: 18, fontWeight: "bold", color: "#333" },
-  empty: { textAlign: "center", color: "#999", marginTop: 30 },
+  backBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: colors.surface,
+    justifyContent: "center", alignItems: "center",
+    marginRight: 10,
+    ...shadow.card,
+  },
+  headerTitle: { fontSize: 18, fontWeight: "bold", color: colors.textPrimary },
+  empty: { textAlign: "center", color: colors.textMuted, marginTop: 30 },
   card: {
-    backgroundColor: "#f9f9f9",
-    borderRadius: 14,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
     padding: 16,
     marginBottom: 14,
-    borderWidth: 1,
-    borderColor: "#eee",
+    ...shadow.card,
   },
   cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  pedidoId: { fontWeight: "bold", fontSize: 15, color: "#333" },
+  pedidoId: { fontWeight: "bold", fontSize: 15, color: colors.textPrimary },
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-  badgeText: { color: "#fff", fontSize: 12, fontWeight: "bold" },
+  badgeText: { color: colors.white, fontSize: 12, fontWeight: "bold" },
   compradorBox: {
     flexDirection: "row",
     alignItems: "flex-start",
-    backgroundColor: "#fff",
+    backgroundColor: colors.background,
     borderRadius: 10,
     padding: 10,
     marginTop: 10,
-    borderWidth: 1,
-    borderColor: "#eee",
   },
-  compradorNombre: { fontWeight: "bold", fontSize: 13, color: "#333" },
-  compradorDato: { fontSize: 12, color: "#777", marginTop: 2 },
-  total: { marginTop: 8, fontWeight: "bold", fontSize: 15, color: "#83c41a" },
-  addressLine: { color: "#666", fontSize: 12, marginTop: 4 },
-  paymentLine: { color: "#666", fontSize: 12, marginTop: 4 },
+  compradorNombre: { fontWeight: "bold", fontSize: 13, color: colors.textPrimary },
+  compradorDato: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
+  total: { marginTop: 8, fontWeight: "bold", fontSize: 15, color: colors.primary },
+  addressLine: { color: colors.textSecondary, fontSize: 12, marginTop: 4 },
+  paymentLine: { color: colors.textSecondary, fontSize: 12, marginTop: 4 },
   actions: { flexDirection: "row", marginTop: 12 },
   advanceBtn: {
-    backgroundColor: "#83c41a",
+    backgroundColor: colors.primary,
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 20,
     marginRight: 10,
   },
-  advanceBtnText: { color: "#fff", fontWeight: "bold", fontSize: 13 },
+  advanceBtnText: { color: colors.white, fontWeight: "bold", fontSize: 13 },
   cancelBtn: {
-    backgroundColor: "#FFEBEE",
+    backgroundColor: colors.dangerLight,
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 20,
   },
-  cancelBtnText: { color: "#D32F2F", fontWeight: "bold", fontSize: 13 },
+  cancelBtnText: { color: colors.danger, fontWeight: "bold", fontSize: 13 },
   cancelForm: {
     marginTop: 12,
-    backgroundColor: "#fff",
+    backgroundColor: colors.background,
     borderRadius: 12,
     padding: 12,
-    borderWidth: 1,
-    borderColor: "#eee",
   },
-  cancelFormLabel: { color: "#333", fontSize: 13, fontWeight: "600", marginBottom: 8 },
+  cancelFormLabel: { color: colors.textPrimary, fontSize: 13, fontWeight: "600", marginBottom: 8 },
   cancelInput: {
-    backgroundColor: "#F5F5F5",
+    backgroundColor: colors.surface,
     borderRadius: 10,
     padding: 10,
     fontSize: 13,
     minHeight: 50,
     textAlignVertical: "top",
+    color: colors.textPrimary,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   cancelFormActions: { flexDirection: "row", justifyContent: "flex-end", marginTop: 10 },
   cancelFormBackBtn: {
@@ -278,6 +284,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#F0F0F0",
   },
   cancelFormBackText: { color: "#555", fontWeight: "600", fontSize: 13 },
-  cancelFormConfirmBtn: { backgroundColor: "#D32F2F", borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8, marginLeft: 10 },
-  cancelFormConfirmText: { color: "#fff", fontWeight: "600", fontSize: 13 },
+  cancelFormConfirmBtn: { backgroundColor: colors.danger, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8, marginLeft: 10 },
+  cancelFormConfirmText: { color: colors.white, fontWeight: "600", fontSize: 13 },
 });

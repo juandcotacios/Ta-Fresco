@@ -1,23 +1,24 @@
-import React, { useState, useCallback } from "react";
+import { colors, radius, shadow } from "@/constants/designSystem";
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  Image,
-  TextInput,
-  ActivityIndicator,
-  Alert,
-} from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter, useFocusEffect } from "expo-router";
-import {
-  obtenerTodosLosProductos,
   actualizarProducto,
   eliminarProducto,
+  obtenerTodosLosProductos,
   ProductoTendero,
 } from "@/src/services/tiendaService";
+import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect, useRouter } from "expo-router";
+import React, { useCallback, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 export default function AdminProductosScreen() {
   const router = useRouter();
@@ -94,8 +95,8 @@ export default function AdminProductosScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 10 }}>
-          <Ionicons name="chevron-back" size={24} color="#333" />
+        <TouchableOpacity onPress={() => router.back()} style={styles.backCircle}>
+          <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.title}>Gestionar Productos y Descuentos</Text>
       </View>
@@ -103,10 +104,10 @@ export default function AdminProductosScreen() {
       {huerfanos.length > 0 && (
         <TouchableOpacity style={styles.huerfanosBanner} onPress={borrarTodosLosHuerfanos} disabled={borrandoTodos}>
           {borrandoTodos ? (
-            <ActivityIndicator color="#D32F2F" size="small" />
+            <ActivityIndicator color={colors.danger} size="small" />
           ) : (
             <>
-              <Ionicons name="trash-outline" size={16} color="#D32F2F" />
+              <Ionicons name="trash-outline" size={16} color={colors.danger} />
               <Text style={styles.huerfanosBannerText}>
                 Borrar {huerfanos.length} producto{huerfanos.length > 1 ? "s" : ""} sin tienda asignada
               </Text>
@@ -116,7 +117,7 @@ export default function AdminProductosScreen() {
       )}
 
       {loading ? (
-        <ActivityIndicator size="large" color="#83c41a" style={{ marginTop: 40 }} />
+        <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
       ) : (
         <FlatList
           data={productos}
@@ -146,20 +147,20 @@ export default function AdminProductosScreen() {
                         placeholder="0-90"
                         autoFocus
                       />
-                      <Text style={{ marginLeft: 4, marginRight: 10 }}>%</Text>
+                      <Text style={{ marginLeft: 4, marginRight: 10, color: colors.textPrimary }}>%</Text>
                       <TouchableOpacity
                         style={styles.saveSmallBtn}
                         onPress={() => guardarDescuento(item)}
                         disabled={saving}
                       >
                         {saving ? (
-                          <ActivityIndicator color="#fff" size="small" />
+                          <ActivityIndicator color={colors.white} size="small" />
                         ) : (
                           <Text style={styles.saveSmallBtnText}>Guardar</Text>
                         )}
                       </TouchableOpacity>
                       <TouchableOpacity onPress={() => setEditingId(null)} style={{ marginLeft: 8 }}>
-                        <Ionicons name="close" size={20} color="#999" />
+                        <Ionicons name="close" size={20} color={colors.textMuted} />
                       </TouchableOpacity>
                     </View>
                   ) : (
@@ -171,7 +172,7 @@ export default function AdminProductosScreen() {
                   )}
                 </View>
                 <TouchableOpacity onPress={() => borrarUno(item)} style={{ padding: 6 }}>
-                  <Ionicons name="trash-outline" size={20} color="#D32F2F" />
+                  <Ionicons name="trash-outline" size={20} color={colors.danger} />
                 </TouchableOpacity>
               </View>
             );
@@ -183,7 +184,7 @@ export default function AdminProductosScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
+  container: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -191,58 +192,65 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 10,
   },
-  title: { fontSize: 18, fontWeight: "bold", color: "#333", flex: 1 },
-  empty: { textAlign: "center", color: "#999", marginTop: 40 },
+  backCircle: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: colors.surface,
+    justifyContent: "center", alignItems: "center",
+    marginRight: 10,
+    ...shadow.card,
+  },
+  title: { fontSize: 18, fontWeight: "bold", color: colors.textPrimary, flex: 1 },
+  empty: { textAlign: "center", color: colors.textMuted, marginTop: 40 },
   huerfanosBanner: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFEBEE",
+    backgroundColor: colors.dangerLight,
     marginHorizontal: 16,
     marginBottom: 10,
     padding: 10,
     borderRadius: 10,
   },
-  huerfanosBannerText: { color: "#D32F2F", fontSize: 12, fontWeight: "700", marginLeft: 8 },
+  huerfanosBannerText: { color: colors.danger, fontSize: 12, fontWeight: "700", marginLeft: 8 },
   card: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f9f9f9",
-    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
     padding: 12,
     marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#eee",
+    ...shadow.card,
   },
-  cardHuerfano: { borderColor: "#FFCDD2", backgroundColor: "#FFF8F8" },
-  thumb: { width: 50, height: 50, borderRadius: 8, backgroundColor: "#eee" },
-  name: { fontWeight: "bold", fontSize: 14, color: "#333" },
-  meta: { color: "#888", fontSize: 12, marginTop: 2, marginBottom: 6 },
-  huerfanoTag: { color: "#D32F2F", fontSize: 11, fontWeight: "600", marginBottom: 6 },
+  cardHuerfano: { backgroundColor: "#FFF8F8" },
+  thumb: { width: 50, height: 50, borderRadius: 8, backgroundColor: colors.background },
+  name: { fontWeight: "bold", fontSize: 14, color: colors.textPrimary },
+  meta: { color: colors.textSecondary, fontSize: 12, marginTop: 2, marginBottom: 6 },
+  huerfanoTag: { color: colors.danger, fontSize: 11, fontWeight: "600", marginBottom: 6 },
   discountBadge: {
     alignSelf: "flex-start",
-    backgroundColor: "#FFF3E0",
+    backgroundColor: colors.warningLight,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 10,
   },
-  discountBadgeText: { color: "#EF6C00", fontSize: 12, fontWeight: "600" },
+  discountBadgeText: { color: "#B45309", fontSize: 12, fontWeight: "600" },
   editRow: { flexDirection: "row", alignItems: "center" },
   discountInput: {
-    backgroundColor: "#fff",
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: colors.border,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 6,
     width: 60,
     fontSize: 14,
+    color: colors.textPrimary,
   },
   saveSmallBtn: {
-    backgroundColor: "#83c41a",
+    backgroundColor: colors.primary,
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 8,
   },
-  saveSmallBtnText: { color: "#fff", fontWeight: "bold", fontSize: 12 },
+  saveSmallBtnText: { color: colors.white, fontWeight: "bold", fontSize: 12 },
 });

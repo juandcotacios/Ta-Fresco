@@ -1,16 +1,18 @@
-import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import * as Google from "expo-auth-session/providers/google";
+import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import {
-  signInWithEmailAndPassword,
-  signInWithCredential,
-  signInWithPopup,
   GoogleAuthProvider,
+  signInWithCredential,
+  signInWithEmailAndPassword,
+  signInWithPopup,
   User,
 } from "firebase/auth";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   Platform,
   SafeAreaView,
@@ -19,14 +21,15 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  ActivityIndicator,
 } from "react-native";
 
 import GoogleLoginModal from "@/components/GoogleLoginModal";
+import Logo from "@/components/Logo";
 
+import { colors, radius, shadow, spacing } from "@/constants/designSystem";
 import { auth, db } from "@/src/config/firebase";
 import { GOOGLE_AUTH } from "@/src/config/googleAuth";
-import { traducirErrorAuth, esCorreoValido } from "@/src/utils/authErrors";
+import { esCorreoValido, traducirErrorAuth } from "@/src/utils/authErrors";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -153,45 +156,58 @@ export default function LoginScreen() {
       <GoogleLoginModal visible={modalVisible} status={loginStatus} />
 
       <View style={styles.container}>
-        <Image
-          source={require("./assets/images/logo3.png")}
-          style={styles.logo}
-        />
+        <View style={styles.logoWrap}>
+          <Logo variant="dark" size="lg" />
+        </View>
 
         <Text style={styles.title}>Inicia sesión</Text>
+        <Text style={styles.subtitle}>Qué bueno verte de nuevo</Text>
 
         {errorMsg ? (
           <View style={styles.errorBox}>
+            <Ionicons name="alert-circle" size={18} color={colors.danger} />
             <Text style={styles.errorText}>{errorMsg}</Text>
           </View>
         ) : null}
 
         <Text style={styles.label}>Correo ó teléfono</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Ingresa tu correo o teléfono"
-          placeholderTextColor="#AAA"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-        />
+        <View style={styles.inputWrap}>
+          <Ionicons name="mail-outline" size={18} color={colors.textMuted} style={styles.inputIcon} />
+          <TextInput
+            style={styles.input}
+            placeholder="Ingresa tu correo o teléfono"
+            placeholderTextColor={colors.textMuted}
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+          />
+        </View>
 
         <Text style={styles.label}>Contraseña</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Ingresa tu contraseña"
-          placeholderTextColor="#AAA"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
+        <View style={styles.inputWrap}>
+          <Ionicons name="lock-closed-outline" size={18} color={colors.textMuted} style={styles.inputIcon} />
+          <TextInput
+            style={styles.input}
+            placeholder="Ingresa tu contraseña"
+            placeholderTextColor={colors.textMuted}
+            secureTextEntry
+            value={password}
+            onChangeText={setPassword}
+          />
+        </View>
 
-        <TouchableOpacity style={styles.loginButton} onPress={handleLogin} disabled={loading}>
-          {loading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.loginButtonText}>Ingresar</Text>}
+        <TouchableOpacity style={styles.loginButton} onPress={handleLogin} disabled={loading} activeOpacity={0.85}>
+          {loading ? <ActivityIndicator color={colors.white} /> : <Text style={styles.loginButtonText}>Ingresar</Text>}
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.googleButton} onPress={handleGoogle}>
+        <View style={styles.dividerRow}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>o</Text>
+          <View style={styles.dividerLine} />
+        </View>
+
+        <TouchableOpacity style={styles.googleButton} onPress={handleGoogle} activeOpacity={0.85}>
           <Image
             source={require("./assets/images/google-ico.png")}
             style={styles.googleIcon}
@@ -213,83 +229,115 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.background,
   },
   container: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 24,
-    backgroundColor: "#FFFFFF",
+    padding: spacing.xxl,
+    backgroundColor: colors.background,
   },
-  logo: {
-    width: 390,
-    height: 124,
-    resizeMode: "contain",
-    marginBottom: 30,
+  logoWrap: {
+    marginBottom: spacing.xl,
   },
   title: {
     fontSize: 26,
-    fontWeight: "bold",
-    color: "#5D5D5D",
-    marginBottom: 15,
+    fontWeight: "800",
+    color: colors.textPrimary,
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginBottom: spacing.lg,
   },
   errorBox: {
-    backgroundColor: "#FFEBEE",
-    borderRadius: 10,
-    padding: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: colors.dangerLight,
+    borderRadius: radius.md,
+    padding: spacing.md,
     width: "100%",
-    marginBottom: 15,
+    marginBottom: spacing.md,
   },
   errorText: {
-    color: "#D32F2F",
+    flex: 1,
+    color: colors.danger,
     fontSize: 13,
-    textAlign: "center",
     fontWeight: "600",
   },
   label: {
     alignSelf: "flex-start",
-    fontSize: 14,
-    color: "#8A8A8A",
-    marginBottom: 8,
-    marginLeft: 10,
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginBottom: 6,
+    marginLeft: 6,
+    fontWeight: "600",
+  },
+  inputWrap: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+    ...shadow.card,
+  },
+  inputIcon: {
+    marginRight: 8,
   },
   input: {
-    width: "100%",
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    borderRadius: 25,
+    flex: 1,
     paddingVertical: 14,
-    paddingHorizontal: 20,
-    fontSize: 16,
-    marginBottom: 20,
-    color: "#333",
+    fontSize: 15,
+    color: colors.textPrimary,
   },
   loginButton: {
-    width: "60%",
-    backgroundColor: "#83c41a",
-    borderRadius: 25,
-    paddingVertical: 14,
+    width: "100%",
+    backgroundColor: colors.primary,
+    borderRadius: radius.pill,
+    paddingVertical: 15,
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: spacing.lg,
+    ...shadow.button,
   },
   loginButtonText: {
-    color: "#FFFEFE",
+    color: colors.white,
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: "800",
+  },
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
+    marginBottom: spacing.lg,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  dividerText: {
+    marginHorizontal: 10,
+    color: colors.textMuted,
+    fontSize: 13,
   },
   googleButton: {
     width: "100%",
     flexDirection: "row",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "#E0E0E0",
-    borderRadius: 25,
+    borderColor: colors.border,
+    borderRadius: radius.pill,
     paddingVertical: 14,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 24,
+    marginBottom: spacing.xl,
   },
   googleIcon: {
     width: 20,
@@ -297,9 +345,9 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   googleButtonText: {
-    color: "#333",
-    fontSize: 16,
-    fontWeight: "500",
+    color: colors.textPrimary,
+    fontSize: 15,
+    fontWeight: "600",
   },
   footerContainer: {
     flexDirection: "row",
@@ -308,11 +356,11 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 14,
-    color: "#8A8A8A",
+    color: colors.textSecondary,
   },
   signupLink: {
     fontSize: 14,
-    color: "#83c41a",
-    fontWeight: "bold",
+    color: colors.primary,
+    fontWeight: "800",
   },
 });

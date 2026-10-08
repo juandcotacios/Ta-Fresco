@@ -1,25 +1,26 @@
-import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  ActivityIndicator,
-  ScrollView,
-} from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { getAuth } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { colors, radius, shadow, spacing } from "@/constants/designSystem";
 import { db } from "@/src/config/firebase";
-import { guardarMiTienda, obtenerMiTienda } from "@/src/services/tiendaService";
 import {
   crearSolicitud,
   obtenerMiSolicitud,
   SolicitudTiendaConId,
 } from "@/src/services/solicitudesService";
+import { guardarMiTienda, obtenerMiTienda } from "@/src/services/tiendaService";
 import { Rol } from "@/src/services/usuariosService";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { getAuth } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 export default function ConvertirseTenderoScreen() {
   const router = useRouter();
@@ -114,22 +115,24 @@ export default function ConvertirseTenderoScreen() {
   if (cargando) {
     return (
       <View style={[styles.container, { justifyContent: "center" }]}>
-        <ActivityIndicator size="large" color="#83c41a" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: 20, paddingTop: 55 }}>
+    <ScrollView style={styles.container} contentContainerStyle={{ padding: spacing.xl, paddingTop: 55 }}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 10 }}>
-          <Ionicons name="chevron-back" size={24} color="#333" />
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.title}>Vende en Ta-Fresco</Text>
+        <Text style={styles.title}>Vende en Ta Fresco</Text>
       </View>
 
       <View style={styles.introBox}>
-        <Ionicons name="storefront" size={32} color="#83c41a" />
+        <View style={styles.introIconCircle}>
+          <Ionicons name="storefront" size={30} color={colors.primary} />
+        </View>
         <Text style={styles.introText}>
           Creá tu tienda y empezá a subir tus productos de Corabastos para que los tenderos
           de la app puedan comprarte directamente.
@@ -138,6 +141,7 @@ export default function ConvertirseTenderoScreen() {
 
       {pendiente && (
         <View style={styles.infoBox}>
+          <Ionicons name="time-outline" size={16} color={colors.warning} />
           <Text style={styles.infoText}>
             {`Tu solicitud de "${solicitud?.nombre}" está pendiente. Un administrador la revisará y, cuando la apruebe, podrás crear tu tienda desde aquí.`}
           </Text>
@@ -164,6 +168,7 @@ export default function ConvertirseTenderoScreen() {
         value={nombre}
         onChangeText={setNombre}
         placeholder="Ej: Frutas y Verduras El Paisa"
+        placeholderTextColor={colors.textMuted}
         editable={!pendiente}
       />
 
@@ -173,17 +178,18 @@ export default function ConvertirseTenderoScreen() {
         value={descripcion}
         onChangeText={setDescripcion}
         placeholder="Cuéntale a los tenderos qué vendes"
+        placeholderTextColor={colors.textMuted}
         multiline
         editable={!pendiente}
       />
 
       <TouchableOpacity
-        style={[styles.createBtn, pendiente && { backgroundColor: "#ccc" }]}
+        style={[styles.createBtn, pendiente && styles.createBtnDisabled]}
         onPress={handleCrear}
         disabled={saving || pendiente}
       >
         {saving ? (
-          <ActivityIndicator color="#fff" />
+          <ActivityIndicator color={colors.white} />
         ) : (
           <Text style={styles.createBtnText}>
             {esVendedor ? "Crear mi tienda" : pendiente ? "Solicitud en revisión" : "Solicitar tienda"}
@@ -199,42 +205,78 @@ export default function ConvertirseTenderoScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  header: { flexDirection: "row", alignItems: "center", marginBottom: 20 },
-  title: { fontSize: 20, fontWeight: "bold", color: "#333" },
-  introBox: {
-    backgroundColor: "#EAF6D8",
-    borderRadius: 16,
-    padding: 18,
+  container: { flex: 1, backgroundColor: colors.background },
+  header: { flexDirection: "row", alignItems: "center", marginBottom: spacing.xl },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.surface,
+    justifyContent: "center",
     alignItems: "center",
-    marginBottom: 24,
+    marginRight: spacing.md,
+    ...shadow.card,
+  },
+  title: { fontSize: 20, fontWeight: "bold", color: colors.textPrimary },
+  introBox: {
+    backgroundColor: colors.primaryLight,
+    borderRadius: radius.lg,
+    padding: spacing.xl,
+    alignItems: "center",
+    marginBottom: spacing.xxl,
+  },
+  introIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.surface,
+    justifyContent: "center",
+    alignItems: "center",
+    ...shadow.card,
   },
   introText: {
-    color: "#333",
+    color: colors.textPrimary,
     fontSize: 13,
     textAlign: "center",
-    marginTop: 10,
+    marginTop: spacing.md,
     lineHeight: 19,
   },
-  errorBox: { backgroundColor: "#FFEBEE", padding: 10, borderRadius: 8, marginBottom: 14 },
-  errorText: { color: "#D32F2F", fontSize: 13 },
-  infoBox: { backgroundColor: "#FFF8E1", padding: 12, borderRadius: 8, marginBottom: 14 },
-  infoText: { color: "#8a6d00", fontSize: 13, lineHeight: 18 },
-  label: { fontSize: 13, color: "#666", marginBottom: 6, marginTop: 10, fontWeight: "600" },
-  input: { backgroundColor: "#F5F5F5", borderRadius: 10, padding: 14, fontSize: 15 },
-  createBtn: {
-    backgroundColor: "#83c41a",
-    paddingVertical: 16,
-    borderRadius: 25,
-    alignItems: "center",
-    marginTop: 26,
+  errorBox: { backgroundColor: colors.dangerLight, padding: spacing.md, borderRadius: radius.md, marginBottom: spacing.lg },
+  errorText: { color: colors.danger, fontSize: 13 },
+  infoBox: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    backgroundColor: colors.warningLight,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    marginBottom: spacing.lg,
   },
-  createBtnText: { color: "#fff", fontWeight: "bold", fontSize: 15 },
+  infoText: { color: "#8a6d00", fontSize: 13, lineHeight: 18, marginLeft: spacing.sm, flex: 1 },
+  label: { fontSize: 13, color: colors.textSecondary, marginBottom: spacing.sm, marginTop: spacing.md, fontWeight: "600" },
+  input: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: spacing.lg,
+    fontSize: 15,
+    color: colors.textPrimary,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  createBtn: {
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.lg,
+    borderRadius: radius.pill,
+    alignItems: "center",
+    marginTop: spacing.xxl,
+    ...shadow.button,
+  },
+  createBtnDisabled: { backgroundColor: colors.textMuted, shadowOpacity: 0, elevation: 0 },
+  createBtnText: { color: colors.white, fontWeight: "bold", fontSize: 15 },
   footerNote: {
     textAlign: "center",
-    color: "#999",
+    color: colors.textMuted,
     fontSize: 12,
-    marginTop: 14,
-    marginBottom: 20,
+    marginTop: spacing.lg,
+    marginBottom: spacing.xl,
   },
 });

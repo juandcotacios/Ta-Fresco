@@ -1,21 +1,22 @@
-import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  Image,
-  ActivityIndicator,
-} from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter, useLocalSearchParams } from "expo-router";
-import { collection, onSnapshot, query, where, doc, getDoc } from "firebase/firestore";
+import { colors, radius, shadow } from "@/constants/designSystem";
 import { db } from "@/src/config/firebase";
 import { useCart } from "@/src/contexts/CartContext";
-import { TiendaConId, ProductoTendero } from "@/src/services/tiendaService";
+import { ProductoTendero, TiendaConId } from "@/src/services/tiendaService";
 import { obtenerPromedioProducto } from "@/src/services/valoracionesService";
 import { getOriginalPrice } from "@/src/utils/pricing";
+import { Ionicons } from "@expo/vector-icons";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { collection, doc, getDoc, onSnapshot, query, where } from "firebase/firestore";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 export default function TiendaDetalleScreen() {
   const router = useRouter();
@@ -60,7 +61,7 @@ export default function TiendaDetalleScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#83c41a" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -68,8 +69,8 @@ export default function TiendaDetalleScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 10 }}>
-          <Ionicons name="chevron-back" size={24} color="#333" />
+        <TouchableOpacity onPress={() => router.back()} style={styles.backCircle}>
+          <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={styles.title}>{tienda?.nombre || "Tienda"}</Text>
@@ -117,11 +118,11 @@ export default function TiendaDetalleScreen() {
               {!sinStock && item.stock <= 10 && (
                 <Text style={styles.stockText}>Quedan {item.stock}</Text>
               )}
-              
+
               {ratings[item.id] && ratings[item.id].cantidad > 0 && (
                 <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 2 }}>
                   <Ionicons name="star" size={11} color="#f0a500" />
-                  <Text style={{ fontSize: 11, color: "#888", marginLeft: 3 }}>
+                  <Text style={{ fontSize: 11, color: colors.textSecondary, marginLeft: 3 }}>
                     {ratings[item.id].promedio.toFixed(1)} ({ratings[item.id].cantidad})
                   </Text>
                 </View>
@@ -140,7 +141,7 @@ export default function TiendaDetalleScreen() {
                   style={styles.addBtn}
                   onPress={() => addToCart({ ...item, quantity: 1 })}
                 >
-                  <Ionicons name="cart-outline" size={16} color="#fff" />
+                  <Ionicons name="cart-outline" size={16} color={colors.white} />
                   <Text style={styles.addBtnText}>Agregar</Text>
                 </TouchableOpacity>
               ) : (
@@ -149,15 +150,15 @@ export default function TiendaDetalleScreen() {
                     style={styles.qtyBtn}
                     onPress={() => decreaseCart(item.id)}
                   >
-                    <Ionicons name={qty === 1 ? "trash-outline" : "remove"} size={14} color="#D32F2F" />
+                    <Ionicons name={qty === 1 ? "trash-outline" : "remove"} size={14} color={colors.danger} />
                   </TouchableOpacity>
                   <Text style={styles.qtyText}>{qty}</Text>
                   <TouchableOpacity
-                    style={[styles.qtyBtn, { backgroundColor: alTope ? "#ccc" : "#83c41a" }]}
+                    style={[styles.qtyBtn, { backgroundColor: alTope ? "#ccc" : colors.primary }]}
                     onPress={alTope ? undefined : () => addToCart({ ...item, quantity: 1 })}
                     disabled={alTope}
                   >
-                    <Ionicons name="add" size={14} color="#fff" />
+                    <Ionicons name="add" size={14} color={colors.white} />
                   </TouchableOpacity>
                 </View>
               )}
@@ -170,7 +171,7 @@ export default function TiendaDetalleScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
+  container: { flex: 1, backgroundColor: colors.background },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
   header: {
     flexDirection: "row",
@@ -178,66 +179,72 @@ const styles = StyleSheet.create({
     paddingTop: 55,
     paddingHorizontal: 16,
     paddingBottom: 14,
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    borderBottomColor: colors.divider,
   },
-  title: { fontSize: 20, fontWeight: "bold", color: "#333" },
-  subtitle: { color: "#888", fontSize: 13, marginTop: 4 },
-  empty: { textAlign: "center", color: "#999", marginTop: 40, width: "100%" },
+  backCircle: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: colors.background,
+    justifyContent: "center", alignItems: "center",
+    marginRight: 10,
+  },
+  title: { fontSize: 20, fontWeight: "bold", color: colors.textPrimary },
+  subtitle: { color: colors.textSecondary, fontSize: 13, marginTop: 4 },
+  empty: { textAlign: "center", color: colors.textMuted, marginTop: 40, width: "100%" },
   card: {
     flex: 1,
-    backgroundColor: "#f9f9f9",
-    borderRadius: 14,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
     padding: 10,
     marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#eee",
     position: "relative",
+    ...shadow.card,
   },
   discountBadge: {
     position: "absolute",
     top: 8,
     left: 8,
-    backgroundColor: "#D32F2F",
+    backgroundColor: colors.danger,
     borderRadius: 8,
     paddingHorizontal: 6,
     paddingVertical: 2,
     zIndex: 1,
   },
-  discountBadgeText: { color: "#fff", fontSize: 10, fontWeight: "bold" },
-  agotadoBadge: { position: "absolute", top: 4, left: 4, backgroundColor: "#D32F2F", borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, zIndex: 2 },
-  agotadoBadgeText: { color: "#fff", fontSize: 9, fontWeight: "bold" },
-  stockText: { fontSize: 10, color: "#F57C00", marginBottom: 2 },
+  discountBadgeText: { color: colors.white, fontSize: 10, fontWeight: "bold" },
+  agotadoBadge: { position: "absolute", top: 4, left: 4, backgroundColor: colors.danger, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, zIndex: 2 },
+  agotadoBadgeText: { color: colors.white, fontSize: 9, fontWeight: "bold" },
+  stockText: { fontSize: 10, color: colors.warning, marginBottom: 2 },
   image: { width: "100%", height: 90, resizeMode: "contain", marginBottom: 6 },
-  name: { fontSize: 13, fontWeight: "600", color: "#333", height: 34 },
+  name: { fontSize: 13, fontWeight: "600", color: colors.textPrimary, height: 34 },
   priceRow: { flexDirection: "row", alignItems: "center", marginVertical: 4 },
-  price: { fontSize: 15, fontWeight: "bold", color: "#83c41a" },
-  oldPrice: { marginLeft: 6, color: "#999", fontSize: 12, textDecorationLine: "line-through" },
+  price: { fontSize: 15, fontWeight: "bold", color: colors.primary },
+  oldPrice: { marginLeft: 6, color: colors.textMuted, fontSize: 12, textDecorationLine: "line-through" },
   addBtn: {
     flexDirection: "row",
-    backgroundColor: "#83c41a",
+    backgroundColor: colors.primary,
     borderRadius: 20,
     paddingVertical: 8,
     justifyContent: "center",
     alignItems: "center",
   },
-  addBtnText: { color: "#fff", fontWeight: "bold", fontSize: 12, marginLeft: 4 },
+  addBtnText: { color: colors.white, fontWeight: "bold", fontSize: 12, marginLeft: 4 },
   qtyRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#eee",
+    backgroundColor: colors.background,
     borderRadius: 20,
     paddingHorizontal: 6,
     paddingVertical: 4,
   },
   qtyBtn: {
-    backgroundColor: "#FFEBEE",
+    backgroundColor: colors.dangerLight,
     width: 26,
     height: 26,
     borderRadius: 13,
     justifyContent: "center",
     alignItems: "center",
   },
-  qtyText: { fontWeight: "bold", color: "#333" },
+  qtyText: { fontWeight: "bold", color: colors.textPrimary },
 });

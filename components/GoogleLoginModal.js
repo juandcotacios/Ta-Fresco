@@ -1,6 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { Modal, View, Text, StyleSheet, Image, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import Logo from './Logo';
+import { colors } from '../constants/designSystem';
 
 const CustomSpinner = () => {
   const spinValue = useRef(new Animated.Value(0)).current;
@@ -33,7 +35,7 @@ const CustomSpinner = () => {
             {
               transform: [
                 { rotate: `${i * 30}deg` },
-                { translateY: -35 }, 
+                { translateY: -35 },
               ],
             },
           ]}
@@ -57,15 +59,15 @@ export default function GoogleLoginModal({ visible, status }) {
   return (
     <Modal transparent={false} animationType="fade" visible={visible}>
       <View style={styles.container}>
-        
+
         {}
         {status === 'loading' && (
           <View style={styles.content}>
             <View style={styles.centerBlock}>
                 {}
-                <Image 
-                  source={require('../app/assets/images/google-ico.png')} 
-                  style={styles.googleLogo} 
+                <Image
+                  source={require('../app/assets/images/google-ico.png')}
+                  style={styles.googleLogo}
                 />
                 <CustomSpinner />
             </View>
@@ -77,11 +79,7 @@ export default function GoogleLoginModal({ visible, status }) {
           <View style={styles.content}>
             <View style={styles.centerBlock}>
                 <View style={styles.logoRow}>
-                    <Image 
-                        source={require('../app/assets/images/logo44.png')} 
-                        style={styles.appLogo}
-                        resizeMode="contain"
-                    />
+                    <Logo variant="dark" size="lg" />
                 </View>
                 <Text style={styles.successText}>Has ingresado con éxito</Text>
                 <View style={styles.checkCircle}>
@@ -99,7 +97,7 @@ export default function GoogleLoginModal({ visible, status }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: colors.background,
     paddingTop: 50,
     alignItems: 'center',
   },
@@ -122,45 +120,41 @@ const styles = StyleSheet.create({
   },
 
   googleLogo: {
-    width: 100,  
-    height: 100, 
-    marginBottom: 100, 
+    width: 100,
+    height: 100,
+    marginBottom: 100,
     resizeMode: 'contain',
   },
   spinnerContainer: {
-    width: 100, 
+    width: 100,
     height: 100,
     justifyContent: 'center',
     alignItems: 'center',
   },
   spinnerLine: {
     position: 'absolute',
-    width: 6,     
-    height: 18,   
-    backgroundColor: '#333',
+    width: 6,
+    height: 18,
+    backgroundColor: colors.primary,
     borderRadius: 4,
   },
   logoRow: {
     marginBottom: 30,
   },
-  appLogo: {
-    width: 450, 
-    height: 140,
-  },
   successText: {
     fontSize: 20,
-    color: '#000',
-    fontWeight: '1000',
+    color: colors.textPrimary,
+    fontWeight: '800',
     marginBottom: 40,
   },
   checkCircle: {
-    width: 100,  
+    width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#4ADE80',
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 5,
-    borderColor: '#DCFCE7',
+    borderColor: colors.primaryLight,
   }
 });

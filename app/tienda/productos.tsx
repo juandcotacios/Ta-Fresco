@@ -1,29 +1,30 @@
-import React, { useState, useCallback } from "react";
+import { colors, radius, shadow } from "@/constants/designSystem";
+import { subirImagenCloudinary } from "@/src/services/cloudinaryService";
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  Image,
-  Modal,
-  TextInput,
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-} from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter, useFocusEffect } from "expo-router";
-import { getAuth } from "firebase/auth";
-import * as ImagePicker from "expo-image-picker";
-import {
-  obtenerMisProductos,
-  crearProducto,
   actualizarProducto,
+  crearProducto,
   eliminarProducto,
+  obtenerMisProductos,
   ProductoTendero,
 } from "@/src/services/tiendaService";
-import { subirImagenCloudinary } from "@/src/services/cloudinaryService";
+import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import { useFocusEffect, useRouter } from "expo-router";
+import { getAuth } from "firebase/auth";
+import React, { useCallback, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 const CATEGORIAS = ["Hortalizas", "Frutas", "Abarrotes", "Tuberculos", "Verduras"];
 
@@ -189,17 +190,17 @@ export default function MisProductosScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 10 }}>
-          <Ionicons name="chevron-back" size={24} color="#333" />
+        <TouchableOpacity onPress={() => router.back()} style={styles.backCircle}>
+          <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.title}>Mis Productos</Text>
         <TouchableOpacity onPress={abrirNuevo} style={styles.addBtn}>
-          <Ionicons name="add" size={24} color="#fff" />
+          <Ionicons name="add" size={24} color={colors.white} />
         </TouchableOpacity>
       </View>
 
       {loading ? (
-        <ActivityIndicator size="large" color="#83c41a" style={{ marginTop: 40 }} />
+        <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
       ) : (
         <FlatList
           data={productos}
@@ -222,15 +223,15 @@ export default function MisProductosScreen() {
                 <Text style={styles.price}>
                   ${item.price.toLocaleString()}
                   {!!item.discountPercent && (
-                    <Text style={{ color: "#D32F2F", fontSize: 12 }}>  -{item.discountPercent}%</Text>
+                    <Text style={{ color: colors.danger, fontSize: 12 }}>  -{item.discountPercent}%</Text>
                   )}
                 </Text>
               </View>
               <TouchableOpacity onPress={() => abrirEditar(item)} style={styles.iconBtn}>
-                <Ionicons name="create-outline" size={20} color="#3b82f6" />
+                <Ionicons name="create-outline" size={20} color={colors.info} />
               </TouchableOpacity>
               <TouchableOpacity onPress={() => handleEliminar(item)} style={styles.iconBtn}>
-                <Ionicons name="trash-outline" size={20} color="#D32F2F" />
+                <Ionicons name="trash-outline" size={20} color={colors.danger} />
               </TouchableOpacity>
             </View>
           )}
@@ -244,12 +245,12 @@ export default function MisProductosScreen() {
           <Text style={styles.label}>Foto del producto</Text>
           <TouchableOpacity style={styles.photoBox} onPress={elegirFoto} disabled={subiendoFoto}>
             {subiendoFoto ? (
-              <ActivityIndicator color="#83c41a" />
+              <ActivityIndicator color={colors.primary} />
             ) : imagenLocal || imageUrl ? (
               <Image source={{ uri: imagenLocal || imageUrl }} style={styles.photoPreview} />
             ) : (
               <View style={styles.photoPlaceholder}>
-                <Ionicons name="camera-outline" size={28} color="#999" />
+                <Ionicons name="camera-outline" size={28} color={colors.textMuted} />
                 <Text style={styles.photoPlaceholderText}>Toca para elegir una foto</Text>
               </View>
             )}
@@ -261,7 +262,7 @@ export default function MisProductosScreen() {
           )}
 
           <Text style={styles.label}>Nombre</Text>
-          <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Ej: Tomate - kg" />
+          <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Ej: Tomate - kg" placeholderTextColor={colors.textMuted} />
 
           <Text style={styles.label}>Precio</Text>
           <TextInput
@@ -270,6 +271,7 @@ export default function MisProductosScreen() {
             onChangeText={setPrice}
             keyboardType="numeric"
             placeholder="Ej: 3500"
+            placeholderTextColor={colors.textMuted}
           />
 
           <Text style={styles.label}>Stock disponible</Text>
@@ -279,6 +281,7 @@ export default function MisProductosScreen() {
             onChangeText={setStock}
             keyboardType="numeric"
             placeholder="Ej: 20"
+            placeholderTextColor={colors.textMuted}
           />
 
           <Text style={styles.label}>Descuento actual (%) — opcional</Text>
@@ -288,6 +291,7 @@ export default function MisProductosScreen() {
             onChangeText={setDiscount}
             keyboardType="numeric"
             placeholder="Ej: 15 (déjalo vacío si no tiene oferta)"
+            placeholderTextColor={colors.textMuted}
           />
 
           <Text style={styles.label}>Categoría</Text>
@@ -308,7 +312,7 @@ export default function MisProductosScreen() {
             onPress={handleGuardar}
             disabled={saving || subiendoFoto}
           >
-            {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>Guardar</Text>}
+            {saving ? <ActivityIndicator color={colors.white} /> : <Text style={styles.saveBtnText}>Guardar</Text>}
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.cancelBtn} onPress={() => setModalVisible(false)}>
@@ -321,7 +325,7 @@ export default function MisProductosScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
+  container: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -329,71 +333,79 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 10,
   },
-  title: { fontSize: 20, fontWeight: "bold", color: "#333", flex: 1 },
+  backCircle: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: colors.surface,
+    justifyContent: "center", alignItems: "center",
+    marginRight: 10,
+    ...shadow.card,
+  },
+  title: { fontSize: 20, fontWeight: "bold", color: colors.textPrimary, flex: 1 },
   addBtn: {
-    backgroundColor: "#83c41a",
+    backgroundColor: colors.primary,
     width: 36,
     height: 36,
     borderRadius: 18,
     justifyContent: "center",
     alignItems: "center",
+    ...shadow.button,
   },
-  empty: { textAlign: "center", color: "#999", marginTop: 40 },
+  empty: { textAlign: "center", color: colors.textMuted, marginTop: 40 },
   card: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f9f9f9",
-    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
     padding: 12,
     marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#eee",
+    ...shadow.card,
   },
-  thumb: { width: 50, height: 50, borderRadius: 8, backgroundColor: "#eee" },
-  name: { fontWeight: "bold", fontSize: 14, color: "#333" },
-  meta: { color: "#888", fontSize: 12, marginTop: 2 },
-  price: { color: "#83c41a", fontWeight: "bold", marginTop: 2 },
+  thumb: { width: 50, height: 50, borderRadius: 8, backgroundColor: colors.background },
+  name: { fontWeight: "bold", fontSize: 14, color: colors.textPrimary },
+  meta: { color: colors.textSecondary, fontSize: 12, marginTop: 2 },
+  price: { color: colors.primary, fontWeight: "bold", marginTop: 2 },
   iconBtn: { padding: 6, marginLeft: 4 },
-  modalContainer: { flex: 1, backgroundColor: "#fff" },
-  modalTitle: { fontSize: 20, fontWeight: "bold", marginBottom: 20, color: "#333" },
-  label: { fontSize: 13, color: "#666", marginBottom: 6, marginTop: 14, fontWeight: "600" },
-  input: { backgroundColor: "#F5F5F5", borderRadius: 10, padding: 14, fontSize: 15 },
+  modalContainer: { flex: 1, backgroundColor: colors.surface },
+  modalTitle: { fontSize: 20, fontWeight: "bold", marginBottom: 20, color: colors.textPrimary },
+  label: { fontSize: 13, color: colors.textSecondary, marginBottom: 6, marginTop: 14, fontWeight: "600" },
+  input: { backgroundColor: colors.background, borderRadius: 10, padding: 14, fontSize: 15, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border },
   photoBox: {
     width: 120,
     height: 120,
     borderRadius: 12,
-    backgroundColor: "#F5F5F5",
+    backgroundColor: colors.background,
     justifyContent: "center",
     alignItems: "center",
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "#eee",
+    borderColor: colors.border,
   },
   photoPreview: { width: "100%", height: "100%" },
   photoPlaceholder: { alignItems: "center", padding: 10 },
-  photoPlaceholderText: { color: "#999", fontSize: 11, textAlign: "center", marginTop: 6 },
-  changePhotoText: { color: "#83c41a", fontWeight: "600", marginTop: 8, fontSize: 13 },
+  photoPlaceholderText: { color: colors.textMuted, fontSize: 11, textAlign: "center", marginTop: 6 },
+  changePhotoText: { color: colors.primary, fontWeight: "600", marginTop: 8, fontSize: 13 },
   catRow: { flexDirection: "row", flexWrap: "wrap" },
   catChip: {
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: colors.border,
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 8,
     marginRight: 8,
     marginBottom: 8,
   },
-  catChipActive: { backgroundColor: "#83c41a", borderColor: "#83c41a" },
-  catChipText: { color: "#666", fontSize: 13 },
-  catChipTextActive: { color: "#fff", fontWeight: "bold" },
+  catChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  catChipText: { color: colors.textSecondary, fontSize: 13 },
+  catChipTextActive: { color: colors.white, fontWeight: "bold" },
   saveBtn: {
-    backgroundColor: "#83c41a",
+    backgroundColor: colors.primary,
     paddingVertical: 15,
-    borderRadius: 25,
+    borderRadius: radius.pill,
     alignItems: "center",
     marginTop: 24,
+    ...shadow.button,
   },
-  saveBtnText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
+  saveBtnText: { color: colors.white, fontWeight: "bold", fontSize: 16 },
   cancelBtn: { alignItems: "center", marginTop: 14, marginBottom: 20 },
-  cancelBtnText: { color: "#999", fontSize: 14 },
+  cancelBtnText: { color: colors.textMuted, fontSize: 14 },
 });
