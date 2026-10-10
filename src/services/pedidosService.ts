@@ -1,14 +1,13 @@
 import {
-  addDoc,
   collection,
   getDocs,
   doc,
-  updateDoc,
   onSnapshot,
   runTransaction,
   query,
   where,
   orderBy,
+  limit,
   serverTimestamp,
   Timestamp,
   Unsubscribe,
@@ -16,39 +15,27 @@ import {
   DocumentReference,
 } from "firebase/firestore";
 import { db } from "@/src/config/firebase";
+import {
+  PedidoItem,
+  EstadoPedido,
+  ORDEN_ESTADOS,
+  ESTADO_LABELS,
+  calcularEstadoGlobal,
+  unidadesADevolver,
+  validarTransicionEstado,
+} from "./pedidosEstadoMachine";
 
-export interface PedidoItem {
-  /**
-   * Id del documento en `Productos`. En `valoraciones` este mismo dato se llama
-   * `productoId`; el nombre `id` se conserva aquí para no romper los pedidos ya guardados.
-   */
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  imageUrl?: string;
-  proveedorId?: string;
-}
+// El estado del pedido (tipos, transición válida entre estados, cálculo del
+// estado resumen) vive en pedidosEstadoMachine.ts, sin depender de Firebase,
+// para poder probarlo con pruebas unitarias. Se re-exporta todo acá para que
+// ninguna pantalla que ya importaba estos nombres desde este archivo tenga que cambiar.
+export type { PedidoItem, EstadoPedido };
+export { ORDEN_ESTADOS, ESTADO_LABELS, unidadesADevolver };
 
 export interface PedidoAddress {
   name: string;
   addressLine: string;
 }
-
-export type EstadoPedido =
-  | "pendiente"
-  | "confirmado"
-  | "en_camino"
-  | "entregado"
-  | "cancelado";
-
-/** Orden de avance normal (sin contar "cancelado", que es un estado aparte). */
-export const ORDEN_ESTADOS: EstadoPedido[] = [
-  "pendiente",
-  "confirmado",
-  "en_camino",
-  "entregado",
-];
 
 export interface Pedido {
   id: string;
@@ -86,48 +73,6 @@ function mapPedido(docSnap: any): Pedido {
     createdAt: data.createdAt || null,
     motivosCancelacion: data.motivosCancelacion || undefined,
   };
-}
-
-/**
- * Calcula el estado "resumen" de un pedido a partir del estado de cada tienda:
- * es el más atrasado de todos (si una tienda va en "pendiente" y otra en
- * "en_camino", el resumen sigue en "pendiente" hasta que la más lenta avance).
- * Las tiendas canceladas no cuentan para este cálculo, salvo que todas lo estén.
- */
-function calcularEstadoGlobal(
-  estadosPorProveedor: Record<string, EstadoPedido>,
-  proveedorIds: string[]
-): EstadoPedido {
-  const estados = proveedorIds.map((id) => estadosPorProveedor[id] || "pendiente");
-  const activos = estados.filter((e) => e !== "cancelado");
-  if (activos.length === 0) return "cancelado";
-  const indices = activos.map((e) => ORDEN_ESTADOS.indexOf(e));
-  const minIndex = Math.min(...indices);
-  return ORDEN_ESTADOS[minIndex];
-}
-
-/**
- * Unidades que hay que devolver al inventario al cancelar, por id de producto.
- * Solo cuentan los ítems de tiendas que todavía NO estaban canceladas, para no
- * devolver dos veces lo mismo. `soloProveedorId` limita el cálculo a una tienda
- * (cancelación hecha por el tendero); sin él aplica a todo el pedido (admin).
- */
-export function unidadesADevolver(
-  items: PedidoItem[],
-  estadosPorProveedor: Record<string, EstadoPedido>,
-  estadoGlobal: EstadoPedido,
-  soloProveedorId?: string
-): Record<string, number> {
-  const unidades: Record<string, number> = {};
-  for (const item of items) {
-    if (soloProveedorId && item.proveedorId !== soloProveedorId) continue;
-    const estadoPrevio = item.proveedorId
-      ? estadosPorProveedor[item.proveedorId] ?? estadoGlobal
-      : estadoGlobal;
-    if (estadoPrevio === "cancelado") continue;
-    unidades[item.id] = (unidades[item.id] || 0) + item.quantity;
-  }
-  return unidades;
 }
 
 /**
@@ -299,11 +244,17 @@ export function suscribirsePedidosDeProveedor(
 /**
  * Se suscribe en tiempo real a TODOS los pedidos (todos los usuarios).
  * Uso: panel de administración.
+ *
+ * Trae los 300 más recientes en vez de la colección completa: sin este tope,
+ * el panel se pone cada vez más lento (y cada vez más caro de leer) a medida
+ * que crece el histórico. Si algún día el admin necesita ver más atrás de los
+ * últimos 300, hay que agregar paginación real ("cargar más"); subir solo el
+ * número acá no resuelve ese caso.
  */
 export function suscribirseTodosLosPedidos(
   callback: (pedidos: Pedido[]) => void
 ): Unsubscribe {
-  const q = query(collection(db, "pedidos"), orderBy("createdAt", "desc"));
+  const q = query(collection(db, "pedidos"), orderBy("createdAt", "desc"), limit(300));
   return onSnapshot(q, (snapshot) => {
     callback(snapshot.docs.map(mapPedido));
   });
@@ -323,6 +274,7 @@ export async function actualizarEstadoPedido(
     const snap = await transaction.get(pedidoRef);
     if (!snap.exists()) throw new Error("El pedido ya no existe.");
     const data = snap.data() as any;
+    validarTransicionEstado((data.status || "pendiente") as EstadoPedido, nuevoEstado);
     const proveedorIds: string[] = data.proveedorIds || [];
     const nuevosEstados: Record<string, EstadoPedido> = {};
     proveedorIds.forEach((id) => {
@@ -372,6 +324,7 @@ export async function actualizarEstadoProveedor(
     const data = snap.data() as any;
     const proveedorIds: string[] = data.proveedorIds || [];
     const estadosActuales: Record<string, EstadoPedido> = data.estadosPorProveedor || {};
+    validarTransicionEstado(estadosActuales[proveedorId] || "pendiente", nuevoEstado);
     const nuevosEstados = { ...estadosActuales, [proveedorId]: nuevoEstado };
     const nuevoGlobal = calcularEstadoGlobal(nuevosEstados, proveedorIds);
 
@@ -396,12 +349,3 @@ export async function actualizarEstadoProveedor(
     transaction.update(pedidoRef, updateData);
   });
 }
-
-/** Texto y color por estado, para mostrar en pantalla. */
-export const ESTADO_LABELS: Record<EstadoPedido, { label: string; color: string }> = {
-  pendiente: { label: "Pendiente", color: "#f0a500" },
-  confirmado: { label: "Confirmado", color: "#3b82f6" },
-  en_camino: { label: "En camino", color: "#8b5cf6" },
-  entregado: { label: "Entregado", color: "#22c55e" },
-  cancelado: { label: "Cancelado", color: "#ef4444" },
-};

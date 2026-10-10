@@ -1,95 +1,203 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // ---------- Funciones auxiliares ----------
     function signedIn() {
       return request.auth != null;
     }
 
-    function isOwner(uid) {
-      return signedIn() && request.auth.uid == uid;
+    function rolDe(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data.role;
     }
 
     function isAdmin() {
-      return signedIn() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return signedIn() && rolDe(request.auth.uid) == 'admin';
     }
 
     function isTendero() {
-      return signedIn() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'tendero';
+      return signedIn() && rolDe(request.auth.uid) == 'tendero';
     }
 
-    function profileFieldsOnly() {
-      return request.resource.data.diff(resource.data).affectedKeys()
-        .hasOnly(['nickname', 'phone', 'photoURL']);
+    // Nombre, precio, stock y descuento válidos. La app ya valida esto en el
+    // formulario (app/tienda/productos.tsx), pero eso se puede saltar; esta
+    // es la validación real del lado del servidor.
+    function productoValido() {
+      return request.resource.data.name is string &&
+        request.resource.data.name.size() > 0 &&
+        request.resource.data.price is number &&
+        request.resource.data.price > 0 &&
+        request.resource.data.stock is number &&
+        request.resource.data.stock >= 0 &&
+        (!('discountPercent' in request.resource.data) ||
+          (request.resource.data.discountPercent is number &&
+            request.resource.data.discountPercent >= 0 &&
+            request.resource.data.discountPercent <= 90));
     }
 
-    match /users/{userId} {
-      allow create: if isOwner(userId) && request.resource.data.role == 'cliente';
-      allow read: if isOwner(userId) || isAdmin();
-      allow update: if isAdmin() || (isOwner(userId) && profileFieldsOnly());
-      allow delete: if isAdmin();
-
-      match /addresses/{addressId} {
-        allow read, create, update, delete: if isOwner(userId);
-      }
+    // La parte de ESTE tendero dentro del pedido ya llegó a un estado final
+    // ("entregado" o "cancelado"): no se puede volver a tocar. Refleja la
+    // misma regla que ya aplica validarTransicionEstado() en pedidosService.ts.
+    function entradaProveedorFinal() {
+      return resource.data.keys().hasAll(['estadosPorProveedor']) &&
+        request.auth.uid in resource.data.estadosPorProveedor &&
+        resource.data.estadosPorProveedor[request.auth.uid] in ['entregado', 'cancelado'];
     }
 
-    match /tiendas/{storeId} {
-      allow read: if true;
-      allow create: if isTendero() && isOwner(storeId) &&
-        request.resource.data.ownerId == request.auth.uid;
-      allow update, delete: if isAdmin() ||
-        (isTendero() && isOwner(storeId) && resource.data.ownerId == request.auth.uid &&
-          request.resource.data.ownerId == resource.data.ownerId);
-    }
-
-    match /Productos/{productId} {
-      allow read: if true;
-      allow create: if isTendero() &&
-        request.resource.data.proveedorId == request.auth.uid;
-      allow update, delete: if isAdmin() ||
-        (isTendero() && resource.data.proveedorId == request.auth.uid &&
-          request.resource.data.proveedorId == resource.data.proveedorId);
-    }
-
-    match /pedidos/{pedidoId} {
-      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
-      allow read: if signedIn() && (
-        resource.data.userId == request.auth.uid ||
-        request.auth.uid in resource.data.proveedorIds ||
-        isAdmin()
-      );
-      // Un tendero solo puede cambiar su entrada de estado y el resumen del pedido.
-      allow update: if isAdmin() || (
-        signedIn() && request.auth.uid in resource.data.proveedorIds &&
-        request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['estadosPorProveedor', 'status']) &&
+    // Dentro de los mapas estadosPorProveedor/motivosCancelacion, un tendero
+    // solo puede modificar SU PROPIA llave; nunca la de otra tienda del mismo
+    // pedido (actualizarEstadoProveedor en el cliente ya hace el merge así,
+    // esto lo garantiza también del lado del servidor).
+    function soloTocaSuEntrada() {
+      let estadosViejos = resource.data.keys().hasAll(['estadosPorProveedor'])
+        ? resource.data.estadosPorProveedor : {};
+      let motivosViejos = resource.data.keys().hasAll(['motivosCancelacion'])
+        ? resource.data.motivosCancelacion : {};
+      return request.resource.data.estadosPorProveedor.diff(estadosViejos)
+        .affectedKeys().hasOnly([request.auth.uid]) &&
         (
-          // Compatibilidad de una sola actualización para pedidos antiguos.
-          !resource.data.keys().hasAll(['estadosPorProveedor']) ||
-          request.resource.data.estadosPorProveedor.diff(resource.data.estadosPorProveedor)
+          !('motivosCancelacion' in request.resource.data) ||
+          request.resource.data.motivosCancelacion.diff(motivosViejos)
             .affectedKeys().hasOnly([request.auth.uid])
-        )
-      );
-      allow delete: if isAdmin();
+        );
     }
 
-    match /valoraciones/{ratingId} {
-      allow read: if true;
-      allow create: if signedIn() && request.resource.data.userId == request.auth.uid &&
-        request.resource.data.rating is int && request.resource.data.rating >= 1 &&
-        request.resource.data.rating <= 5 &&
-        get(/databases/$(database)/documents/pedidos/$(request.resource.data.pedidoId)).data.userId == request.auth.uid;
+    // El pedido existe, es del comprador que firma la calificación, y la
+    // tienda que está calificando ya marcó su parte como entregada.
+    function pedidoListoParaCalificar(pedidoId, proveedorId) {
+      let pedido = get(/databases/$(database)/documents/pedidos/$(pedidoId)).data;
+      return pedido.userId == request.auth.uid &&
+        pedido.keys().hasAll(['estadosPorProveedor']) &&
+        proveedorId in pedido.estadosPorProveedor &&
+        pedido.estadosPorProveedor[proveedorId] == 'entregado';
+    }
+
+    // ---------- Productos ----------
+    match /Productos/{productoId} {
+      allow read: if signedIn();
+      // Solo un tendero (o admin) puede publicar productos, siempre a su nombre.
+      allow create: if signedIn()
+                    && request.resource.data.proveedorId == request.auth.uid
+                    && (isTendero() || isAdmin())
+                    && productoValido();
+      allow update: if signedIn()
+                    && (
+                      (resource.data.proveedorId == request.auth.uid && productoValido())
+                      || (isAdmin() && productoValido())
+                      // Cualquier comprador puede descontar stock al hacer un pedido
+                      // (crearPedido en pedidosService.ts); nunca puede dejarlo negativo.
+                      || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stock'])
+                          && request.resource.data.stock < resource.data.stock
+                          && request.resource.data.stock >= 0)
+                    );
+      allow delete: if signedIn()
+                    && (resource.data.proveedorId == request.auth.uid || isAdmin());
+    }
+
+    // ---------- Tiendas ----------
+    match /tiendas/{tiendaId} {
+      allow read: if signedIn();
+      // El dueño (tiendero) solo escribe su propia tienda. Un admin puede
+      // escribir cualquiera: lo necesita para crearla automáticamente al
+      // aprobar una solicitud, sin que eso abra la puerta a otros usuarios.
+      allow write: if signedIn() && (
+                     (tiendaId == request.auth.uid && (isTendero() || isAdmin()))
+                     || isAdmin()
+                   );
+    }
+
+    // ---------- Solicitudes para convertirse en tendero ----------
+    match /solicitudesTienda/{solicitudId} {
+      // Cualquier usuario puede pedirla, siempre a su nombre y en estado "pendiente".
+      allow create: if signedIn()
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.estado == 'pendiente'
+                    && request.resource.data.keys().hasOnly(['userId', 'nombre', 'descripcion', 'estado', 'createdAt']);
+      // La ve su dueño o un admin.
+      allow read: if signedIn()
+                  && (resource.data.userId == request.auth.uid || isAdmin());
+      // Solo un admin la resuelve, una única vez, y sin tocar los demás campos.
+      allow update: if isAdmin()
+                    && resource.data.estado == 'pendiente'
+                    && request.resource.data.estado in ['aprobada', 'rechazada']
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'resueltaPor', 'resueltaEn']);
+      allow delete: if false;
+    }
+
+    // ---------- Carritos ----------
+    match /carts/{cartId} {
+      allow create: if signedIn()
+                    && request.resource.data.userId == request.auth.uid;
+      allow read, update, delete: if signedIn()
+                    && resource.data.userId == request.auth.uid;
+    }
+
+    // ---------- Pedidos ----------
+    match /pedidos/{pedidoId} {
+      allow create: if signedIn()
+                    && request.resource.data.userId == request.auth.uid;
+      // Antes era "cualquier usuario autenticado puede leer CUALQUIER pedido".
+      // Se restringe a quien compró, a las tiendas incluidas en él, o al admin,
+      // que son los únicos tres patrones de consulta que usa la app
+      // (obtenerPedidosUsuario, suscribirsePedidosDeProveedor, panel admin).
+      allow read: if signedIn()
+                  && (
+                    resource.data.userId == request.auth.uid
+                    || request.auth.uid in resource.data.proveedorIds
+                    || isAdmin()
+                  );
+      allow update: if signedIn()
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'estadosPorProveedor', 'motivosCancelacion'])
+                    && (
+                      isAdmin()
+                      || (
+                        request.auth.uid in resource.data.proveedorIds
+                        && !entradaProveedorFinal()
+                        && soloTocaSuEntrada()
+                      )
+                    );
+      allow delete: if false;
+    }
+
+    // ---------- Valoraciones (inmutables una vez creadas) ----------
+    match /valoraciones/{valoracionId} {
+      allow read: if signedIn();
+      // Solo se puede calificar un pedido propio, ya entregado por esa tienda.
+      allow create: if signedIn()
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.rating is number
+                    && request.resource.data.rating >= 1
+                    && request.resource.data.rating <= 5
+                    && pedidoListoParaCalificar(request.resource.data.pedidoId, request.resource.data.proveedorId);
       allow update, delete: if false;
     }
 
-    match /solicitudesTienda/{requestId} {
-      allow create: if signedIn() && request.resource.data.userId == request.auth.uid &&
-        request.resource.data.estado == 'pendiente';
-      allow read: if signedIn() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow update, delete: if isAdmin();
+    // ---------- Usuarios ----------
+    match /users/{userId} {
+      // Cada quien lee su perfil; tenderos y admins leen el de los compradores.
+      allow read: if signedIn()
+                  && (request.auth.uid == userId || rolDe(request.auth.uid) in ['admin', 'tendero']);
+      // Todo usuario nuevo nace como cliente: nadie puede crearse ya como admin o tendero.
+      allow create: if signedIn()
+                    && request.auth.uid == userId
+                    && request.resource.data.role == 'cliente';
+      allow update: if signedIn() && (
+                    // El dueño solo edita su perfil, nunca su rol.
+                    (request.auth.uid == userId
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nickname', 'phone', 'photoURL']))
+                    // El admin solo cambia el rol.
+                    || (isAdmin()
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role']))
+                  );
+    }
+
+    match /users/{userId}/addresses/{addressId} {
+      allow read, write: if signedIn() && request.auth.uid == userId;
+    }
+
+    // Todo lo demás, bloqueado.
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

@@ -9,6 +9,7 @@ import {
   deleteDoc,
   query,
   where,
+  limit,
   serverTimestamp,
   Timestamp,
   QueryDocumentSnapshot,
@@ -89,6 +90,37 @@ export async function obtenerMisProductos(uid: string): Promise<ProductoTendero[
   return snapshot.docs.map(docAProducto);
 }
 
+/**
+ * Valida los campos de un producto antes de guardarlo. Las pantallas (tienda
+ * y admin) ya validan en el formulario, pero el servicio es el único punto
+ * por el que pasan TODAS las escrituras, así que repetir la validación acá
+ * evita que un formulario nuevo, o una llamada futura, guarde datos inválidos
+ * sin darse cuenta (precio negativo, stock negativo, nombre vacío, etc.).
+ * Firestore Rules aplica la misma regla del lado del servidor.
+ */
+function validarCamposProducto(data: {
+  name?: string;
+  price?: number;
+  stock?: number;
+  discountPercent?: number;
+}): void {
+  if (data.name !== undefined && data.name.trim().length === 0) {
+    throw new Error("El producto necesita un nombre.");
+  }
+  if (data.price !== undefined && (isNaN(data.price) || data.price <= 0)) {
+    throw new Error("El precio debe ser mayor a 0.");
+  }
+  if (data.stock !== undefined && (isNaN(data.stock) || data.stock < 0)) {
+    throw new Error("El stock no puede ser negativo.");
+  }
+  if (
+    data.discountPercent !== undefined &&
+    (isNaN(data.discountPercent) || data.discountPercent < 0 || data.discountPercent > 90)
+  ) {
+    throw new Error("El descuento debe estar entre 0 y 90%.");
+  }
+}
+
 /** Crea un producto nuevo para el catálogo, asociado al proveedor. */
 export async function crearProducto(
   uid: string,
@@ -101,6 +133,7 @@ export async function crearProducto(
     discountPercent?: number;
   }
 ): Promise<string> {
+  validarCamposProducto(data);
   const docRef = await addDoc(collection(db, "Productos"), {
     ...data,
     discountPercent: data.discountPercent || 0,
@@ -121,12 +154,20 @@ export async function actualizarProducto(
     discountPercent: number;
   }>
 ): Promise<void> {
+  validarCamposProducto(data);
   await updateDoc(doc(db, "Productos", productoId), data);
 }
 
-/** Trae TODOS los productos del catálogo (uso del panel de administración). */
+/**
+ * Trae productos del catálogo para el panel de administración (hasta 500).
+ * El catálogo que ven los compradores (home) se suscribe directo a la colección
+ * completa porque ahí la búsqueda necesita verlo todo; este tope solo aplica
+ * a la vista de admin, para no leer (y pagar) toda la colección en cada visita
+ * a medida que crece. Si el catálogo supera los 500 productos, hay que
+ * agregar paginación real en vez de subir el número.
+ */
 export async function obtenerTodosLosProductos(): Promise<ProductoTendero[]> {
-  const snapshot = await getDocs(collection(db, "Productos"));
+  const snapshot = await getDocs(query(collection(db, "Productos"), limit(500)));
   return snapshot.docs.map(docAProducto);
 }
 
