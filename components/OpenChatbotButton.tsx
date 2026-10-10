@@ -1,35 +1,45 @@
 import React from "react";
-import { TouchableOpacity, StyleSheet } from "react-native";
+import { TouchableOpacity, View, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { colors, shadow } from "@/constants/designSystem";
 
 export default function OpenChatbotButton() {
   const router = useRouter();
 
   return (
-    <TouchableOpacity 
-      style={styles.container} 
-      activeOpacity={0.8}
-      onPress={() => router.push("/chatbot")} 
+    <TouchableOpacity
+      style={styles.container}
+      activeOpacity={0.85}
+      onPress={() => router.push("/chatbot")}
     >
-      {}
-      <Ionicons name="chatbubble-ellipses" size={28} color="#FFF" />
+      <Ionicons name="chatbubble-ellipses" size={26} color={colors.white} />
+      <View style={styles.pingDot} />
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "#83c41a", 
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: colors.primary,
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 6,
+    borderWidth: 3,
+    borderColor: colors.surface,
+    ...shadow.floating,
+  },
+  pingDot: {
+    position: "absolute",
+    top: 2,
+    right: 2,
+    width: 13,
+    height: 13,
+    borderRadius: 7,
+    backgroundColor: colors.accent,
+    borderWidth: 2,
+    borderColor: colors.surface,
   },
 });

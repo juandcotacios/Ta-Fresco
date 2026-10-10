@@ -22,7 +22,7 @@ import {
 } from "react-native";
 import OpenChatbotButton from "../../components/OpenChatbotButton";
 
-const { width, height } = Dimensions.get('window');
+const { height } = Dimensions.get('window');
 const MIN_ORDER_AMOUNT = 100000;
 const BOTTOM_TAB_HEIGHT = Platform.OS === 'ios' ? 90 : 70;
 
@@ -488,7 +488,7 @@ const styles = StyleSheet.create({
   },
   carouselSection: { marginTop: 10, marginBottom: 20 },
   offerCard: {
-    width: width * 0.42,
+    width: 158,
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: 10,

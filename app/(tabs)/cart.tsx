@@ -658,7 +658,7 @@ const styles = StyleSheet.create({
   divider: { height: 10 },
   upsellSection: { marginTop: 10, paddingLeft: 20 },
   upsellTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15, color: colors.textPrimary },
-  upsellCard: { width: width * 0.4, backgroundColor: colors.surface, borderRadius: radius.lg, padding: 10, marginRight: 15, marginBottom: 10, ...shadow.card },
+  upsellCard: { width: 150, backgroundColor: colors.surface, borderRadius: radius.lg, padding: 10, marginRight: 15, marginBottom: 10, ...shadow.card },
   upsellDiscountTag: { position: 'absolute', top: 6, left: 6, zIndex: 2, backgroundColor: colors.danger, borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 },
   upsellDiscountText: { color: colors.white, fontSize: 10, fontWeight: 'bold' },
   upsellPriceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 5 },

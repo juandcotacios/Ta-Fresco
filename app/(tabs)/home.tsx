@@ -102,9 +102,27 @@ export default function Home() {
     return () => unsubscribe();
   }, []);
 
-  const filtered = products.filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const normalizar = (s: string) =>
+    s
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "") // quita tildes para comparar "Tubérculos" y "Tuberculos" por igual
+      .trim();
+
+  // Búsqueda "inteligente": ignora tildes/mayúsculas, compara por palabras (no
+  // exige que coincidan en orden ni sean la frase exacta) y busca tanto en el
+  // nombre del producto como en su categoría. Así "frutas" encuentra toda la
+  // categoría Frutas y no solo productos que se llamen literalmente "frutas".
+  const filtered = useMemo(() => {
+    const query = normalizar(search);
+    if (!query) return products;
+    const tokens = query.split(/\s+/).filter(Boolean);
+    return products.filter((p) => {
+      const nombreCategoria = `${p.name} ${p.category}`.toLowerCase();
+      const texto = normalizar(nombreCategoria);
+      return tokens.every((t) => texto.includes(t));
+    });
+  }, [products, search]);
 
   // Top descuentos vigentes, ordenados de mayor a menor, para el panel dinámico.
   const topDescuentos = useMemo(() => {
@@ -127,12 +145,6 @@ export default function Home() {
   useEffect(() => {
     if (promoIndex >= topDescuentos.length) setPromoIndex(0);
   }, [topDescuentos.length]);
-
-  const normalizar = (s: string) =>
-    s
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[̀-ͯ]/g, ""); // quita tildes para comparar "Tubérculos" y "Tuberculos" por igual
 
   const groupedProducts = CATEGORIES.filter(
     (cat) => !selectedCategory || cat.name === selectedCategory
