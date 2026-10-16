@@ -5,6 +5,7 @@ import {
   EstadoPedido,
   ORDEN_ESTADOS,
   Pedido,
+  labelEstado,
   obtenerEstadoProveedor,
   suscribirsePedidosUsuario,
 } from "@/src/services/pedidosService";
@@ -253,9 +254,9 @@ export default function PedidosScreen() {
                   <Text style={styles.pedidoId}>Pedido #{item.id.slice(0, 6).toUpperCase()}</Text>
                   <Text style={styles.fecha}>{formatFecha(item.createdAt)}</Text>
                 </View>
-                <View style={[styles.statusPill, { backgroundColor: ESTADO_LABELS[item.status].color + "22" }]}>
-                  <Text style={[styles.statusPillText, { color: ESTADO_LABELS[item.status].color }]}>
-                    {ESTADO_LABELS[item.status].label}
+                <View style={[styles.statusPill, { backgroundColor: labelEstado(item.status).color + "22" }]}>
+                  <Text style={[styles.statusPillText, { color: labelEstado(item.status).color }]}>
+                    {labelEstado(item.status).label}
                   </Text>
                 </View>
               </View>
@@ -291,8 +292,8 @@ export default function PedidosScreen() {
                       <View key={proveedorId} style={styles.storeStatusBlock}>
                         <View style={styles.storeStatusRow}>
                           <Text style={styles.storeStatusName}>Tienda {index + 1}</Text>
-                          <Text style={[styles.storeStatusValue, { color: ESTADO_LABELS[estadoTienda].color }]}>
-                            {ESTADO_LABELS[estadoTienda].label}
+                          <Text style={[styles.storeStatusValue, { color: labelEstado(estadoTienda).color }]}>
+                            {labelEstado(estadoTienda).label}
                           </Text>
                         </View>
                         {estadoTienda === "cancelado" && !!motivoTienda && (

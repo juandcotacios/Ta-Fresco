@@ -4,6 +4,7 @@ import {
   actualizarEstadoPedido,
   ESTADO_LABELS,
   EstadoPedido,
+  labelEstado,
   ORDEN_ESTADOS,
   Pedido,
   suscribirseTodosLosPedidos,
@@ -100,7 +101,7 @@ export default function AdminPedidosScreen() {
         contentContainerStyle={{ padding: 16 }}
         ListEmptyComponent={<Text style={styles.empty}>No hay pedidos todavía.</Text>}
         renderItem={({ item }) => {
-          const estado = ESTADO_LABELS[item.status];
+          const estado = labelEstado(item.status);
           const esFinal = item.status === "entregado" || item.status === "cancelado";
           const currentIndex = ORDEN_ESTADOS.indexOf(item.status);
           const siguienteLabel =

@@ -21,8 +21,10 @@ import {
   ORDEN_ESTADOS,
   ESTADO_LABELS,
   calcularEstadoGlobal,
+  aplicarEstadoAdmin,
   unidadesADevolver,
   validarTransicionEstado,
+  labelEstado,
 } from "./pedidosEstadoMachine";
 
 // El estado del pedido (tipos, transición válida entre estados, cálculo del
@@ -30,7 +32,7 @@ import {
 // para poder probarlo con pruebas unitarias. Se re-exporta todo acá para que
 // ninguna pantalla que ya importaba estos nombres desde este archivo tenga que cambiar.
 export type { PedidoItem, EstadoPedido };
-export { ORDEN_ESTADOS, ESTADO_LABELS, unidadesADevolver };
+export { ORDEN_ESTADOS, ESTADO_LABELS, unidadesADevolver, labelEstado };
 
 export interface PedidoAddress {
   name: string;
@@ -261,8 +263,12 @@ export function suscribirseTodosLosPedidos(
 }
 
 /**
- * Uso del ADMIN: fuerza el mismo estado para TODAS las tiendas de un pedido
- * a la vez (una anulación general por encima de cada tendero individual).
+ * Uso del ADMIN: fuerza un mismo estado nuevo sobre todas las tiendas ACTIVAS
+ * de un pedido a la vez (una anulación general por encima de cada tendero
+ * individual). Las tiendas que ya llegaron a un estado final (entregado o
+ * cancelado) se dejan intactas -ver aplicarEstadoAdmin()-, así que esto nunca
+ * retrocede a una tienda que ya iba más adelante que las demás, ni revive ni
+ * repone stock de una tienda que ya entregó o ya había cancelado su parte.
  */
 export async function actualizarEstadoPedido(
   pedidoId: string,
@@ -276,28 +282,39 @@ export async function actualizarEstadoPedido(
     const data = snap.data() as any;
     validarTransicionEstado((data.status || "pendiente") as EstadoPedido, nuevoEstado);
     const proveedorIds: string[] = data.proveedorIds || [];
-    const nuevosEstados: Record<string, EstadoPedido> = {};
-    proveedorIds.forEach((id) => {
-      nuevosEstados[id] = nuevoEstado;
-    });
+    const estadosActuales: Record<string, EstadoPedido> = data.estadosPorProveedor || {};
+    const { nuevosEstados, proveedoresQueCambian } = aplicarEstadoAdmin(
+      estadosActuales,
+      proveedorIds,
+      nuevoEstado
+    );
+    // El resumen se recalcula a partir de cómo quedó cada tienda (no se asume
+    // que sea igual a nuevoEstado): si alguna tienda activa quedó sin tocar
+    // por estar ya en un estado final, el resumen refleja eso.
+    const nuevoGlobal = calcularEstadoGlobal(nuevosEstados, proveedorIds);
 
-    // Al cancelar, las unidades vuelven al inventario (lecturas antes de escribir).
+    // Al cancelar, las unidades vuelven al inventario (lecturas antes de
+    // escribir). unidadesADevolver ya omite cualquier tienda en un estado
+    // final (incluida "entregado"), así que nunca repone mercancía que una
+    // tienda ya entregó o que ya estaba cancelada antes de esta operación.
     const devolver =
       nuevoEstado === "cancelado"
-        ? unidadesADevolver(data.items || [], data.estadosPorProveedor || {}, data.status || "pendiente")
+        ? unidadesADevolver(data.items || [], estadosActuales, data.status || "pendiente")
         : {};
     const reposiciones = await leerStockParaDevolver(transaction, devolver);
     reposiciones.forEach((r) => transaction.update(r.ref, { stock: r.stock + r.cantidad }));
 
     const updateData: Record<string, unknown> = {
       estadosPorProveedor: nuevosEstados,
-      status: nuevoEstado,
+      status: nuevoGlobal,
     };
-    // El admin cancela TODO el pedido de una vez: el mismo motivo aplica a cada tienda.
-    if (nuevoEstado === "cancelado" && motivo?.trim()) {
+    // El admin cancela todo el pedido de una vez: el motivo aplica solo a las
+    // tiendas que de verdad cambiaron en esta operación (nunca a una que ya
+    // estaba en un estado final, que ni se tocó).
+    if (nuevoEstado === "cancelado" && motivo?.trim() && proveedoresQueCambian.length > 0) {
       const motivosPrevios: Record<string, string> = data.motivosCancelacion || {};
       const motivosNuevos = { ...motivosPrevios };
-      proveedorIds.forEach((id) => {
+      proveedoresQueCambian.forEach((id) => {
         motivosNuevos[id] = motivo.trim();
       });
       updateData.motivosCancelacion = motivosNuevos;

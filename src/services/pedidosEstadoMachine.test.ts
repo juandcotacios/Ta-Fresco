@@ -1,9 +1,12 @@
+/// <reference types="jest" />
 import {
+  aplicarEstadoAdmin,
   calcularEstadoGlobal,
   esEstadoFinal,
+  labelEstado,
+  PedidoItem,
   unidadesADevolver,
   validarTransicionEstado,
-  PedidoItem,
 } from "./pedidosEstadoMachine";
 
 describe("esEstadoFinal", () => {
@@ -88,6 +91,14 @@ describe("unidadesADevolver", () => {
     expect(resultado).toEqual({ prod2: 5 });
   });
 
+  it("tampoco devuelve unidades de una tienda que ya había entregado (LOG-N2)", () => {
+    // Caso real: el admin cancela TODO el pedido, pero una de las tiendas ya
+    // había marcado su parte como entregada. Esa mercancía no vuelve al stock.
+    const estadosPorProveedor = { tiendaA: "entregado" as const, tiendaB: "pendiente" as const };
+    const resultado = unidadesADevolver(items, estadosPorProveedor, "pendiente");
+    expect(resultado).toEqual({ prod2: 5 });
+  });
+
   it("con soloProveedorId, solo devuelve las unidades de esa tienda", () => {
     const resultado = unidadesADevolver(items, {}, "pendiente", "tiendaA");
     expect(resultado).toEqual({ prod1: 3 });
@@ -100,5 +111,60 @@ describe("unidadesADevolver", () => {
     ];
     const resultado = unidadesADevolver(itemsRepetidos, {}, "pendiente");
     expect(resultado).toEqual({ prod1: 3 });
+  });
+});
+
+describe("labelEstado", () => {
+  it("devuelve la etiqueta real para cada estado válido", () => {
+    expect(labelEstado("pendiente")).toEqual({ label: "Pendiente", color: "#f0a500" });
+    expect(labelEstado("entregado")).toEqual({ label: "Entregado", color: "#22c55e" });
+  });
+
+  it("no truena con un valor desconocido, vacío o ausente (SEG-N03)", () => {
+    expect(labelEstado("algo_que_no_existe")).toEqual({ label: "Desconocido", color: "#9ca3af" });
+    expect(labelEstado(undefined)).toEqual({ label: "Desconocido", color: "#9ca3af" });
+    expect(labelEstado(null)).toEqual({ label: "Desconocido", color: "#9ca3af" });
+    expect(labelEstado("")).toEqual({ label: "Desconocido", color: "#9ca3af" });
+  });
+});
+
+describe("aplicarEstadoAdmin", () => {
+  it("mueve a todas las tiendas activas al mismo estado nuevo", () => {
+    const estadosActuales = { tiendaA: "pendiente" as const, tiendaB: "pendiente" as const };
+    const resultado = aplicarEstadoAdmin(estadosActuales, ["tiendaA", "tiendaB"], "confirmado");
+    expect(resultado.nuevosEstados).toEqual({ tiendaA: "confirmado", tiendaB: "confirmado" });
+    expect(resultado.proveedoresQueCambian).toEqual(["tiendaA", "tiendaB"]);
+  });
+
+  it("no retrocede a una tienda que ya iba más adelante que las demás (LOG-N1)", () => {
+    // Caso real: A va en_camino, B va pendiente (el resumen del pedido es
+    // "pendiente", el más atrasado). El admin pulsa "avanzar" a "confirmado".
+    // A NO debe retroceder de en_camino a confirmado.
+    const estadosActuales = { tiendaA: "en_camino" as const, tiendaB: "pendiente" as const };
+    const resultado = aplicarEstadoAdmin(estadosActuales, ["tiendaA", "tiendaB"], "confirmado");
+    expect(resultado.nuevosEstados.tiendaA).toBe("en_camino");
+    expect(resultado.nuevosEstados.tiendaB).toBe("confirmado");
+    expect(resultado.proveedoresQueCambian).toEqual(["tiendaB"]);
+  });
+
+  it("no revive ni toca una tienda que ya entregó o ya había cancelado", () => {
+    const estadosActuales = {
+      tiendaA: "entregado" as const,
+      tiendaB: "cancelado" as const,
+      tiendaC: "pendiente" as const,
+    };
+    const resultado = aplicarEstadoAdmin(estadosActuales, ["tiendaA", "tiendaB", "tiendaC"], "cancelado");
+    expect(resultado.nuevosEstados).toEqual({
+      tiendaA: "entregado",
+      tiendaB: "cancelado",
+      tiendaC: "cancelado",
+    });
+    expect(resultado.proveedoresQueCambian).toEqual(["tiendaC"]);
+  });
+
+  it("trata una tienda sin estado registrado como 'pendiente'", () => {
+    const resultado = aplicarEstadoAdmin({}, ["tiendaA"], "confirmado");
+    expect(resultado.nuevosEstados).toEqual({ tiendaA: "confirmado" });
+    expect(resultado.proveedoresQueCambian).toEqual(["tiendaA"]);
   });
 });

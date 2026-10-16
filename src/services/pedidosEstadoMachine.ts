@@ -47,6 +47,21 @@ export const ESTADO_LABELS: Record<EstadoPedido, { label: string; color: string 
 };
 
 /**
+ * Accede a ESTADO_LABELS con una red de seguridad. `item.status` y las llaves
+ * de `estadosPorProveedor` vienen directo de Firestore sin pasar por el tipo
+ * `EstadoPedido`; un dato legado, un valor todavía no migrado, o un campo que
+ * llegó vacío hacían que `ESTADO_LABELS[x]` diera `undefined` y la pantalla
+ * tronara al leer `.label`/`.color`. Con esto, un valor desconocido muestra
+ * "Desconocido" en gris en vez de romper la pantalla (SEG-N03).
+ */
+export function labelEstado(estado: unknown): { label: string; color: string } {
+  if (typeof estado === "string" && estado in ESTADO_LABELS) {
+    return ESTADO_LABELS[estado as EstadoPedido];
+  }
+  return { label: "Desconocido", color: "#9ca3af" };
+}
+
+/**
  * Calcula el estado "resumen" de un pedido a partir del estado de cada tienda:
  * es el más atrasado de todos (si una tienda va en "pendiente" y otra en
  * "en_camino", el resumen sigue en "pendiente" hasta que la más lenta avance).
@@ -64,11 +79,55 @@ export function calcularEstadoGlobal(
   return ORDEN_ESTADOS[minIndex];
 }
 
+/** Lo que resulta de que el admin fuerce un estado sobre TODO el pedido de una vez. */
+export interface ResultadoEstadoAdmin {
+  /** Estado de cada tienda después del cambio: las finales quedan intactas. */
+  nuevosEstados: Record<string, EstadoPedido>;
+  /** Tiendas que de verdad cambiaron de estado en esta operación (para el motivo de cancelación). */
+  proveedoresQueCambian: string[];
+}
+
+/**
+ * Uso del ADMIN: aplica un mismo estado nuevo sobre todas las tiendas del
+ * pedido a la vez, pero solo a las que de verdad avanzan con este cambio:
+ * - Una tienda en un estado final (entregado o cancelado) nunca se toca.
+ * - Si `nuevoEstado` es un paso de la secuencia normal (no "cancelado"), solo
+ *   se mueven las tiendas que estén ATRÁS de ese punto; una que ya iba igual
+ *   de adelantada o más (por ejemplo, otra tienda del mismo pedido que ya
+ *   confirmó aparte) se deja como está, nunca retrocede.
+ * - Si `nuevoEstado` es "cancelado", se cancelan todas las tiendas activas
+ *   (cancelar es válido desde cualquier punto de la secuencia), excepto las
+ *   que ya son finales.
+ */
+export function aplicarEstadoAdmin(
+  estadosActuales: Record<string, EstadoPedido>,
+  proveedorIds: string[],
+  nuevoEstado: EstadoPedido
+): ResultadoEstadoAdmin {
+  const nuevosEstados: Record<string, EstadoPedido> = { ...estadosActuales };
+  const proveedoresQueCambian: string[] = [];
+  const indiceNuevo = ORDEN_ESTADOS.indexOf(nuevoEstado);
+  proveedorIds.forEach((id) => {
+    const actual = estadosActuales[id] || "pendiente";
+    if (esEstadoFinal(actual)) return; // ya entregó o canceló: no se toca
+    if (nuevoEstado !== "cancelado" && ORDEN_ESTADOS.indexOf(actual) >= indiceNuevo) {
+      return; // ya está en ese punto de la secuencia o más adelante: no se toca
+    }
+    nuevosEstados[id] = nuevoEstado;
+    proveedoresQueCambian.push(id);
+  });
+  return { nuevosEstados, proveedoresQueCambian };
+}
+
 /**
  * Unidades que hay que devolver al inventario al cancelar, por id de producto.
- * Solo cuentan los ítems de tiendas que todavía NO estaban canceladas, para no
- * devolver dos veces lo mismo. `soloProveedorId` limita el cálculo a una tienda
- * (cancelación hecha por el tendero); sin él aplica a todo el pedido (admin).
+ * Solo cuentan los ítems de tiendas que todavía estaban en un estado ACTIVO
+ * (ni cancelado ni entregado). Omitir también "entregado" es a propósito: si
+ * una tienda ya marcó su parte como entregada, esa mercancía ya salió del
+ * inventario para siempre, y un "cancelar todo" del admin sobre el resto del
+ * pedido no le puede devolver unidades que ya se entregaron. `soloProveedorId`
+ * limita el cálculo a una tienda (cancelación hecha por el tendero); sin él
+ * aplica a todo el pedido (admin).
  */
 export function unidadesADevolver(
   items: PedidoItem[],
@@ -82,7 +141,7 @@ export function unidadesADevolver(
     const estadoPrevio = item.proveedorId
       ? estadosPorProveedor[item.proveedorId] ?? estadoGlobal
       : estadoGlobal;
-    if (estadoPrevio === "cancelado") continue;
+    if (esEstadoFinal(estadoPrevio)) continue;
     unidades[item.id] = (unidades[item.id] || 0) + item.quantity;
   }
   return unidades;

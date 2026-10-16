@@ -4,6 +4,7 @@ import {
   actualizarEstadoProveedor,
   ESTADO_LABELS,
   EstadoPedido,
+  labelEstado,
   obtenerEstadoProveedor,
   ORDEN_ESTADOS,
   Pedido,
@@ -114,7 +115,7 @@ export default function PedidosDeMiTiendaScreen() {
           }
           renderItem={({ item }) => {
             const estadoPropio = user ? obtenerEstadoProveedor(item, user.uid) : item.status;
-            const estado = ESTADO_LABELS[estadoPropio];
+            const estado = labelEstado(estadoPropio);
             const esFinal = estadoPropio === "entregado" || estadoPropio === "cancelado";
             const currentIndex = ORDEN_ESTADOS.indexOf(estadoPropio);
             const siguienteLabel =
