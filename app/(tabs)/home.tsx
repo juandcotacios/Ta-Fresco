@@ -48,7 +48,7 @@ const CATEGORIES: { name: string; icon: any; ionicon?: keyof typeof Ionicons.gly
   { name: "Tubérculos", icon: require("../assets/categorias/tuberculos.png") },
   { name: "Hortalizas", icon: require("../assets/categorias/hortalizas.png") },
   { name: "Abarrotes", icon: require("../assets/categorias/abarrotes.png") },
-  { name: "Carnes", icon: null, ionicon: "restaurant-outline" },
+  { name: "Carnes", icon: require("../assets/categorias/carne.jpg") },
 ];
 
 export default function Home() {
