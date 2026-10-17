@@ -12,7 +12,10 @@ export default function TabLayout() {
         animation: 'fade',
 
         tabBarStyle: {
-          backgroundColor: colors.primary,
+          // primary (sin oscurecer) con el texto inactivo al 60% daba 2,1:1 de
+          // contraste, casi ilegible con 10px. primaryDark + 85% blanco + 11px
+          // sube eso a ~4,1:1 sin tocar la marca ni el resto del diseño.
+          backgroundColor: colors.primaryDark,
           height: Platform.OS === 'ios' ? 90 : 75,
           borderTopLeftRadius: radius.xl,
           borderTopRightRadius: radius.xl,
@@ -30,9 +33,9 @@ export default function TabLayout() {
           paddingTop: 10,
         },
         tabBarActiveTintColor: colors.white,
-        tabBarInactiveTintColor: "rgba(255,255,255,0.6)",
+        tabBarInactiveTintColor: "rgba(255,255,255,0.85)",
         tabBarLabelStyle: {
-          fontSize: 10,
+          fontSize: 11,
           fontWeight: 'bold',
           marginBottom: 5,
         },

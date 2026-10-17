@@ -11,7 +11,7 @@ import {
   suscribirsePedidosDeProveedor,
 } from "@/src/services/pedidosService";
 import { Comprador } from "@/src/services/usuariosService";
-import { avisar, confirmar } from "@/src/utils/dialogos";
+import { avisar } from "@/src/utils/dialogos";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { getAuth } from "firebase/auth";
@@ -21,6 +21,7 @@ import {
   FlatList,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -77,21 +78,26 @@ export default function PedidosDeMiTiendaScreen() {
     }
   };
 
-  const cancelarPedido = (pedido: Pedido) => {
-    confirmar(
-      "Cancelar pedido",
-      `¿Cancelar el pedido #${pedido.id.slice(0, 6).toUpperCase()}? Las unidades volverán al inventario.`,
-      async () => {
-        try {
-          if (user) await actualizarEstadoProveedor(pedido.id, user.uid, "cancelado" as EstadoPedido);
-        } catch (error) {
-          console.log(error);
-          avisar("Error", "No se pudo cancelar el pedido.");
-        }
-      },
-      "Sí, cancelar",
-      true
-    );
+  // Cancelación en línea (dentro de la misma tarjeta) en vez de una ventana
+  // emergente del navegador, con un motivo obligatorio. El tendero solo
+  // cancela SU parte del pedido; el resto de tiendas no se ven afectadas.
+  const [cancelandoId, setCancelandoId] = useState<string | null>(null);
+  const [motivoCancelacion, setMotivoCancelacion] = useState("");
+  const [enviandoCancelacion, setEnviandoCancelacion] = useState(false);
+
+  const confirmarCancelacion = async (pedido: Pedido) => {
+    if (!user || !motivoCancelacion.trim()) return;
+    setEnviandoCancelacion(true);
+    try {
+      await actualizarEstadoProveedor(pedido.id, user.uid, "cancelado" as EstadoPedido, motivoCancelacion);
+      setCancelandoId(null);
+      setMotivoCancelacion("");
+    } catch (error) {
+      console.log(error);
+      avisar("Error", "No se pudo cancelar el pedido.");
+    } finally {
+      setEnviandoCancelacion(false);
+    }
   };
 
   return (
@@ -165,16 +171,54 @@ export default function PedidosDeMiTiendaScreen() {
                 </Text>
 
                 {!esFinal && (
-                  <View style={styles.actions}>
-                    {siguienteLabel && (
-                      <TouchableOpacity style={styles.advanceBtn} onPress={() => avanzarEstado(item)}>
-                        <Text style={styles.advanceBtnText}>Avanzar a: {siguienteLabel}</Text>
+                  cancelandoId === item.id ? (
+                    <View style={styles.cancelForm}>
+                      <Text style={styles.cancelFormLabel}>¿Por qué cancelas este pedido?</Text>
+                      <TextInput
+                        style={styles.cancelInput}
+                        placeholder="Ej: no queda stock"
+                        placeholderTextColor={colors.textMuted}
+                        value={motivoCancelacion}
+                        onChangeText={setMotivoCancelacion}
+                        multiline
+                        autoFocus
+                      />
+                      <View style={styles.cancelFormActions}>
+                        <TouchableOpacity
+                          onPress={() => { setCancelandoId(null); setMotivoCancelacion(""); }}
+                          style={styles.cancelFormBackBtn}
+                        >
+                          <Text style={styles.cancelFormBackText}>Atrás</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => confirmarCancelacion(item)}
+                          disabled={!motivoCancelacion.trim() || enviandoCancelacion}
+                          style={[
+                            styles.cancelFormConfirmBtn,
+                            (!motivoCancelacion.trim() || enviandoCancelacion) && { opacity: 0.5 },
+                          ]}
+                        >
+                          <Text style={styles.cancelFormConfirmText}>
+                            {enviandoCancelacion ? "Cancelando..." : "Confirmar cancelación"}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ) : (
+                    <View style={styles.actions}>
+                      {siguienteLabel && (
+                        <TouchableOpacity style={styles.advanceBtn} onPress={() => avanzarEstado(item)}>
+                          <Text style={styles.advanceBtnText}>Avanzar a: {siguienteLabel}</Text>
+                        </TouchableOpacity>
+                      )}
+                      <TouchableOpacity
+                        style={styles.cancelBtn}
+                        onPress={() => { setCancelandoId(item.id); setMotivoCancelacion(""); }}
+                      >
+                        <Text style={styles.cancelBtnText}>Cancelar</Text>
                       </TouchableOpacity>
-                    )}
-                    <TouchableOpacity style={styles.cancelBtn} onPress={() => cancelarPedido(item)}>
-                      <Text style={styles.cancelBtnText}>Cancelar</Text>
-                    </TouchableOpacity>
-                  </View>
+                    </View>
+                  )
                 )}
               </View>
             );
@@ -244,4 +288,33 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   cancelBtnText: { color: colors.danger, fontWeight: "bold", fontSize: 13 },
+  cancelForm: {
+    marginTop: 12,
+    backgroundColor: colors.background,
+    borderRadius: 12,
+    padding: 12,
+  },
+  cancelFormLabel: { color: colors.textPrimary, fontSize: 13, fontWeight: "600", marginBottom: 8 },
+  cancelInput: {
+    backgroundColor: colors.surface,
+    borderRadius: 10,
+    padding: 10,
+    fontSize: 13,
+    minHeight: 50,
+    textAlignVertical: "top",
+    color: colors.textPrimary,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  cancelFormActions: { flexDirection: "row", justifyContent: "flex-end", marginTop: 10 },
+  cancelFormBackBtn: {
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginLeft: 10,
+    backgroundColor: "#F0F0F0",
+  },
+  cancelFormBackText: { color: "#555", fontWeight: "600", fontSize: 13 },
+  cancelFormConfirmBtn: { backgroundColor: colors.danger, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8, marginLeft: 10 },
+  cancelFormConfirmText: { color: colors.white, fontWeight: "600", fontSize: 13 },
 });

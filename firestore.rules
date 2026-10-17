@@ -43,6 +43,17 @@ service cloud.firestore {
       );
     }
 
+    // Categoría de la lista que ofrece el formulario (app/tienda/productos.tsx)
+    // e imagen que de verdad viene de la subida a Cloudinary (cloudinaryService.ts),
+    // nunca una URL externa cualquiera. Solo se exige al CREAR: un producto ya
+    // existente puede traer una categoría o imagen de antes de esta regla, y no
+    // se quiere romper su edición (p. ej. solo cambiar el precio) por eso.
+    function productoNuevoValido() {
+      return request.resource.data.category in
+        ['Hortalizas', 'Frutas', 'Abarrotes', 'Tuberculos', 'Verduras'] &&
+        request.resource.data.imageUrl.matches('https://res[.]cloudinary[.]com/.*');
+    }
+
     // Los cinco estados del ciclo de vida de un pedido, en el mismo orden que
     // ORDEN_ESTADOS en pedidosEstadoMachine.ts.
     function estadoValido(e) {
@@ -125,7 +136,9 @@ service cloud.firestore {
       return request.resource.data.ownerId == tiendaId &&
         request.resource.data.nombre is string &&
         request.resource.data.nombre.size() > 0 &&
-        (!('descripcion' in request.resource.data) || request.resource.data.descripcion is string);
+        request.resource.data.nombre.size() <= 100 &&
+        (!('descripcion' in request.resource.data) ||
+          (request.resource.data.descripcion is string && request.resource.data.descripcion.size() <= 1000));
     }
 
     // ---------- Productos ----------
@@ -136,7 +149,8 @@ service cloud.firestore {
                     && request.resource.data.proveedorId == request.auth.uid
                     && (isTendero() || isAdmin())
                     && productoValido()
-                    && camposProductoValidos();
+                    && camposProductoValidos()
+                    && productoNuevoValido();
       allow update: if signedIn()
                     && (
                       // No se exige camposProductoValidos() aquí a propósito: productos
@@ -175,7 +189,9 @@ service cloud.firestore {
                     && request.resource.data.estado == 'pendiente'
                     && request.resource.data.nombre is string
                     && request.resource.data.nombre.size() > 0
+                    && request.resource.data.nombre.size() <= 100
                     && request.resource.data.descripcion is string
+                    && request.resource.data.descripcion.size() <= 1000
                     && request.resource.data.keys()
                          .hasAll(['userId', 'nombre', 'descripcion', 'estado', 'createdAt'])
                     && request.resource.data.keys()
@@ -245,9 +261,16 @@ service cloud.firestore {
 
     // ---------- Usuarios ----------
     match /users/{userId} {
-      // Cada quien lee su perfil; tenderos y admins leen el de los compradores.
-      allow read: if signedIn()
-                  && (request.auth.uid == userId || rolDe(request.auth.uid) in ['admin', 'tendero']);
+      // Cada quien lee su perfil propio; tenderos y admins leen el de un
+      // comprador puntual (así lo pide la app: siempre con getDoc(uid), nunca
+      // listando la colección completa). "get" es un documento por su id;
+      // "list" es una consulta/colección entera, y esa SOLO la puede hacer un
+      // admin (único caso real: obtenerTodosLosUsuarios(), panel de admin).
+      // Antes "read" cubría ambos y cualquier tendero podía traerse la
+      // colección users completa con los datos de todos, admins incluidos.
+      allow get: if signedIn()
+                 && (request.auth.uid == userId || rolDe(request.auth.uid) in ['admin', 'tendero']);
+      allow list: if isAdmin();
       // Todo usuario nuevo nace como cliente: nadie puede crearse ya como admin o tendero.
       allow create: if signedIn()
                     && request.auth.uid == userId
