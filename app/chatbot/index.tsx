@@ -25,8 +25,8 @@ interface ProductoChat {
   proveedorId: string;
 }
 
-// Las mismas 5 categorías que usan home.tsx y ofertas.tsx.
-const CATEGORIAS = ["Verduras", "Frutas", "Tubérculos", "Hortalizas", "Abarrotes"];
+// Las mismas categorías que usan home.tsx y ofertas.tsx.
+const CATEGORIAS = ["Verduras", "Frutas", "Tubérculos", "Hortalizas", "Abarrotes", "Carnes"];
 
 const normalizar = (s: string) =>
   s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");

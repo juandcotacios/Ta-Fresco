@@ -50,7 +50,7 @@ service cloud.firestore {
     // se quiere romper su edición (p. ej. solo cambiar el precio) por eso.
     function productoNuevoValido() {
       return request.resource.data.category in
-        ['Hortalizas', 'Frutas', 'Abarrotes', 'Tuberculos', 'Verduras'] &&
+        ['Hortalizas', 'Frutas', 'Abarrotes', 'Tuberculos', 'Verduras', 'Carnes'] &&
         request.resource.data.imageUrl.matches('https://res[.]cloudinary[.]com/.*');
     }
 

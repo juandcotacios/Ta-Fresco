@@ -26,7 +26,7 @@ import {
   View,
 } from "react-native";
 
-const CATEGORIAS = ["Hortalizas", "Frutas", "Abarrotes", "Tuberculos", "Verduras"];
+const CATEGORIAS = ["Hortalizas", "Frutas", "Abarrotes", "Tuberculos", "Verduras", "Carnes"];
 
 export default function MisProductosScreen() {
   const router = useRouter();

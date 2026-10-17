@@ -40,12 +40,16 @@ interface Product {
   proveedorId?: string;
 }
 
-const CATEGORIES = [
+// "Carnes" no tiene foto propia todavía (las demás son fotos recortadas tipo
+// stock); por eso usa un ícono en vez de imagen hasta que se agregue
+// assets/categorias/carnes.png con el mismo estilo que las otras.
+const CATEGORIES: { name: string; icon: any; ionicon?: keyof typeof Ionicons.glyphMap }[] = [
   { name: "Verduras", icon: require("../assets/categorias/verduras.png") },
   { name: "Frutas", icon: require("../assets/categorias/frutas.png") },
   { name: "Tubérculos", icon: require("../assets/categorias/tuberculos.png") },
   { name: "Hortalizas", icon: require("../assets/categorias/hortalizas.png") },
   { name: "Abarrotes", icon: require("../assets/categorias/abarrotes.png") },
+  { name: "Carnes", icon: null, ionicon: "restaurant-outline" },
 ];
 
 export default function OfertasScreen() {
@@ -190,7 +194,11 @@ export default function OfertasScreen() {
                   onPress={() => setSelectedCategory(isSelected ? null : item.name)}
                 >
                   <View style={[styles.catCircle, isSelected && { borderWidth: 2, borderColor: colors.primary, backgroundColor: colors.primaryLight }]}>
-                    <Image source={item.icon} style={styles.catImage} />
+                    {item.icon ? (
+                      <Image source={item.icon} style={styles.catImage} />
+                    ) : (
+                      <Ionicons name={item.ionicon ?? "pricetag-outline"} size={30} color={colors.primary} />
+                    )}
                   </View>
                   <Text style={[styles.catText, isSelected && { color: colors.primary, fontWeight: "bold" }]}>
                     {item.name}

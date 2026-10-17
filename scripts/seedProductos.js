@@ -23,7 +23,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 // Categorías válidas según CATEGORIES en app/(tabs)/home.tsx:
-// Verduras, Frutas, Tubérculos, Hortalizas, Abarrotes
+// Verduras, Frutas, Tubérculos, Hortalizas, Abarrotes, Carnes
 const productos = [
   { name: "Manzana Roja - kg", price: 4200, category: "Frutas", imageUrl: "https://picsum.photos/seed/manzana/400", stock: 30, featured: true },
   { name: "Banano - kg", price: 2500, category: "Frutas", imageUrl: "https://picsum.photos/seed/banano/400", stock: 40, featured: false },
@@ -46,6 +46,11 @@ const productos = [
   { name: "Arroz Diana - libra", price: 2400, category: "Abarrotes", imageUrl: "https://picsum.photos/seed/arroz/400", stock: 50, featured: true },
   { name: "Panela Redonda - unidad", price: 2200, category: "Abarrotes", imageUrl: "https://picsum.photos/seed/panela/400", stock: 45, featured: false },
   { name: "Frijol Cargamanto - libra", price: 5800, category: "Abarrotes", imageUrl: "https://picsum.photos/seed/frijol/400", stock: 22, featured: false },
+
+  { name: "Pechuga de Pollo - kg", price: 13500, category: "Carnes", imageUrl: "https://picsum.photos/seed/pollo/400", stock: 20, featured: true },
+  { name: "Carne de Res Molida - kg", price: 16800, category: "Carnes", imageUrl: "https://picsum.photos/seed/carneres/400", stock: 15, featured: false },
+  { name: "Filete de Tilapia - kg", price: 15200, category: "Carnes", imageUrl: "https://picsum.photos/seed/pescado/400", stock: 12, featured: false },
+  { name: "Costilla de Cerdo - kg", price: 14300, category: "Carnes", imageUrl: "https://picsum.photos/seed/cerdo/400", stock: 10, featured: false },
 ];
 
 async function seed() {
