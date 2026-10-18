@@ -202,19 +202,23 @@ const styles = StyleSheet.create({
     position: "relative",
     ...shadow.card,
   },
+  // Mismo diseño de badge de descuento y de "AGOTADO" en todas las pantallas
+  // con productos (inicio, ofertas, tienda, carrito): descuento en verde en
+  // la esquina superior derecha, agotado en rojo en la esquina superior
+  // izquierda, para que nunca se encimen y se distingan a simple vista.
   discountBadge: {
     position: "absolute",
-    top: 8,
-    left: 8,
-    backgroundColor: colors.danger,
+    top: 6,
+    right: 6,
+    backgroundColor: colors.accent,
     borderRadius: 8,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    zIndex: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    zIndex: 3,
   },
-  discountBadgeText: { color: colors.white, fontSize: 10, fontWeight: "bold" },
-  agotadoBadge: { position: "absolute", top: 4, left: 4, backgroundColor: colors.danger, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, zIndex: 2 },
-  agotadoBadgeText: { color: colors.white, fontSize: 9, fontWeight: "bold" },
+  discountBadgeText: { color: colors.primaryDarker, fontSize: 11, fontWeight: "800" },
+  agotadoBadge: { position: "absolute", top: 6, left: 6, backgroundColor: colors.danger, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, zIndex: 2 },
+  agotadoBadgeText: { color: colors.white, fontSize: 10, fontWeight: "bold" },
   stockText: { fontSize: 10, color: colors.warning, marginBottom: 2 },
   image: { width: "100%", height: 90, resizeMode: "contain", marginBottom: 6 },
   name: { fontSize: 13, fontWeight: "600", color: colors.textPrimary, height: 34 },

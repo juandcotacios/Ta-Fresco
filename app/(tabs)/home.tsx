@@ -443,6 +443,11 @@ function ProductCard({ item, categoryLabel, storeName, onStorePress, currentQty,
 
   return (
     <View style={styles.productCard}>
+      {hasDiscount(item.discountPercent) && (
+        <View style={styles.discountBadge}>
+          <Text style={styles.discountBadgeText}>-{item.discountPercent}%</Text>
+        </View>
+      )}
       <View>
         <Image source={{ uri: item.imageUrl }} style={styles.productImage} resizeMode="contain" />
         {sinStock && (
@@ -455,10 +460,7 @@ function ProductCard({ item, categoryLabel, storeName, onStorePress, currentQty,
         <View style={styles.productPriceRow}>
           <Text style={styles.productPrice}>$ {item.price.toLocaleString()}</Text>
           {hasDiscount(item.discountPercent) && (
-            <>
-              <Text style={styles.productOldPrice}>${getOriginalPrice(item.price, item.discountPercent)?.toLocaleString()}</Text>
-              <Text style={styles.productDiscount}>-{item.discountPercent}%</Text>
-            </>
+            <Text style={styles.productOldPrice}>${getOriginalPrice(item.price, item.discountPercent)?.toLocaleString()}</Text>
           )}
         </View>
         <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
@@ -505,6 +507,12 @@ const styles = StyleSheet.create({
 
     agotadoBadge: { position: 'absolute', top: 6, left: 6, backgroundColor: colors.danger, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, zIndex: 2 },
   agotadoBadgeText: { color: colors.white, fontSize: 10, fontWeight: 'bold' },
+  // Mismo diseño de badge de descuento en todas las pantallas con productos
+  // (inicio, ofertas, tienda, carrito): esquina opuesta al badge "AGOTADO"
+  // para que nunca se encimen, en verde para distinguirse claramente del
+  // rojo de "agotado".
+  discountBadge: { position: 'absolute', top: 6, right: 6, backgroundColor: colors.accent, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, zIndex: 3 },
+  discountBadgeText: { color: colors.primaryDarker, fontSize: 11, fontWeight: '800' },
   stockText: { fontSize: 10, color: colors.warning, marginTop: 2 },
 
   mainContainer: { flex: 1, backgroundColor: colors.background },
@@ -573,7 +581,6 @@ const styles = StyleSheet.create({
   productPrice: { fontSize: 17, fontWeight: "bold", color: colors.textPrimary },
   productPriceRow: { flexDirection: "row", alignItems: "center", flexWrap: "wrap" },
   productOldPrice: { fontSize: 11, color: colors.textMuted, textDecorationLine: "line-through", marginLeft: 6 },
-  productDiscount: { fontSize: 10, color: colors.danger, fontWeight: "bold", marginLeft: 5 },
   productName: { fontSize: 13, color: "#555", marginTop: 2, height: 34 },
   productUnitLabel: { fontSize: 11, color: colors.textMuted, marginTop: 4 },
   storeName: { fontSize: 10, color: colors.primaryDark, fontWeight: "600", marginTop: 4 },

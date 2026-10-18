@@ -522,7 +522,9 @@ const CartItemRow = ({ item, onIncrease, onDecrease, onRemove }: any) => {
         {!!getOriginalPrice(item.price, item.discountPercent) && (
           <>
             <Text style={styles.itemOldPrice}>${getOriginalPrice(item.price, item.discountPercent)?.toLocaleString()}</Text>
-            <Text style={styles.itemDiscount}>-{item.discountPercent}%</Text>
+            <View style={styles.itemDiscountPill}>
+              <Text style={styles.itemDiscountPillText}>-{item.discountPercent}%</Text>
+            </View>
           </>
         )}
       </View>
@@ -569,6 +571,11 @@ const UpsellCard = ({ item, cantidad, onAdd, onIncrease, onDecrease }: any) => {
       )}
       <View style={styles.imageContainer}>
         <Image source={{ uri: item.imageUrl }} style={styles.upsellImage} />
+        {sinStock && (
+          <View style={styles.upsellAgotadoBadge}>
+            <Text style={styles.upsellAgotadoBadgeText}>AGOTADO</Text>
+          </View>
+        )}
       </View>
       <View style={{ paddingHorizontal: 5 }}>
         <View style={styles.upsellPriceRow}>
@@ -650,7 +657,12 @@ const styles = StyleSheet.create({
   itemPrice: { fontSize: 16, fontWeight: 'bold', color: colors.textPrimary },
   itemPriceRow: { flexDirection: 'row', alignItems: 'center' },
   itemOldPrice: { color: colors.textMuted, fontSize: 12, textDecorationLine: 'line-through', marginLeft: 7 },
-  itemDiscount: { color: colors.danger, fontSize: 11, fontWeight: 'bold', marginLeft: 5 },
+  // La fila del carrito es muy angosta para un badge sobre la imagen (65x65,
+  // ya ocupada por "AGOTADO"), así que el descuento va como una píldora
+  // junto al precio, en el mismo verde que el badge de descuento del resto
+  // de la app, en vez del rojo que antes lo confundía con "agotado".
+  itemDiscountPill: { backgroundColor: colors.accent, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1, marginLeft: 5 },
+  itemDiscountPillText: { color: colors.primaryDarker, fontSize: 10, fontWeight: '800' },
   qtyContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.background, borderRadius: 20, padding: 4 },
   qtyBtn: { width: 30, height: 30, borderRadius: 15, justifyContent: 'center', alignItems: 'center' },
   qtyBtnRed: { backgroundColor: colors.dangerLight },
@@ -663,8 +675,14 @@ const styles = StyleSheet.create({
   upsellSection: { marginTop: 10, paddingLeft: 20 },
   upsellTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15, color: colors.textPrimary },
   upsellCard: { width: 150, backgroundColor: colors.surface, borderRadius: radius.lg, padding: 10, marginRight: 15, marginBottom: 10, ...shadow.card },
-  upsellDiscountTag: { position: 'absolute', top: 6, left: 6, zIndex: 2, backgroundColor: colors.danger, borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 },
-  upsellDiscountText: { color: colors.white, fontSize: 10, fontWeight: 'bold' },
+  // Mismo diseño de badge de descuento y de "AGOTADO" que el resto de
+  // pantallas con productos (inicio, ofertas, tienda): descuento en verde
+  // arriba a la derecha, agotado en rojo arriba a la izquierda, para que
+  // nunca se encimen y se vean igual en toda la app.
+  upsellDiscountTag: { position: 'absolute', top: 6, right: 6, zIndex: 3, backgroundColor: colors.accent, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
+  upsellDiscountText: { color: colors.primaryDarker, fontSize: 11, fontWeight: '800' },
+  upsellAgotadoBadge: { position: 'absolute', top: 6, left: 6, zIndex: 2, backgroundColor: colors.danger, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
+  upsellAgotadoBadgeText: { color: colors.white, fontSize: 10, fontWeight: 'bold' },
   upsellPriceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 5 },
   upsellOldPrice: { fontSize: 11, color: colors.textMuted, textDecorationLine: 'line-through' },
   upsellAddBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary, borderRadius: 16, paddingVertical: 6, marginTop: 6, gap: 4 },
