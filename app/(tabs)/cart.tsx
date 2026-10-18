@@ -4,6 +4,7 @@ import { useCart } from "@/src/contexts/CartContext";
 import { crearPedido } from "@/src/services/pedidosService";
 import { Direccion } from "@/src/services/usuariosService";
 import { getOriginalPrice, hasDiscount } from "@/src/utils/pricing";
+import { alTopeDeStock, estaAgotado } from "@/src/utils/stock";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { getAuth } from "firebase/auth";
@@ -68,7 +69,7 @@ export default function CartScreen() {
   // Los productos agotados quedan visibles en el carrito, pero no se cobran
   // ni cuentan para el pedido: no se pueden comprar hasta que vuelvan a tener stock.
   const itemsComprables = useMemo(
-    () => cart.filter((item: any) => (item.stock ?? Infinity) > 0),
+    () => cart.filter((item: any) => !estaAgotado(item.stock)),
     [cart]
   );
   const totalPrice = useMemo(() => {
@@ -121,7 +122,11 @@ export default function CartScreen() {
             discountPercent: Number(data.discountPercent) || 0,
             imageUrl: data.imageUrl || "https://via.placeholder.com/100",
             category: data.category || "Varios",
-            stock: data.stock || 99,
+            // Antes era `|| 99`: como 0 es "falsy", un producto realmente
+            // agotado (stock: 0) se mostraba aquí con un stock falso de 99 y
+            // se podía agregar y comprar sin que nada lo bloqueara. `?? 0`
+            // conserva el 0 real.
+            stock: data.stock ?? 0,
             proveedorId: data.proveedorId || "",
           };
         });
@@ -498,7 +503,7 @@ const Header = ({ title, onBack }: any) => (
 );
 
 const CartItemRow = ({ item, onIncrease, onDecrease, onRemove }: any) => {
-  const sinStock = (item.stock ?? Infinity) <= 0;
+  const sinStock = estaAgotado(item.stock);
   return (
   <View style={styles.cartItem}>
     <View>
@@ -538,9 +543,9 @@ const CartItemRow = ({ item, onIncrease, onDecrease, onRemove }: any) => {
         </TouchableOpacity>
         <Text style={styles.qtyText}>{item.quantity}</Text>
         <TouchableOpacity
-          style={[styles.qtyBtn, styles.qtyBtnGreen, item.quantity >= (item.stock ?? Infinity) && { opacity: 0.3 }]}
-          onPress={item.quantity >= (item.stock ?? Infinity) ? undefined : onIncrease}
-          disabled={item.quantity >= (item.stock ?? Infinity)}
+          style={[styles.qtyBtn, styles.qtyBtnGreen, alTopeDeStock(item.quantity, item.stock) && { opacity: 0.3 }]}
+          onPress={alTopeDeStock(item.quantity, item.stock) ? undefined : onIncrease}
+          disabled={alTopeDeStock(item.quantity, item.stock)}
         >
           <Ionicons name="add" size={16} color={colors.white} />
         </TouchableOpacity>
@@ -551,9 +556,8 @@ const CartItemRow = ({ item, onIncrease, onDecrease, onRemove }: any) => {
 };
 
 const UpsellCard = ({ item, cantidad, onAdd, onIncrease, onDecrease }: any) => {
-  const stock = item.stock ?? Infinity;
-  const sinStock = stock <= 0;
-  const alTope = cantidad >= stock;
+  const sinStock = estaAgotado(item.stock);
+  const alTope = alTopeDeStock(cantidad, item.stock);
   const originalPrice = getOriginalPrice(item.price, item.discountPercent);
 
   return (

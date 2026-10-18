@@ -4,6 +4,7 @@ import { useCart } from "@/src/contexts/CartContext";
 import { ProductoTendero, TiendaConId } from "@/src/services/tiendaService";
 import { obtenerPromedioProducto } from "@/src/services/valoracionesService";
 import { getOriginalPrice } from "@/src/utils/pricing";
+import { alTopeDeStock, estaAgotado } from "@/src/utils/stock";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { collection, doc, getDoc, onSnapshot, query, where } from "firebase/firestore";
@@ -93,8 +94,8 @@ export default function TiendaDetalleScreen() {
           const hasDiscount = !!item.discountPercent && item.discountPercent > 0;
           const finalPrice = item.price;
           const originalPrice = getOriginalPrice(item.price, item.discountPercent);
-          const sinStock = (item.stock ?? 0) <= 0;
-          const alTope = qty >= (item.stock ?? 0);
+          const sinStock = estaAgotado(item.stock);
+          const alTope = alTopeDeStock(qty, item.stock);
 
           return (
             <View style={styles.card}>

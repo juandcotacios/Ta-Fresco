@@ -3,6 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { onAuthStateChanged } from "firebase/auth";
 import { collection, documentId, onSnapshot, query, where } from "firebase/firestore";
 import { auth, db } from "@/src/config/firebase";
+import { estaAgotado } from "@/src/utils/stock";
 
 interface CartItem {
   id: string;
@@ -118,10 +119,10 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
             prevCart.map((item) => {
               if (!(item.id in stockReal)) return item; // fuera de este bloque
               const stock = stockReal[item.id];
-              if (item.stock === stock && (stock <= 0 || item.quantity <= stock)) return item;
+              if (item.stock === stock && (estaAgotado(stock) || item.quantity <= stock)) return item;
               // Con algo de stock (aunque sea menos de lo que había) se ajusta la
               // cantidad; agotado del todo, se deja la cantidad tal cual estaba.
-              const quantity = stock > 0 ? Math.min(item.quantity, stock) : item.quantity;
+              const quantity = !estaAgotado(stock) ? Math.min(item.quantity, stock) : item.quantity;
               return { ...item, stock, quantity };
             })
           );
@@ -135,19 +136,24 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
 
   /**
    * Agrega un producto al carrito, o suma unidades si ya estaba, sin pasar
-   * nunca del stock del producto (mismo límite que increaseCart). Antes esta
-   * función no validaba nada, así que cualquier pantalla que no se protegiera
-   * a mano dejaba agregar más unidades de las que había en el catálogo.
+   * nunca del stock del producto (mismo límite que increaseCart) y sin
+   * agregar nada que ya esté agotado. Antes esta función no validaba nada
+   * (y usaba `?? Infinity`, que trataba un stock ausente como "ilimitado"
+   * en vez de agotado), así que cualquier pantalla que no se protegiera a
+   * mano — o que leyera mal el stock, como pasaba en el carrito — dejaba
+   * agregar algo sin existencias. `estaAgotado` es la misma regla que usa
+   * toda la app para mostrar el badge "AGOTADO", así que esta función
+   * queda como el último filtro, no solo el primero.
    */
   const addToCart = (item: CartItem) => {
     setCart((prevCart) => {
-      const tope = item.stock ?? Infinity;
+      if (estaAgotado(item.stock)) return prevCart;
+      const tope = item.stock ?? 0;
       const existingItem = prevCart.find((i) => i.id === item.id);
       if (existingItem) {
         const cantidad = Math.min(existingItem.quantity + (item.quantity || 1), tope);
         return prevCart.map((i) => (i.id === item.id ? { ...i, quantity: cantidad } : i));
       }
-      if (tope <= 0) return prevCart; // producto sin stock
       const cantidad = Math.min(item.quantity || 1, tope);
       return [...prevCart, { ...item, quantity: cantidad }];
     });
@@ -157,7 +163,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   const increaseCart = (id: string) => {
     setCart((prevCart) =>
       prevCart.map((item) =>
-        item.id === id && item.quantity < (item.stock ?? Infinity)
+        item.id === id && !estaAgotado(item.stock) && item.quantity < (item.stock ?? 0)
           ? { ...item, quantity: item.quantity + 1 }
           : item
       )
@@ -195,4 +201,4 @@ export const useCart = () => {
   const context = useContext(CartContext);
   if (!context) throw new Error("useCart must be used within a CartProvider");
   return context;
-};
+};

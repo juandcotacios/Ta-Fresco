@@ -2,6 +2,7 @@ import { colors, radius, shadow } from "@/constants/designSystem";
 import { db } from "@/src/config/firebase";
 import { useCart } from "@/src/contexts/CartContext";
 import { getOriginalPrice } from "@/src/utils/pricing";
+import { alTopeDeStock, estaAgotado } from "@/src/utils/stock";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { collection, onSnapshot } from "firebase/firestore";
@@ -40,16 +41,13 @@ interface Product {
   proveedorId?: string;
 }
 
-// "Carnes" no tiene foto propia todavía (las demás son fotos recortadas tipo
-// stock); por eso usa un ícono en vez de imagen hasta que se agregue
-// assets/categorias/carnes.png con el mismo estilo que las otras.
 const CATEGORIES: { name: string; icon: any; ionicon?: keyof typeof Ionicons.glyphMap }[] = [
   { name: "Verduras", icon: require("../assets/categorias/verduras.png") },
   { name: "Frutas", icon: require("../assets/categorias/frutas.png") },
   { name: "Tubérculos", icon: require("../assets/categorias/tuberculos.png") },
   { name: "Hortalizas", icon: require("../assets/categorias/hortalizas.png") },
   { name: "Abarrotes", icon: require("../assets/categorias/abarrotes.png") },
-  { name: "Carnes", icon: null, ionicon: "restaurant-outline" },
+  { name: "Carnes", icon: require("../assets/categorias/carne.jpg") },
 ];
 
 export default function OfertasScreen() {
@@ -220,7 +218,7 @@ export default function OfertasScreen() {
             <Text style={styles.emptySubtitle}>
               {selectedCategory
                 ? "Prueba con otra categoría o vuelve más tarde."
-                : "Vuelve más tarde, los tenderos actualizan sus descuentos seguido."}
+                : "Vuelve más tarde, los mayoristas actualizan sus descuentos seguido."}
             </Text>
           </View>
         ) : (
@@ -347,7 +345,11 @@ export default function OfertasScreen() {
                                     />
                                  </TouchableOpacity>
                                  <Text style={styles.miniCtrlText}>{item.quantity}</Text>
-                                 <TouchableOpacity onPress={() => increaseCart(item.id)} style={[styles.miniCtrlBtn, {backgroundColor: colors.primary, borderColor: colors.primary}]}>
+                                 <TouchableOpacity
+                                    onPress={alTopeDeStock(item.quantity, item.stock) ? undefined : () => increaseCart(item.id)}
+                                    disabled={alTopeDeStock(item.quantity, item.stock)}
+                                    style={[styles.miniCtrlBtn, {backgroundColor: colors.primary, borderColor: colors.primary}, alTopeDeStock(item.quantity, item.stock) && { opacity: 0.3 }]}
+                                 >
                                     <Ionicons name="add" size={16} color={colors.white} />
                                  </TouchableOpacity>
                               </View>
@@ -395,8 +397,8 @@ export default function OfertasScreen() {
 const TopOfferItem = ({ item, currentQty, addToCart, decreaseCart, cardStyle, storeName, onStorePress }: any) => {
   // Firestore ya entrega el stock en tiempo real (el listener de arriba usa
   // onSnapshot), así que esto siempre refleja el stock real, sin fotos viejas.
-  const sinStock = (item.stock ?? 0) <= 0;
-  const alTope = currentQty >= (item.stock ?? 0);
+  const sinStock = estaAgotado(item.stock);
+  const alTope = alTopeDeStock(currentQty, item.stock);
 
   const handleDecrease = () => decreaseCart(item.id);
 

@@ -3,6 +3,7 @@ import { colors, radius, shadow } from "@/constants/designSystem";
 import { db } from "@/src/config/firebase";
 import { useCart } from "@/src/contexts/CartContext";
 import { getOriginalPrice, hasDiscount } from "@/src/utils/pricing";
+import { alTopeDeStock, estaAgotado } from "@/src/utils/stock";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { collection, onSnapshot } from "firebase/firestore";
@@ -39,9 +40,6 @@ interface Product {
   discountPercent?: number;
 }
 
-// "Carnes" no tiene foto propia todavía (las demás son fotos recortadas tipo
-// stock); por eso usa un ícono en vez de imagen hasta que se agregue
-// assets/categorias/carnes.png con el mismo estilo que las otras.
 const CATEGORIES: { name: string; icon: any; ionicon?: keyof typeof Ionicons.glyphMap }[] = [
   { name: "Verduras", icon: require("../assets/categorias/verduras.png") },
   { name: "Frutas", icon: require("../assets/categorias/frutas.png") },
@@ -387,9 +385,9 @@ export default function Home() {
                                  </TouchableOpacity>
                                  <Text style={styles.miniCtrlText}>{item.quantity}</Text>
                                  <TouchableOpacity
-                                    onPress={item.quantity >= (item.stock ?? Infinity) ? undefined : () => increaseCart(item.id)}
-                                    disabled={item.quantity >= (item.stock ?? Infinity)}
-                                    style={[styles.miniCtrlBtn, {backgroundColor: colors.primary, borderColor: colors.primary}, item.quantity >= (item.stock ?? Infinity) && { opacity: 0.3 }]}
+                                    onPress={alTopeDeStock(item.quantity, item.stock) ? undefined : () => increaseCart(item.id)}
+                                    disabled={alTopeDeStock(item.quantity, item.stock)}
+                                    style={[styles.miniCtrlBtn, {backgroundColor: colors.primary, borderColor: colors.primary}, alTopeDeStock(item.quantity, item.stock) && { opacity: 0.3 }]}
                                  >
                                     <Ionicons name="add" size={16} color={colors.white} />
                                  </TouchableOpacity>
@@ -440,8 +438,8 @@ function ProductCard({ item, categoryLabel, storeName, onStorePress, currentQty,
     if (currentQty > 1) onRemove(); else onDelete();
   };
 
-  const sinStock = (item.stock ?? 0) <= 0;
-  const alTope = currentQty >= (item.stock ?? 0);
+  const sinStock = estaAgotado(item.stock);
+  const alTope = alTopeDeStock(currentQty, item.stock);
 
   return (
     <View style={styles.productCard}>
