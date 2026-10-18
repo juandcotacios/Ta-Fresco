@@ -84,7 +84,7 @@ const INTENCIONES: Intencion[] = [
   {
     palabras: ["cancelar", "como cancelo", "anular pedido"],
     respuesta:
-      "Por ahora la cancelación la hace la tienda o un administrador, no el comprador directamente. Si necesitas cancelar algo, contacta a la tienda; si llegan a cancelarlo, verás el motivo en \"Mis pedidos\".",
+      "Por ahora la cancelación la hace la tienda o un administrador, no el tendero directamente. Si necesitas cancelar algo, contacta a la tienda; si llegan a cancelarlo, verás el motivo en \"Mis pedidos\".",
   },
   {
     palabras: ["mi pedido", "seguimiento", "estado de mi pedido", "rastrear", "donde esta mi pedido", "mis pedidos"],
@@ -95,10 +95,12 @@ const INTENCIONES: Intencion[] = [
     palabras: [
       "vender",
       "ser tendero",
+      "ser mayorista",
       "tener tienda",
       "como vendo",
       "abrir tienda",
       "convertirme en tendero",
+      "convertirme en mayorista",
       "quiero vender",
     ],
     respuesta:

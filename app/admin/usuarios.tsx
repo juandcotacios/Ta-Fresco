@@ -18,10 +18,13 @@ import {
   View,
 } from "react-native";
 
+// Las etiquetas son solo lo que se muestra en pantalla; el valor guardado en
+// Firestore (value) sigue siendo "cliente"/"tendero"/"admin" como siempre,
+// así ninguna cuenta existente se rompe por este cambio de nombre.
 const ROLES: { value: Rol; label: string; color: string }[] = [
-  { value: "cliente", label: "Cliente", color: colors.textMuted },
-  { value: "tendero", label: "Tendero", color: colors.info },
-  { value: "admin", label: "Admin", color: colors.danger },
+  { value: "cliente", label: "Tendero", color: colors.textMuted },
+  { value: "tendero", label: "Mayorista", color: colors.info },
+  { value: "admin", label: "Administrador", color: colors.danger },
 ];
 
 export default function AdminUsuariosScreen() {
@@ -180,14 +183,17 @@ const styles = StyleSheet.create({
   },
   name: { fontWeight: "bold", fontSize: 15, color: colors.textPrimary },
   email: { color: colors.textSecondary, fontSize: 12, marginTop: 2, marginBottom: 10 },
-  rolesRow: { flexDirection: "row" },
+  // "Administrador" es más largo que "Admin", así que las fichas ahora
+  // pueden pasar a una segunda línea en vez de salirse de la pantalla.
+  rolesRow: { flexDirection: "row", flexWrap: "wrap" },
   roleChip: {
     borderWidth: 1.5,
     borderRadius: 20,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     paddingVertical: 6,
     marginRight: 8,
-    minWidth: 70,
+    marginBottom: 8,
+    minWidth: 60,
     alignItems: "center",
   },
   roleChipText: { fontSize: 12, fontWeight: "600", color: colors.textPrimary },

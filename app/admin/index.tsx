@@ -25,7 +25,7 @@ const OPCIONES = [
   },
   {
     label: "Usuarios",
-    desc: "Ver usuarios y cambiar su rol (cliente / tendero / admin)",
+    desc: "Ver usuarios y cambiar su rol (Tendero / Mayorista / Administrador)",
     icon: "people-outline" as const,
     route: "/admin/usuarios",
   },
