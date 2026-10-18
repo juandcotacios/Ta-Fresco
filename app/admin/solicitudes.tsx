@@ -135,7 +135,7 @@ export default function AdminSolicitudesScreen() {
                   <View style={styles.confirmRow}>
                     <Text style={styles.confirmText}>
                       {confirmando.aprobar
-                        ? `${persona?.nickname || "Este usuario"} pasará a ser tendero.`
+                        ? `${persona?.nickname || "Este usuario"} pasará a ser mayorista.`
                         : "Se rechazará esta solicitud."}
                     </Text>
                     <View style={styles.confirmButtons}>
