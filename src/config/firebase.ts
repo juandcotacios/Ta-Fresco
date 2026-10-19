@@ -1,3 +1,5 @@
+
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getAnalytics, isSupported } from "firebase/analytics";
 import { getApp, getApps, initializeApp } from "firebase/app";
 import {
@@ -9,7 +11,13 @@ import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { Platform } from "react-native";
 
-// Configuración de Firebase desde las variables de entorno.
+// La entrada React Native de Firebase exporta esta función.
+const getReactNativePersistence = (
+  require("@firebase/auth/dist/rn/index.rn.js") as typeof import("firebase/auth") & {
+    getReactNativePersistence: (storage: typeof AsyncStorage) => unknown;
+  }
+).getReactNativePersistence;
+
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -42,16 +50,11 @@ if (missingConfig.length > 0) {
 export const app =
   getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 
-// En web se usa la autenticación normal.
-// En Android/iOS se usa la persistencia de React Native.
 export const auth =
   Platform.OS === "web"
     ? getAuth(app)
     : initializeAuth(app, {
-        persistence: (require("firebase/auth") as typeof import("firebase/auth"))
-          .getAuth
-          ? undefined
-          : undefined,
+        persistence: getReactNativePersistence(AsyncStorage) as never,
       });
 
 export const googleProvider = new GoogleAuthProvider();
