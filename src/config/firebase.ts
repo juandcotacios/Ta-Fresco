@@ -13,9 +13,19 @@ const requiredConfig = [
   "EXPO_PUBLIC_FIREBASE_APP_ID",
 ] as const;
 
-const missingConfig = requiredConfig.filter((key) => !process.env[key]);
+const missingConfig = [
+  !process.env.EXPO_PUBLIC_FIREBASE_API_KEY && "EXPO_PUBLIC_FIREBASE_API_KEY",
+  !process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN && "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN",
+  !process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID && "EXPO_PUBLIC_FIREBASE_PROJECT_ID",
+  !process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET && "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET",
+  !process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID && "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID",
+  !process.env.EXPO_PUBLIC_FIREBASE_APP_ID && "EXPO_PUBLIC_FIREBASE_APP_ID",
+].filter(Boolean);
+
 if (missingConfig.length > 0) {
-  throw new Error(`Falta configuración de Firebase: ${missingConfig.join(", ")}`);
+  throw new Error(
+    `Falta configuración de Firebase: ${missingConfig.join(", ")}`
+  );
 }
 
 // Esta configuración es pública en una app móvil; la seguridad real se aplica
