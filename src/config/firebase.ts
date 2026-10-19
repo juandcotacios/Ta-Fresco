@@ -1,25 +1,29 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getAnalytics, isSupported } from "firebase/analytics";
-import { initializeApp, getApp, getApps } from "firebase/app";
+import { getApp, getApps, initializeApp } from "firebase/app";
 import {
   getAuth,
-  initializeAuth,
   getReactNativePersistence,
   GoogleAuthProvider,
+  initializeAuth,
 } from "firebase/auth";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
+import { Platform } from "react-native";
 
 const requiredConfig = [
-  "EXPO_PUBLIC_FIREBASE_API_KEY",
-  "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN",
-  "EXPO_PUBLIC_FIREBASE_PROJECT_ID",
-  "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET",
-  "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID",
-  "EXPO_PUBLIC_FIREBASE_APP_ID",
+  ["EXPO_PUBLIC_FIREBASE_API_KEY", process.env.EXPO_PUBLIC_FIREBASE_API_KEY],
+  ["EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN", process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN],
+  ["EXPO_PUBLIC_FIREBASE_PROJECT_ID", process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID],
+  ["EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET", process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET],
+  ["EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID", process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID],
+  ["EXPO_PUBLIC_FIREBASE_APP_ID", process.env.EXPO_PUBLIC_FIREBASE_APP_ID],
 ] as const;
 
-const missingConfig = requiredConfig.filter((key) => !process.env[key]);
+const missingConfig = requiredConfig
+  .filter(([, value]) => !value)
+  .map(([key]) => key);
+
 if (missingConfig.length > 0) {
   throw new Error(`Falta configuración de Firebase: ${missingConfig.join(", ")}`);
 }
@@ -38,21 +42,15 @@ const firebaseConfig = {
 
 export const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 
-// React Native needs AsyncStorage-backed persistence. The fallback allows reuse
-// if Auth has already been initialized elsewhere during module loading.
-function createAuth() {
-  try {
-    return initializeAuth(app, {
-      persistence: getReactNativePersistence(AsyncStorage),
-    });
-  } catch (error) {
-    // Firebase throws here if the default Auth instance is already initialized.
-    // In that case, reuse the existing instance rather than crashing on startup.
-    return getAuth(app);
-  }
-}
+// On native, use AsyncStorage so the Firebase Auth session persists between launches.
+// On web, keep Firebase's browser-default persistence.
+export const auth =
+  Platform.OS === "web"
+    ? getAuth(app)
+    : initializeAuth(app, {
+        persistence: getReactNativePersistence(AsyncStorage),
+      });
 
-export const auth = createAuth();
 export const googleProvider = new GoogleAuthProvider();
 export const db = getFirestore(app);
 export const storage = getStorage(app);
