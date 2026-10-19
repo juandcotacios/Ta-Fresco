@@ -1,6 +1,12 @@
 import { getAnalytics, isSupported } from "firebase/analytics";
-import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import { initializeApp, getApp, getApps } from "firebase/app";
+import {
+  getAuth,
+  initializeAuth,
+  getReactNativePersistence,
+  GoogleAuthProvider,
+} from "firebase/auth";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
@@ -30,8 +36,23 @@ const firebaseConfig = {
   measurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
-export const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
+export const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+
+// React Native needs AsyncStorage-backed persistence. The fallback allows reuse
+// if Auth has already been initialized elsewhere during module loading.
+function createAuth() {
+  try {
+    return initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage),
+    });
+  } catch (error) {
+    // Firebase throws here if the default Auth instance is already initialized.
+    // In that case, reuse the existing instance rather than crashing on startup.
+    return getAuth(app);
+  }
+}
+
+export const auth = createAuth();
 export const googleProvider = new GoogleAuthProvider();
 export const db = getFirestore(app);
 export const storage = getStorage(app);
