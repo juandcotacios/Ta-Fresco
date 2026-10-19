@@ -2,10 +2,10 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged } from 'firebase/auth';
 import React, { useEffect, useState } from 'react';
 import 'react-native-reanimated';
-import { app } from '@/src/config/firebase';
+import { auth } from '@/src/config/firebase';
 import { CartProvider } from '@/src/contexts/CartContext';
 
 export const unstable_settings = { anchor: '(tabs)' };
@@ -13,7 +13,6 @@ export const unstable_settings = { anchor: '(tabs)' };
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [user, setUser] = useState<any>(null);
-  const auth = getAuth(app);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -27,7 +26,6 @@ export default function RootLayout() {
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <Stack screenOptions={{ headerShown: false }}>
           {user ? (
-            
             <Stack.Screen name="(tabs)" />
           ) : (
             [
@@ -37,7 +35,6 @@ export default function RootLayout() {
             ]
           )}
 
-          {}
           <Stack.Screen name="pedidos" />
           <Stack.Screen name="admin" />
           <Stack.Screen name="admin-pedidos" />
