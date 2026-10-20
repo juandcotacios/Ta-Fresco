@@ -8,10 +8,11 @@ import {
   signInWithCredential,
 } from "firebase/auth";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
   Image,
+  Platform,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -24,6 +25,8 @@ import Logo from "@/components/Logo";
 import { colors, radius, shadow, spacing } from "@/constants/designSystem";
 import { auth, db } from "@/src/config/firebase";
 import { GOOGLE_AUTH } from "@/src/config/googleAuth";
+import { signInWithGoogleNative } from "@/src/utils/googleSignIn";
+import { mensajeErrorGoogleAndroid } from "@/src/utils/googleSignInErrors";
 import {
   esCorreoValido,
   traducirErrorAuth,
@@ -34,27 +37,21 @@ WebBrowser.maybeCompleteAuthSession();
 
 export default function RegisterScreen() {
   const router = useRouter();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    clientId: GOOGLE_AUTH.webClientId,
-    androidClientId: GOOGLE_AUTH.androidClientId,
-    iosClientId: GOOGLE_AUTH.iosClientId,
-  });
+  const [request, , promptAsync] =
+    Google.useIdTokenAuthRequest({
+      clientId: GOOGLE_AUTH.webClientId,
+      androidClientId: GOOGLE_AUTH.androidClientId,
+      iosClientId: GOOGLE_AUTH.iosClientId,
+    });
 
-  useEffect(() => {
-    if (response?.type === "success") {
-      const { id_token } = response.params;
-      finishGoogleSignIn(id_token);
-    } else if (response?.type === "error") {
-      setErrorMsg("No se pudo iniciar sesión con Google.");
-    }
-  }, [response]);
-
+  // Registro con correo y contraseña.
   const handleRegister = async () => {
     setErrorMsg(null);
 
@@ -62,23 +59,36 @@ export default function RegisterScreen() {
       setErrorMsg("Completa todos los campos.");
       return;
     }
+
     if (!esCorreoValido(email)) {
-      setErrorMsg("Escribe un correo válido (ej: nombre@correo.com).");
+      setErrorMsg(
+        "Escribe un correo válido (ej: nombre@correo.com)."
+      );
       return;
     }
+
     const errorContrasena = validarContrasenaFuerte(password);
+
     if (errorContrasena) {
       setErrorMsg(errorContrasena);
       return;
     }
+
     if (password !== confirm) {
       setErrorMsg("Las contraseñas no coinciden.");
       return;
     }
 
     setLoading(true);
+
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential =
+        await createUserWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
+
       const user = userCredential.user;
 
       await setDoc(doc(db, "users", user.uid), {
@@ -91,15 +101,17 @@ export default function RegisterScreen() {
       });
 
       console.log("Perfil creado exitosamente en Firestore");
-      router.push("/(tabs)/home");
+
+      router.replace("/(tabs)/home");
     } catch (error: any) {
-      console.log(error);
+      console.log("Error en el registro:", error);
       setErrorMsg(traducirErrorAuth(error));
     } finally {
       setLoading(false);
     }
   };
 
+  // Registro o inicio de sesión con Google.
   const finishGoogleSignIn = async (idToken: string) => {
     try {
       const credential = GoogleAuthProvider.credential(idToken);
@@ -108,6 +120,7 @@ export default function RegisterScreen() {
 
       const userRef = doc(db, "users", user.uid);
       const existingProfile = await getDoc(userRef);
+
       if (!existingProfile.exists()) {
         await setDoc(userRef, {
           nickname: user.displayName || "Usuario Google",
@@ -119,19 +132,97 @@ export default function RegisterScreen() {
         });
       }
 
-      router.push("/(tabs)/home");
+      router.replace("/(tabs)/home");
     } catch (error: any) {
+      console.log(
+        "Error al registrar o autenticar con Google:",
+        error
+      );
+
       setErrorMsg(traducirErrorAuth(error));
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleGoogle = async () => {
     setErrorMsg(null);
-    if (GOOGLE_AUTH.webClientId.startsWith("TU_") || !request) {
-      setErrorMsg("Falta configurar los Client ID de Google (revisa src/config/googleAuth.ts).");
+
+    if (Platform.OS === "android") {
+      setLoading(true);
+
+      try {
+        const idToken = await signInWithGoogleNative();
+
+        if (!idToken) {
+          setLoading(false);
+          return;
+        }
+
+        await finishGoogleSignIn(idToken);
+      } catch (error: any) {
+        console.log("Error de Google en Android:", error);
+
+        setLoading(false);
+        setErrorMsg(mensajeErrorGoogleAndroid(error));
+      }
+
       return;
     }
-    await promptAsync();
+
+    if (GOOGLE_AUTH.webClientId.startsWith("TU_") || !request) {
+      setErrorMsg(
+        "Falta configurar los Client ID de Google (revisa src/config/googleAuth.ts)."
+      );
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const result = await promptAsync();
+
+      if (result.type === "success") {
+        const idToken = result.params.id_token;
+
+        if (!idToken) {
+          setLoading(false);
+          setErrorMsg(
+            "Google no devolvió el token de autenticación. Inténtalo de nuevo."
+          );
+          return;
+        }
+
+        await finishGoogleSignIn(idToken);
+        return;
+      }
+
+      setLoading(false);
+
+      if (result.type === "error") {
+        setErrorMsg(
+          result.error?.message ||
+            "No se pudo iniciar sesión con Google."
+        );
+      } else if (
+        result.type === "dismiss" ||
+        result.type === "cancel"
+      ) {
+        setErrorMsg("Se canceló el registro con Google.");
+      } else {
+        setErrorMsg("No se pudo completar el registro con Google.");
+      }
+    } catch (error) {
+      console.log(
+        "Error al abrir la autenticación de Google:",
+        error
+      );
+
+      setLoading(false);
+      setErrorMsg(
+        "No se pudo abrir el registro con Google. Inténtalo de nuevo."
+      );
+    }
   };
 
   return (
@@ -142,18 +233,32 @@ export default function RegisterScreen() {
         </View>
 
         <Text style={styles.title}>Crea una cuenta</Text>
-        <Text style={styles.subtitle}>Únete a la plaza online de Ta Fresco</Text>
+
+        <Text style={styles.subtitle}>
+          Únete a la plaza online de Ta Fresco
+        </Text>
 
         {errorMsg ? (
           <View style={styles.errorBox}>
-            <Ionicons name="alert-circle" size={18} color={colors.danger} />
+            <Ionicons
+              name="alert-circle"
+              size={18}
+              color={colors.danger}
+            />
             <Text style={styles.errorText}>{errorMsg}</Text>
           </View>
         ) : null}
 
-        <Text style={styles.label}>Correo ó teléfono</Text>
+        <Text style={styles.label}>Correo o teléfono</Text>
+
         <View style={styles.inputWrap}>
-          <Ionicons name="mail-outline" size={18} color={colors.textMuted} style={styles.inputIcon} />
+          <Ionicons
+            name="mail-outline"
+            size={18}
+            color={colors.textMuted}
+            style={styles.inputIcon}
+          />
+
           <TextInput
             style={styles.input}
             placeholder="Ingresa tu correo o teléfono"
@@ -166,8 +271,15 @@ export default function RegisterScreen() {
         </View>
 
         <Text style={styles.label}>Contraseña</Text>
+
         <View style={styles.inputWrap}>
-          <Ionicons name="lock-closed-outline" size={18} color={colors.textMuted} style={styles.inputIcon} />
+          <Ionicons
+            name="lock-closed-outline"
+            size={18}
+            color={colors.textMuted}
+            style={styles.inputIcon}
+          />
+
           <TextInput
             style={styles.input}
             placeholder="Mínimo 8 caracteres, con letras y números"
@@ -179,8 +291,15 @@ export default function RegisterScreen() {
         </View>
 
         <Text style={styles.label}>Confirmar contraseña</Text>
+
         <View style={styles.inputWrap}>
-          <Ionicons name="lock-closed-outline" size={18} color={colors.textMuted} style={styles.inputIcon} />
+          <Ionicons
+            name="lock-closed-outline"
+            size={18}
+            color={colors.textMuted}
+            style={styles.inputIcon}
+          />
+
           <TextInput
             style={styles.input}
             placeholder="Confirma tu contraseña"
@@ -192,15 +311,17 @@ export default function RegisterScreen() {
         </View>
 
         <TouchableOpacity
-            style={styles.createButton}
-            onPress={handleRegister}
-            disabled={loading}
-            activeOpacity={0.85}
+          style={styles.createButton}
+          onPress={handleRegister}
+          disabled={loading}
+          activeOpacity={0.85}
         >
           {loading ? (
-             <ActivityIndicator color={colors.white} />
+            <ActivityIndicator color={colors.white} />
           ) : (
-             <Text style={styles.createButtonText}>Crear cuenta</Text>
+            <Text style={styles.createButtonText}>
+              Crear cuenta
+            </Text>
           )}
         </TouchableOpacity>
 
@@ -210,16 +331,26 @@ export default function RegisterScreen() {
           <View style={styles.dividerLine} />
         </View>
 
-        <TouchableOpacity style={styles.googleButton} onPress={handleGoogle} activeOpacity={0.85}>
+        <TouchableOpacity
+          style={styles.googleButton}
+          onPress={handleGoogle}
+          activeOpacity={0.85}
+          disabled={loading}
+        >
           <Image
             source={require("./assets/images/google-ico.png")}
             style={styles.googleIcon}
           />
-          <Text style={styles.googleButtonText}>Continuar con Google</Text>
+          <Text style={styles.googleButtonText}>
+            Continuar con Google
+          </Text>
         </TouchableOpacity>
 
         <View style={styles.footerContainer}>
-          <Text style={styles.footerText}>¿Ya tienes cuenta? </Text>
+          <Text style={styles.footerText}>
+            ¿Ya tienes cuenta?{" "}
+          </Text>
+
           <TouchableOpacity onPress={() => router.push("/login")}>
             <Text style={styles.loginLink}>Inicia sesión</Text>
           </TouchableOpacity>
@@ -363,8 +494,8 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   loginLink: {
-    fontSize: 14,
     color: colors.primary,
+    fontSize: 14,
     fontWeight: "800",
   },
 });

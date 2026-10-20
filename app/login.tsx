@@ -10,7 +10,7 @@ import {
   User,
 } from "firebase/auth";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -29,38 +29,36 @@ import Logo from "@/components/Logo";
 import { colors, radius, shadow, spacing } from "@/constants/designSystem";
 import { auth, db } from "@/src/config/firebase";
 import { GOOGLE_AUTH } from "@/src/config/googleAuth";
-import { esCorreoValido, traducirErrorAuth } from "@/src/utils/authErrors";
+import { signInWithGoogleNative } from "@/src/utils/googleSignIn";
+import { mensajeErrorGoogleAndroid } from "@/src/utils/googleSignInErrors";
+import {
+  esCorreoValido,
+  traducirErrorAuth,
+} from "@/src/utils/authErrors";
 
 WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
   const router = useRouter();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const [modalVisible, setModalVisible] = useState(false);
-  const [loginStatus, setLoginStatus] = useState<'loading' | 'success'>('loading');
+  const [loginStatus, setLoginStatus] = useState<"loading" | "success">(
+    "loading"
+  );
 
-  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    clientId: GOOGLE_AUTH.webClientId,
-    androidClientId: GOOGLE_AUTH.androidClientId,
-    iosClientId: GOOGLE_AUTH.iosClientId,
-  });
+  const [request, , promptAsync] =
+    Google.useIdTokenAuthRequest({
+      clientId: GOOGLE_AUTH.webClientId,
+      androidClientId: GOOGLE_AUTH.androidClientId,
+      iosClientId: GOOGLE_AUTH.iosClientId,
+    });
 
-  useEffect(() => {
-    if (response?.type === "success") {
-      const { id_token } = response.params;
-      finishGoogleSignIn(id_token);
-    } else if (response?.type === "error") {
-      setModalVisible(false);
-      setErrorMsg("No se pudo iniciar sesión con Google.");
-    } else if (response?.type === "cancel" || response?.type === "dismiss") {
-      setModalVisible(false);
-    }
-  }, [response]);
-
+  // Inicio de sesión tradicional con correo y contraseña.
   const handleLogin = async () => {
     setErrorMsg(null);
 
@@ -68,23 +66,28 @@ export default function LoginScreen() {
       setErrorMsg("Ingresa tu correo y contraseña.");
       return;
     }
+
     if (!esCorreoValido(email)) {
-      setErrorMsg("Escribe un correo válido (ej: nombre@correo.com).");
+      setErrorMsg(
+        "Escribe un correo válido (ej: nombre@correo.com)."
+      );
       return;
     }
 
     setLoading(true);
+
     try {
       await signInWithEmailAndPassword(auth, email, password);
       router.push("/(tabs)/home");
     } catch (error: any) {
-      console.log(error);
+      console.log("Error al iniciar sesión:", error);
       setErrorMsg(traducirErrorAuth(error));
     } finally {
       setLoading(false);
     }
   };
 
+  // Crea el perfil de Firestore si el usuario de Google no lo tiene.
   const afterGoogleSignIn = async (user: User) => {
     const userDocRef = doc(db, "users", user.uid);
     const userDoc = await getDoc(userDocRef);
@@ -98,6 +101,7 @@ export default function LoginScreen() {
         role: "cliente",
         createdAt: serverTimestamp(),
       });
+
       console.log("Perfil de Google creado en Firestore");
     }
 
@@ -105,32 +109,43 @@ export default function LoginScreen() {
 
     setTimeout(() => {
       setModalVisible(false);
-      router.push("/(tabs)/home");
+      router.replace("/(tabs)/home");
     }, 1500);
   };
 
+  // Intercambia el token de Google por una sesión de Firebase.
   const finishGoogleSignIn = async (idToken: string) => {
     try {
       const credential = GoogleAuthProvider.credential(idToken);
       const result = await signInWithCredential(auth, credential);
+
       await afterGoogleSignIn(result.user);
     } catch (error: any) {
+      console.log("Error al autenticar con Firebase:", error);
+
       setModalVisible(false);
       setErrorMsg(traducirErrorAuth(error));
     }
   };
 
+  // Inicio de sesión con Google.
   const handleGoogle = async () => {
     setErrorMsg(null);
+
     if (Platform.OS === "web") {
       setLoginStatus("loading");
       setModalVisible(true);
+
       try {
         const provider = new GoogleAuthProvider();
         const result = await signInWithPopup(auth, provider);
+
         await afterGoogleSignIn(result.user);
       } catch (error: any) {
+        console.log("Error de Google en web:", error);
+
         setModalVisible(false);
+
         if (
           error?.code !== "auth/popup-closed-by-user" &&
           error?.code !== "auth/cancelled-popup-request"
@@ -138,22 +153,94 @@ export default function LoginScreen() {
           setErrorMsg(traducirErrorAuth(error));
         }
       }
+
+      return;
+    }
+
+    if (Platform.OS === "android") {
+      setLoading(true);
+
+      try {
+        const idToken = await signInWithGoogleNative();
+
+        if (!idToken) {
+          return;
+        }
+
+        await finishGoogleSignIn(idToken);
+      } catch (error: any) {
+        console.log("Error de Google en Android:", error);
+
+        setErrorMsg(mensajeErrorGoogleAndroid(error));
+      } finally {
+        setLoading(false);
+      }
+
       return;
     }
 
     if (GOOGLE_AUTH.webClientId.startsWith("TU_") || !request) {
-      setErrorMsg("Falta configurar los Client ID de Google (revisa src/config/googleAuth.ts).");
+      setErrorMsg(
+        "Falta configurar los Client ID de Google (revisa src/config/googleAuth.ts)."
+      );
       return;
     }
 
     setLoginStatus("loading");
     setModalVisible(true);
-    await promptAsync();
+
+    try {
+      const result = await promptAsync();
+
+      if (result.type === "success") {
+        const idToken = result.params.id_token;
+
+        if (!idToken) {
+          setModalVisible(false);
+          setErrorMsg(
+            "Google no devolvió el token de autenticación. Inténtalo de nuevo."
+          );
+          return;
+        }
+
+        await finishGoogleSignIn(idToken);
+        return;
+      }
+
+      setModalVisible(false);
+
+      if (result.type === "error") {
+        setErrorMsg(
+          result.error?.message ||
+            "No se pudo iniciar sesión con Google."
+        );
+      } else if (
+        result.type === "dismiss" ||
+        result.type === "cancel"
+      ) {
+        setErrorMsg("Se canceló el inicio de sesión con Google.");
+      } else {
+        setErrorMsg("No se pudo completar el inicio de sesión con Google.");
+      }
+    } catch (error) {
+      console.log(
+        "Error al abrir la autenticación de Google:",
+        error
+      );
+
+      setModalVisible(false);
+      setErrorMsg(
+        "No se pudo abrir el inicio de sesión con Google. Inténtalo de nuevo."
+      );
+    }
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <GoogleLoginModal visible={modalVisible} status={loginStatus} />
+      <GoogleLoginModal
+        visible={modalVisible}
+        status={loginStatus}
+      />
 
       <View style={styles.container}>
         <View style={styles.logoWrap}>
@@ -161,18 +248,31 @@ export default function LoginScreen() {
         </View>
 
         <Text style={styles.title}>Inicia sesión</Text>
-        <Text style={styles.subtitle}>Qué bueno verte de nuevo</Text>
+        <Text style={styles.subtitle}>
+          Qué bueno verte de nuevo
+        </Text>
 
         {errorMsg ? (
           <View style={styles.errorBox}>
-            <Ionicons name="alert-circle" size={18} color={colors.danger} />
+            <Ionicons
+              name="alert-circle"
+              size={18}
+              color={colors.danger}
+            />
             <Text style={styles.errorText}>{errorMsg}</Text>
           </View>
         ) : null}
 
-        <Text style={styles.label}>Correo ó teléfono</Text>
+        <Text style={styles.label}>Correo o teléfono</Text>
+
         <View style={styles.inputWrap}>
-          <Ionicons name="mail-outline" size={18} color={colors.textMuted} style={styles.inputIcon} />
+          <Ionicons
+            name="mail-outline"
+            size={18}
+            color={colors.textMuted}
+            style={styles.inputIcon}
+          />
+
           <TextInput
             style={styles.input}
             placeholder="Ingresa tu correo o teléfono"
@@ -185,8 +285,15 @@ export default function LoginScreen() {
         </View>
 
         <Text style={styles.label}>Contraseña</Text>
+
         <View style={styles.inputWrap}>
-          <Ionicons name="lock-closed-outline" size={18} color={colors.textMuted} style={styles.inputIcon} />
+          <Ionicons
+            name="lock-closed-outline"
+            size={18}
+            color={colors.textMuted}
+            style={styles.inputIcon}
+          />
+
           <TextInput
             style={styles.input}
             placeholder="Ingresa tu contraseña"
@@ -197,8 +304,17 @@ export default function LoginScreen() {
           />
         </View>
 
-        <TouchableOpacity style={styles.loginButton} onPress={handleLogin} disabled={loading} activeOpacity={0.85}>
-          {loading ? <ActivityIndicator color={colors.white} /> : <Text style={styles.loginButtonText}>Ingresar</Text>}
+        <TouchableOpacity
+          style={styles.loginButton}
+          onPress={handleLogin}
+          disabled={loading}
+          activeOpacity={0.85}
+        >
+          {loading ? (
+            <ActivityIndicator color={colors.white} />
+          ) : (
+            <Text style={styles.loginButtonText}>Ingresar</Text>
+          )}
         </TouchableOpacity>
 
         <View style={styles.dividerRow}>
@@ -207,16 +323,26 @@ export default function LoginScreen() {
           <View style={styles.dividerLine} />
         </View>
 
-        <TouchableOpacity style={styles.googleButton} onPress={handleGoogle} activeOpacity={0.85}>
+        <TouchableOpacity
+          style={styles.googleButton}
+          onPress={handleGoogle}
+          activeOpacity={0.85}
+          disabled={modalVisible || loading}
+        >
           <Image
             source={require("./assets/images/google-ico.png")}
             style={styles.googleIcon}
           />
-          <Text style={styles.googleButtonText}>Continuar con Google</Text>
+          <Text style={styles.googleButtonText}>
+            Continuar con Google
+          </Text>
         </TouchableOpacity>
 
         <View style={styles.footerContainer}>
-          <Text style={styles.footerText}>¿Aún no tienes una cuenta? </Text>
+          <Text style={styles.footerText}>
+            ¿Aún no tienes una cuenta?{" "}
+          </Text>
+
           <TouchableOpacity onPress={() => router.push("/register")}>
             <Text style={styles.signupLink}>Crea una</Text>
           </TouchableOpacity>
@@ -359,8 +485,8 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   signupLink: {
-    fontSize: 14,
     color: colors.primary,
+    fontSize: 14,
     fontWeight: "800",
   },
 });

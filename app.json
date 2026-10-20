@@ -29,6 +29,12 @@
     "plugins": [
       "expo-router",
       [
+        "react-native-nitro-google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.TU_IOS_CLIENT_ID"
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",
