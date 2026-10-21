@@ -1,3 +1,4 @@
+import { useAppTheme } from '@/src/contexts/ThemeContext';
 import { colors, radius, shadow } from "@/constants/designSystem";
 import { db } from "@/src/config/firebase";
 import { useCart } from "@/src/contexts/CartContext";
@@ -41,6 +42,8 @@ const MIN_ORDER_AMOUNT = 100000;
 const auth = getAuth();
 
 export default function CartScreen() {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
   const router = useRouter();
   const user = auth.currentUser;
 
@@ -229,7 +232,7 @@ export default function CartScreen() {
   if (!cart || cart.length === 0) {
     return (
       <View style={styles.container}>
-        <Header title="Tu pedido" onBack={() => router.back()} />
+        <Header title="Tu pedido" onBack={() => router.back()} colors={colors} styles={styles} />
         <View style={styles.emptyStateContainer}>
             <View style={styles.emptyIconContainer}>
                <Ionicons name="cart-outline" size={80} color={colors.border} />
@@ -247,7 +250,7 @@ export default function CartScreen() {
 
   return (
     <View style={styles.container}>
-      <Header title="Tu pedido" onBack={() => router.back()} />
+      <Header title="Tu pedido" onBack={() => router.back()} colors={colors} styles={styles} />
 
       <ScrollView contentContainerStyle={{ paddingBottom: 250 }} showsVerticalScrollIndicator={false}>
         {!isMinMet ? (
@@ -265,6 +268,8 @@ export default function CartScreen() {
         <View style={styles.listContainer}>
           {cart.map((item: any) => (
             <CartItemRow
+              colors={colors}
+              styles={styles}
               key={item.id}
               item={item}
               onIncrease={() => handleIncrease(item)}
@@ -294,6 +299,8 @@ export default function CartScreen() {
                   const enCarrito = cart.find((c: any) => c.id === item.id);
                   return (
                     <UpsellCard
+                      colors={colors}
+                      styles={styles}
                       item={item}
                       cantidad={enCarrito?.quantity || 0}
                       onAdd={() => addToCart({ ...item, quantity: 1 })}
@@ -490,19 +497,19 @@ export default function CartScreen() {
           </View>
       </Modal>
 
-      <CustomModal visible={clearModalVisible} onClose={() => setClearModalVisible(false)} onConfirm={() => { clearCart(); setClearModalVisible(false); }} />
+      <CustomModal colors={colors} styles={styles} visible={clearModalVisible} onClose={() => setClearModalVisible(false)} onConfirm={() => { clearCart(); setClearModalVisible(false); }} />
     </View>
   );
 }
 
-const Header = ({ title, onBack }: any) => (
+const Header = ({ title, onBack, colors, styles }: any) => (
   <View style={styles.header}>
     <TouchableOpacity onPress={onBack} style={styles.backCircle}><Ionicons name="chevron-back" size={24} color={colors.textPrimary} /></TouchableOpacity>
     <Text style={styles.headerTitle}>{title}</Text>
   </View>
 );
 
-const CartItemRow = ({ item, onIncrease, onDecrease, onRemove }: any) => {
+const CartItemRow = ({ item, onIncrease, onDecrease, onRemove, colors, styles }: any) => {
   const sinStock = estaAgotado(item.stock);
   return (
   <View style={styles.cartItem}>
@@ -541,7 +548,7 @@ const CartItemRow = ({ item, onIncrease, onDecrease, onRemove }: any) => {
     ) : (
       <View style={styles.qtyContainer}>
         <TouchableOpacity style={[styles.qtyBtn, item.quantity === 1 ? styles.qtyBtnRed : styles.qtyBtnGray]} onPress={onDecrease}>
-          <Ionicons name={item.quantity === 1 ? "trash-outline" : "remove"} size={16} color={item.quantity === 1 ? colors.white : "#555"} />
+          <Ionicons name={item.quantity === 1 ? "trash-outline" : "remove"} size={16} color={item.quantity === 1 ? colors.white : colors.textSecondary} />
         </TouchableOpacity>
         <Text style={styles.qtyText}>{item.quantity}</Text>
         <TouchableOpacity
@@ -557,7 +564,7 @@ const CartItemRow = ({ item, onIncrease, onDecrease, onRemove }: any) => {
   );
 };
 
-const UpsellCard = ({ item, cantidad, onAdd, onIncrease, onDecrease }: any) => {
+const UpsellCard = ({ item, cantidad, onAdd, onIncrease, onDecrease, colors, styles }: any) => {
   const sinStock = estaAgotado(item.stock);
   const alTope = alTopeDeStock(cantidad, item.stock);
   const originalPrice = getOriginalPrice(item.price, item.discountPercent);
@@ -613,7 +620,7 @@ const UpsellCard = ({ item, cantidad, onAdd, onIncrease, onDecrease }: any) => {
   );
 };
 
-const CustomModal = ({ visible, onClose, onConfirm }: any) => (
+const CustomModal = ({ visible, onClose, onConfirm, colors, styles }: any) => (
   <Modal transparent visible={visible} animationType="fade">
     <View style={styles.modalOverlay}>
       <View style={styles.modalContent}>
@@ -627,7 +634,7 @@ const CustomModal = ({ visible, onClose, onConfirm }: any) => (
   </Modal>
 );
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: { flexDirection: 'row', alignItems: 'center', paddingTop: 60, paddingHorizontal: 20, paddingBottom: 15, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.divider },
   backCircle: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
@@ -649,7 +656,7 @@ const styles = StyleSheet.create({
   itemAgotadoBadgeText: { color: colors.white, fontSize: 8, fontWeight: 'bold' },
   itemAgotadoActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   itemAgotadoPill: { backgroundColor: '#EEE', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 7 },
-  itemAgotadoPillText: { color: '#888', fontWeight: '700', fontSize: 12 },
+  itemAgotadoPillText: { color: colors.textSecondary, fontWeight: '700', fontSize: 12 },
   itemAgotadoRemove: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.dangerLight, justifyContent: 'center', alignItems: 'center' },
   itemInfo: { flex: 1 },
   itemName: { fontSize: 15, fontWeight: '600', color: colors.textPrimary, marginBottom: 2 },
@@ -693,7 +700,7 @@ const styles = StyleSheet.create({
   imageContainer: { width: '100%', height: 90, justifyContent: 'center', alignItems: 'center', marginBottom: 5 },
   upsellImage: { width: '100%', height: '100%', resizeMode: 'contain' },
   upsellPrice: { fontSize: 15, fontWeight: 'bold', color: colors.textPrimary },
-  upsellName: { fontSize: 12, color: "#666", marginTop: 2, height: 32 },
+  upsellName: { fontSize: 12, color: colors.textSecondary, marginTop: 2, height: 32 },
   footerCard: { position: 'absolute', bottom: 80, left: 20, right: 20, backgroundColor: colors.surface, paddingHorizontal: 20, paddingVertical: 15, borderRadius: radius.xl, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', zIndex: 1000, ...shadow.floating },
   totalSection: { flexDirection: 'column' },
   totalLabel: { fontSize: 12, color: colors.textSecondary, fontWeight: '600' },
@@ -758,7 +765,7 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 10, color: colors.textPrimary },
   modalButtons: { flexDirection: 'row', width: '100%', justifyContent: 'space-between', marginTop: 15 },
   btnCancel: { flex: 1, backgroundColor: '#F0F0F0', borderRadius: 12, paddingVertical: 12, marginRight: 10, alignItems: 'center' },
-  btnCancelText: { color: '#555', fontWeight: 'bold' },
+  btnCancelText: { color: colors.textSecondary, fontWeight: 'bold' },
   btnConfirm: { flex: 1, backgroundColor: colors.dangerLight, borderRadius: 12, paddingVertical: 12, marginLeft: 10, alignItems: 'center' },
   btnConfirmText: { color: colors.danger, fontWeight: 'bold' },
 });

@@ -22,7 +22,7 @@ export const colors = {
   // Texto
   textPrimary: "#1F2937",
   textSecondary: "#6B7280",
-  textMuted: "#9CA3AF",
+  textMuted: "#737D75",
   textOnPrimary: "#FFFFFF",
 
   // Bordes / separadores
@@ -35,6 +35,7 @@ export const colors = {
   danger: "#E53935",
   dangerLight: "#FDECEA",
   warning: "#F59E0B",
+  warningText: "#92400E",
   warningLight: "#FEF3C7",
   info: "#2563EB",
   infoLight: "#DBEAFE",

@@ -3,6 +3,7 @@ import { Modal, View, Text, StyleSheet, Image, Animated, Easing } from 'react-na
 import { Ionicons } from '@expo/vector-icons';
 import Logo from './Logo';
 import { colors } from '../constants/designSystem';
+import { useAppTheme } from '../src/contexts/ThemeContext';
 
 const CustomSpinner = () => {
   const spinValue = useRef(new Animated.Value(0)).current;
@@ -54,11 +55,12 @@ const CustomSpinner = () => {
 
 
 export default function GoogleLoginModal({ visible, status }) {
+  const { colors: themeColors } = useAppTheme();
   if (!visible) return null;
 
   return (
     <Modal transparent={false} animationType="fade" visible={visible}>
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: themeColors.background }]}>
 
         {}
         {status === 'loading' && (
@@ -81,7 +83,7 @@ export default function GoogleLoginModal({ visible, status }) {
                 <View style={styles.logoRow}>
                     <Logo variant="dark" size="lg" />
                 </View>
-                <Text style={styles.successText}>Has ingresado con éxito</Text>
+                <Text style={[styles.successText, { color: themeColors.textPrimary }]}>Has ingresado con éxito</Text>
                 <View style={styles.checkCircle}>
                     <Ionicons name="checkmark" size={50} color="white" />
                 </View>

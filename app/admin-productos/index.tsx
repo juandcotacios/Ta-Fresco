@@ -1,3 +1,4 @@
+import { useAppTheme } from '@/src/contexts/ThemeContext';
 import { colors, radius, shadow } from "@/constants/designSystem";
 import {
   actualizarProducto,
@@ -21,6 +22,8 @@ import {
 } from "react-native";
 
 export default function AdminProductosScreen() {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
   const router = useRouter();
   const [productos, setProductos] = useState<ProductoTendero[]>([]);
   const [loading, setLoading] = useState(true);
@@ -183,7 +186,7 @@ export default function AdminProductosScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: "row",
@@ -233,7 +236,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 10,
   },
-  discountBadgeText: { color: "#B45309", fontSize: 12, fontWeight: "600" },
+  discountBadgeText: { color: colors.warningText, fontSize: 12, fontWeight: "600" },
   editRow: { flexDirection: "row", alignItems: "center" },
   discountInput: {
     backgroundColor: colors.surface,

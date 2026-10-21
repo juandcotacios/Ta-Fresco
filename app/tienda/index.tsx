@@ -1,3 +1,4 @@
+import { useAppTheme } from '@/src/contexts/ThemeContext';
 import { colors, radius, shadow } from "@/constants/designSystem";
 import { guardarMiTienda, obtenerMiTienda } from "@/src/services/tiendaService";
 import { Ionicons } from "@expo/vector-icons";
@@ -16,6 +17,8 @@ import {
 } from "react-native";
 
 export default function MiTiendaScreen() {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
   const router = useRouter();
   const auth = getAuth();
   const user = auth.currentUser;
@@ -68,7 +71,12 @@ export default function MiTiendaScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: 20, paddingTop: 55 }}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={{ padding: 20, paddingTop: 55, paddingBottom: 48 }}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
+    >
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backCircle}>
           <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
@@ -115,7 +123,7 @@ export default function MiTiendaScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
   header: { flexDirection: "row", alignItems: "center", marginBottom: 20 },

@@ -1,3 +1,4 @@
+import { useAppTheme } from '@/src/contexts/ThemeContext';
 import { colors, radius, shadow } from "@/constants/designSystem";
 import { subirImagenCloudinary } from "@/src/services/cloudinaryService";
 import {
@@ -29,6 +30,8 @@ import {
 const CATEGORIAS = ["Hortalizas", "Frutas", "Abarrotes", "Tuberculos", "Verduras", "Carnes"];
 
 export default function MisProductosScreen() {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
   const router = useRouter();
   const auth = getAuth();
   const user = auth.currentUser;
@@ -239,7 +242,12 @@ export default function MisProductosScreen() {
       )}
 
       <Modal visible={modalVisible} animationType="slide" presentationStyle="pageSheet">
-        <ScrollView style={styles.modalContainer} contentContainerStyle={{ padding: 20, paddingTop: 30 }}>
+        <ScrollView
+          style={styles.modalContainer}
+          contentContainerStyle={{ padding: 20, paddingTop: 30, paddingBottom: 48 }}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+        >
           <Text style={styles.modalTitle}>{editingId ? "Editar producto" : "Nuevo producto"}</Text>
 
           <Text style={styles.label}>Foto del producto</Text>
@@ -324,7 +332,7 @@ export default function MisProductosScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: "row",

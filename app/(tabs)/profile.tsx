@@ -1,5 +1,7 @@
+import { useAppTheme } from '@/src/contexts/ThemeContext';
 import { colors, radius, shadow } from '@/constants/designSystem';
 import { db } from '@/src/config/firebase';
+import { signOutGoogleNative } from '@/src/utils/googleSignIn';
 import { subirImagenCloudinary } from '@/src/services/cloudinaryService';
 import { Direccion, Usuario } from '@/src/services/usuariosService';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,12 +20,14 @@ import {
   updateDoc
 } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
+import { PRIVACY_POLICY, TERMS_AND_CONDITIONS } from '@/src/content/legalDocuments';
 import {
   ActivityIndicator,
   Alert,
   Dimensions,
   FlatList,
   Image,
+  Linking,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -39,6 +43,8 @@ const auth = getAuth();
 const { width, height } = Dimensions.get('window');
 
 export default function ProfileScreen() {
+  const { colors, mode, setMode } = useAppTheme();
+  const styles = createStyles(colors);
   const router = useRouter();
   const user = auth.currentUser;
 
@@ -231,15 +237,20 @@ export default function ProfileScreen() {
     setLogoutConfirmVisible(false);
     setLoggingOut(true);
 
-    setTimeout(async () => {
-      try {
-        await signOut(auth);
-        router.replace('/login');
-      } catch (error) {
-        console.log(error);
-        setLoggingOut(false);
+    try {
+      if (user?.providerData.some((provider) => provider.providerId === 'google.com')) {
+        try {
+          await signOutGoogleNative();
+        } catch (googleError) {
+          console.log('No se pudo limpiar la sesión nativa de Google:', googleError);
+        }
       }
-    }, 1500);
+      await signOut(auth);
+      router.replace('/login');
+    } catch (error) {
+      console.log(error);
+      setLoggingOut(false);
+    }
   };
 
   const showSuccessMessage = () => {
@@ -247,18 +258,24 @@ export default function ProfileScreen() {
     setTimeout(() => setSuccessModalVisible(false), 2000);
   };
 
-  const openInfoModal = (type: 'contact' | 'terms') => {
+  const openInfoModal = (type: 'contact' | 'terms' | 'privacy') => {
     if (type === 'contact') {
       setInfoData({
         title: 'Contáctanos',
         icon: 'headset',
-        content: "📞 Línea nacional: 01 8000 123 456\n\n💬 WhatsApp: +57 300 987 6543\n\n📧 Email: ayuda@tafresco.com\n\n⏰ Horario: Lun-Sáb, 7am - 7pm"
+        content: 'Ta Fresco es un prototipo académico de Bogotá, Colombia. No tiene una empresa constituida ni un canal comercial de atención. El correo soporte@tafresco.invalid es ficticio y no recibe mensajes. Los pedidos son simulaciones: no se hacen cobros ni entregas reales.'
       });
-    } else {
+    } else if (type === 'terms') {
       setInfoData({
         title: 'Términos y Condiciones',
         icon: 'document-text',
-        content: "TÉRMINOS Y CONDICIONES DE USO DE TA FRESCO\n\nÚltima actualización: Noviembre 2025\n\n1. INTRODUCCIÓN\nBienvenido a Ta Fresco. Estos términos y condiciones describen las reglas y regulaciones para el uso de la aplicación Ta Fresco.\n\n2. LICENCIA\nTodos los derechos de propiedad intelectual están reservados.\n\n3. USO ACEPTABLE\nNo debes usar esta aplicación de ninguna manera que cause daño a la aplicación o menoscabo de la disponibilidad.\n\n4. PRODUCTOS\nTa Fresco se esfuerza por garantizar que todos los productos mostrados estén disponibles y descritos con precisión.\n\n5. ENVÍOS\nLos tiempos de envío son estimados y no están garantizados.\n\n(Texto completo disponible en la web)"
+        content: TERMS_AND_CONDITIONS,
+      });
+    } else {
+      setInfoData({
+        title: 'Política de datos personales',
+        icon: 'shield-checkmark',
+        content: PRIVACY_POLICY,
       });
     }
     setInfoModalVisible(true);
@@ -303,8 +320,25 @@ export default function ProfileScreen() {
 
         <View style={styles.menuContainer}>
           <Text style={styles.sectionHeader}>CUENTA</Text>
+          <View style={styles.themeCard}>
+            <View style={styles.themeCardHeading}>
+              <Ionicons name="color-palette-outline" size={20} color={colors.primary} />
+              <Text style={styles.themeCardTitle}>Apariencia</Text>
+            </View>
+            <Text style={styles.themeCardDescription}>Elige el tema de Ta Fresco</Text>
+            <View style={styles.themeOptions}>
+              <TouchableOpacity accessibilityRole="button" accessibilityState={{ selected: mode === 'light' }} onPress={() => setMode('light')} style={[styles.themeOption, mode === 'light' && styles.themeOptionSelected]}>
+                <Ionicons name="sunny-outline" size={18} color={mode === 'light' ? colors.primary : colors.textSecondary} />
+                <Text style={[styles.themeOptionText, mode === 'light' && styles.themeOptionTextSelected]}>Claro</Text>
+              </TouchableOpacity>
+              <TouchableOpacity accessibilityRole="button" accessibilityState={{ selected: mode === 'dark' }} onPress={() => setMode('dark')} style={[styles.themeOption, mode === 'dark' && styles.themeOptionSelected]}>
+                <Ionicons name="moon-outline" size={18} color={mode === 'dark' ? colors.primary : colors.textSecondary} />
+                <Text style={[styles.themeOptionText, mode === 'dark' && styles.themeOptionTextSelected]}>Oscuro</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
           <View style={styles.menuGroup}>
-            <MenuOption
+            <MenuOption colors={colors} styles={styles}
               icon="create-outline"
               text="Editar datos personales"
               onPress={() => {
@@ -314,7 +348,7 @@ export default function ProfileScreen() {
                 setEditModalVisible(true);
               }}
             />
-            <MenuOption
+            <MenuOption colors={colors} styles={styles}
               icon="location-outline"
               text="Mis direcciones"
               onPress={fetchAddresses}
@@ -323,15 +357,20 @@ export default function ProfileScreen() {
 
           <Text style={styles.sectionHeader}>SOPORTE E INFORMACIÓN</Text>
           <View style={styles.menuGroup}>
-            <MenuOption
+            <MenuOption colors={colors} styles={styles}
               icon="headset-outline"
               text="Contáctanos"
               onPress={() => openInfoModal('contact')}
             />
-            <MenuOption
+            <MenuOption colors={colors} styles={styles}
               icon="document-text-outline"
               text="Términos y condiciones"
               onPress={() => openInfoModal('terms')}
+            />
+            <MenuOption colors={colors} styles={styles}
+              icon="shield-checkmark-outline"
+              text="Política de datos personales"
+              onPress={() => openInfoModal('privacy')}
             />
           </View>
         </View>
@@ -381,6 +420,15 @@ export default function ProfileScreen() {
                 <Text style={styles.infoContent}>{infoData.content}</Text>
               </View>
             </ScrollView>
+            {(infoData.title === 'Términos y Condiciones' || infoData.title === 'Política de datos personales') && (
+              <TouchableOpacity
+                style={styles.sicLinkButton}
+                onPress={() => Linking.openURL('https://www.sic.gov.co/')}
+              >
+                <Text style={styles.sicLinkText}>Superintendencia de Industria y Comercio</Text>
+                <Ionicons name="open-outline" size={16} color={colors.primary} />
+              </TouchableOpacity>
+            )}
             <TouchableOpacity style={styles.closeInfoBtn} onPress={() => setInfoModalVisible(false)}>
               <Text style={styles.closeInfoText}>Cerrar</Text>
             </TouchableOpacity>
@@ -402,11 +450,11 @@ export default function ProfileScreen() {
               </View>
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Nombre / Apodo</Text>
-                <TextInput style={styles.inputField} value={tempNickname} onChangeText={setTempNickname} placeholder="Ej: Juan Perez" />
+                <TextInput style={styles.inputField} value={tempNickname} onChangeText={setTempNickname} placeholder="Ej: Juan Perez" placeholderTextColor={colors.textMuted} />
               </View>
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Teléfono</Text>
-                <TextInput style={styles.inputField} value={tempPhone} onChangeText={setTempPhone} keyboardType="phone-pad" placeholder="Ej: 300 123 4567" />
+                <TextInput style={styles.inputField} value={tempPhone} onChangeText={setTempPhone} keyboardType="phone-pad" placeholder="Ej: 300 123 4567" placeholderTextColor={colors.textMuted} />
               </View>
               <TouchableOpacity style={styles.saveButton} onPress={handleSaveProfile} disabled={savingProfile}>
                 {savingProfile ? <ActivityIndicator color={colors.white} /> : <Text style={styles.saveButtonText}>Guardar Cambios</Text>}
@@ -417,24 +465,30 @@ export default function ProfileScreen() {
       </Modal>
 
       <Modal animationType="slide" visible={addressModalVisible} onRequestClose={() => setAddressModalVisible(false)}>
+       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={() => setAddressModalVisible(false)}><Ionicons name="close" size={28} color={colors.textPrimary} /></TouchableOpacity>
             <Text style={styles.modalTitleText}>Direcciones</Text>
           </View>
           {showAddAddressForm ? (
-            <View style={{marginTop: 10}}>
+            <ScrollView
+              style={{ flex: 1 }}
+              contentContainerStyle={{ marginTop: 10, paddingBottom: 36 }}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+            >
               <Text style={styles.label}>Nombre</Text>
-              <TextInput style={styles.inputField} value={newAddrName} onChangeText={setNewAddrName} placeholder="Ej: Casa, Oficina" />
+              <TextInput style={styles.inputField} value={newAddrName} onChangeText={setNewAddrName} placeholder="Ej: Casa, Oficina" placeholderTextColor={colors.textMuted} />
               <Text style={[styles.label, {marginTop: 15}]}>Dirección</Text>
-              <TextInput style={styles.inputField} value={newAddrLine} onChangeText={setNewAddrLine} placeholder="Ej: Calle 123 # 45 - 67" />
+              <TextInput style={styles.inputField} value={newAddrLine} onChangeText={setNewAddrLine} placeholder="Ej: Calle 123 # 45 - 67" placeholderTextColor={colors.textMuted} />
               <View style={{flexDirection:'row', marginTop: 25}}>
                 <TouchableOpacity onPress={() => setShowAddAddressForm(false)} style={styles.cancelBtn}><Text>Cancelar</Text></TouchableOpacity>
                 <TouchableOpacity onPress={handleSaveAddress} style={styles.smallSaveBtn}>
                    {savingAddress ? <ActivityIndicator color={colors.white} /> : <Text style={{color: colors.white, fontWeight:'bold'}}>Guardar</Text>}
                 </TouchableOpacity>
               </View>
-            </View>
+            </ScrollView>
           ) : (
             <>
               <TouchableOpacity style={styles.addNewAddrBtn} onPress={() => setShowAddAddressForm(true)}>
@@ -474,6 +528,7 @@ export default function ProfileScreen() {
               </View>
            </View>
         </Modal>
+       </KeyboardAvoidingView>
       </Modal>
 
       <Modal animationType="fade" transparent={true} visible={successModalVisible}>
@@ -514,7 +569,7 @@ export default function ProfileScreen() {
   );
 }
 
-const MenuOption = ({ icon, text, onPress }: { icon: any, text: string, onPress: () => void }) => (
+const MenuOption = ({ icon, text, onPress, colors, styles }: { icon: any, text: string, onPress: () => void, colors: any, styles: any }) => (
   <TouchableOpacity style={styles.menuOption} onPress={onPress} activeOpacity={0.6}>
     <View style={styles.iconContainer}>
       <Ionicons name={icon} size={22} color={colors.textSecondary} />
@@ -524,7 +579,7 @@ const MenuOption = ({ icon, text, onPress }: { icon: any, text: string, onPress:
   </TouchableOpacity>
 );
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
@@ -580,6 +635,15 @@ const styles = StyleSheet.create({
   phoneText: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
 
   menuContainer: { marginBottom: 20 },
+  themeCard: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.border },
+  themeCardHeading: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  themeCardTitle: { color: colors.textPrimary, fontSize: 15, fontWeight: '700' },
+  themeCardDescription: { color: colors.textSecondary, fontSize: 12, marginTop: 6, marginBottom: 12 },
+  themeOptions: { flexDirection: 'row', gap: 10 },
+  themeOption: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.background },
+  themeOptionSelected: { borderColor: colors.primary, backgroundColor: colors.primaryLight },
+  themeOptionText: { color: colors.textSecondary, fontWeight: '600', fontSize: 13 },
+  themeOptionTextSelected: { color: colors.textPrimary },
   sectionHeader: { fontSize: 12, fontWeight: '800', color: colors.textMuted, marginBottom: 10, marginLeft: 10, letterSpacing: 0.5 },
   menuGroup: { backgroundColor: colors.surface, borderRadius: radius.xl, overflow: 'hidden', marginBottom: 20, ...shadow.card },
   menuOption: { flexDirection: 'row', alignItems: 'center', padding: 18, borderBottomWidth: 1, borderBottomColor: colors.divider },
@@ -593,9 +657,11 @@ const styles = StyleSheet.create({
   infoModalCard: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: 25, width: '100%', maxHeight: '80%' },
   infoIconCircle: { backgroundColor: colors.primaryLight, padding: 15, borderRadius: 40, marginBottom: 15 },
   infoTitle: { fontSize: 20, fontWeight: 'bold', color: colors.textPrimary, marginBottom: 15, textAlign: 'center' },
-  infoContent: { fontSize: 14, color: "#555", lineHeight: 20, textAlign: 'left', marginBottom: 25 },
+  infoContent: { fontSize: 14, color: colors.textSecondary, lineHeight: 20, textAlign: 'left', marginBottom: 25 },
   closeInfoBtn: { backgroundColor: colors.primary, paddingVertical: 12, borderRadius: 25, alignItems: 'center', width: '100%' },
   closeInfoText: { color: colors.white, fontWeight: 'bold', fontSize: 16 },
+  sicLinkButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10 },
+  sicLinkText: { color: colors.primary, fontWeight: '700', fontSize: 13 },
 
   modalContainer: { flex: 1, backgroundColor: colors.surface, padding: 20 },
   modalHeader: { flexDirection: 'row', alignItems: 'center', marginTop: 10, marginBottom: 20 },
@@ -624,7 +690,7 @@ const styles = StyleSheet.create({
   alertBtnContainer: { flexDirection: 'row', width: '100%', justifyContent: 'space-between' },
   alertBtnCancel: { flex: 1, padding: 12, backgroundColor: '#F0F0F0', borderRadius: 10, marginRight: 10, alignItems: 'center' },
   alertBtnDelete: { flex: 1, padding: 12, backgroundColor: colors.danger, borderRadius: 10, marginLeft: 10, alignItems: 'center' },
-  alertBtnTextCancel: { fontWeight: 'bold', color: '#555' },
+  alertBtnTextCancel: { fontWeight: 'bold', color: colors.textSecondary },
   alertBtnTextDelete: { fontWeight: 'bold', color: colors.white },
 
   toastOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.1)' },

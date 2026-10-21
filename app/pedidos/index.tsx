@@ -1,3 +1,4 @@
+import { useAppTheme } from '@/src/contexts/ThemeContext';
 import { colors, radius, shadow } from "@/constants/designSystem";
 import { auth } from "@/src/config/firebase";
 import {
@@ -31,6 +32,7 @@ import {
 } from "react-native";
 
 function StatusStepper({ status }: { status: EstadoPedido }) {
+  const { colors } = useAppTheme();
   if (status === "cancelado") {
     return (
       <View style={{ marginTop: 10 }}>
@@ -60,7 +62,7 @@ function StatusStepper({ status }: { status: EstadoPedido }) {
               <Text
                 style={[
                   stepperStyles.stepLabel,
-                  { color: reached ? colors.textPrimary : "#AAA", fontWeight: reached ? "bold" : "normal" },
+                  { color: reached ? colors.textPrimary : colors.textMuted, fontWeight: reached ? "bold" : "normal" },
                 ]}
               >
                 {ESTADO_LABELS[estado].label}
@@ -82,6 +84,8 @@ function StatusStepper({ status }: { status: EstadoPedido }) {
 }
 
 export default function PedidosScreen() {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
   const router = useRouter();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
@@ -421,7 +425,7 @@ export default function PedidosScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
   header: {
@@ -477,9 +481,9 @@ const styles = StyleSheet.create({
     marginRight: 8, paddingHorizontal: 4,
   },
   itemQtyText: { fontSize: 11, fontWeight: "bold", color: colors.primaryDark },
-  itemLine: { color: "#555", fontSize: 14, flex: 1 },
+  itemLine: { color: colors.textSecondary, fontSize: 14, flex: 1 },
   storeStatuses: { marginTop: 10, padding: 10, backgroundColor: colors.background, borderRadius: 10 },
-  storeStatusesTitle: { color: "#555", fontSize: 12, fontWeight: "bold", marginBottom: 5 },
+  storeStatusesTitle: { color: colors.textSecondary, fontSize: 12, fontWeight: "bold", marginBottom: 5 },
   storeStatusBlock: { paddingVertical: 2 },
   storeStatusRow: { flexDirection: "row", justifyContent: "space-between" },
   storeStatusName: { color: colors.textSecondary, fontSize: 12 },
@@ -500,7 +504,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   rateBtnDone: { backgroundColor: colors.successLight },
-  rateBtnText: { marginLeft: 6, fontSize: 12, fontWeight: "600", color: "#B45309" },
+  rateBtnText: { marginLeft: 6, fontSize: 12, fontWeight: "600", color: colors.warningText },
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" },
   modalContent: { backgroundColor: colors.surface, width: "88%", borderRadius: radius.xl, padding: 22 },
   modalTitle: { fontSize: 17, fontWeight: "bold", color: colors.textPrimary, textAlign: "center", marginBottom: 16 },

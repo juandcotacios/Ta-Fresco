@@ -1,3 +1,4 @@
+import { useAppTheme } from '@/src/contexts/ThemeContext';
 import { Ionicons } from "@expo/vector-icons";
 import * as Google from "expo-auth-session/providers/google";
 import { useRouter } from "expo-router";
@@ -14,7 +15,9 @@ import React, { useState } from "react";
 import {
   ActivityIndicator,
   Image,
+  KeyboardAvoidingView,
   Platform,
+  ScrollView,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -39,6 +42,8 @@ import {
 WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
   const router = useRouter();
 
   const [email, setEmail] = useState("");
@@ -78,7 +83,7 @@ export default function LoginScreen() {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      router.push("/(tabs)/home");
+      router.replace("/(tabs)/home");
     } catch (error: any) {
       console.log("Error al iniciar sesión:", error);
       setErrorMsg(traducirErrorAuth(error));
@@ -106,6 +111,7 @@ export default function LoginScreen() {
     }
 
     setLoginStatus("success");
+    setModalVisible(true);
 
     setTimeout(() => {
       setModalVisible(false);
@@ -159,11 +165,14 @@ export default function LoginScreen() {
 
     if (Platform.OS === "android") {
       setLoading(true);
+      setLoginStatus("loading");
+      setModalVisible(true);
 
       try {
         const idToken = await signInWithGoogleNative();
 
         if (!idToken) {
+          setModalVisible(false);
           return;
         }
 
@@ -171,6 +180,7 @@ export default function LoginScreen() {
       } catch (error: any) {
         console.log("Error de Google en Android:", error);
 
+        setModalVisible(false);
         setErrorMsg(mensajeErrorGoogleAndroid(error));
       } finally {
         setLoading(false);
@@ -242,6 +252,15 @@ export default function LoginScreen() {
         status={loginStatus}
       />
 
+      <KeyboardAvoidingView
+        style={styles.keyboardScreen}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+      >
       <View style={styles.container}>
         <View style={styles.logoWrap}>
           <Logo variant="dark" size="lg" />
@@ -281,6 +300,7 @@ export default function LoginScreen() {
             onChangeText={setEmail}
             autoCapitalize="none"
             keyboardType="email-address"
+            returnKeyType="next"
           />
         </View>
 
@@ -301,6 +321,8 @@ export default function LoginScreen() {
             secureTextEntry
             value={password}
             onChangeText={setPassword}
+            returnKeyType="go"
+            onSubmitEditing={handleLogin}
           />
         </View>
 
@@ -343,27 +365,31 @@ export default function LoginScreen() {
             ¿Aún no tienes una cuenta?{" "}
           </Text>
 
-          <TouchableOpacity onPress={() => router.push("/register")}>
+          <TouchableOpacity onPress={() => router.replace("/register")}>
             <Text style={styles.signupLink}>Crea una</Text>
           </TouchableOpacity>
         </View>
       </View>
+      </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.background,
   },
   container: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: spacing.xxl,
     backgroundColor: colors.background,
   },
+  keyboardScreen: { flex: 1 },
+  scrollContent: { flexGrow: 1, justifyContent: "center" },
   logoWrap: {
     marginBottom: spacing.xl,
   },

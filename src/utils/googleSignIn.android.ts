@@ -34,3 +34,7 @@ export async function signInWithGoogleNative(): Promise<string | null> {
 
   return idToken;
 }
+
+export async function signOutGoogleNative(): Promise<void> {
+  await GoogleOneTapSignIn.signOut();
+}

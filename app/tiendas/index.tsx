@@ -1,3 +1,4 @@
+import { useAppTheme } from '@/src/contexts/ThemeContext';
 import { colors, radius, shadow } from "@/constants/designSystem";
 import { db } from "@/src/config/firebase";
 import { TiendaConId } from "@/src/services/tiendaService";
@@ -16,6 +17,8 @@ import {
 } from "react-native";
 
 export default function TiendasScreen() {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
   const router = useRouter();
   const [tiendas, setTiendas] = useState<TiendaConId[]>([]);
   const [ratings, setRatings] = useState<Record<string, { promedio: number; cantidad: number }>>({});
@@ -92,7 +95,7 @@ export default function TiendasScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: "row",

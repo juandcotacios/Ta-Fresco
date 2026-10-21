@@ -1,3 +1,4 @@
+import { useAppTheme } from '@/src/contexts/ThemeContext';
 import { colors, radius, shadow } from "@/constants/designSystem";
 import { db } from "@/src/config/firebase";
 import { useCart } from "@/src/contexts/CartContext";
@@ -51,6 +52,8 @@ const CATEGORIES: { name: string; icon: any; ionicon?: keyof typeof Ionicons.gly
 ];
 
 export default function OfertasScreen() {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
   const router = useRouter();
   const { cart, addToCart, increaseCart, decreaseCart } = useCart();
 
@@ -237,6 +240,8 @@ export default function OfertasScreen() {
 
                    return (
                      <TopOfferItem
+                       colors={colors}
+                       styles={styles}
                         item={item}
                         currentQty={currentQty}
                         addToCart={addToCart}
@@ -260,6 +265,8 @@ export default function OfertasScreen() {
                      return (
                        <View key={item.id} style={styles.gridItem}>
                          <TopOfferItem
+                           colors={colors}
+                           styles={styles}
                             item={item}
                             currentQty={currentQty}
                             addToCart={addToCart}
@@ -385,7 +392,7 @@ export default function OfertasScreen() {
          <View style={styles.loadingOverlay}>
             <View style={styles.loadingCard}>
                <ActivityIndicator size="large" color={colors.primary} />
-               <Text style={{marginTop:10, fontWeight:'bold', color:'#555'}}>Cargando carrito...</Text>
+               <Text style={{marginTop:10, fontWeight:'bold', color:colors.textSecondary}}>Cargando carrito...</Text>
             </View>
          </View>
       </Modal>
@@ -394,7 +401,7 @@ export default function OfertasScreen() {
   );
 }
 
-const TopOfferItem = ({ item, currentQty, addToCart, decreaseCart, cardStyle, storeName, onStorePress }: any) => {
+const TopOfferItem = ({ item, currentQty, addToCart, decreaseCart, cardStyle, storeName, onStorePress, colors, styles }: any) => {
   // Firestore ya entrega el stock en tiempo real (el listener de arriba usa
   // onSnapshot), así que esto siempre refleja el stock real, sin fotos viejas.
   const sinStock = estaAgotado(item.stock);
@@ -462,7 +469,7 @@ const TopOfferItem = ({ item, currentQty, addToCart, decreaseCart, cardStyle, st
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   mainContainer: {
     flex: 1,
     backgroundColor: colors.background,
@@ -532,7 +539,7 @@ const styles = StyleSheet.create({
   },
   priceText: { fontSize: 17, fontWeight: 'bold', color: colors.textPrimary },
   oldPriceText: { fontSize: 11, color: colors.textMuted, textDecorationLine: 'line-through', marginBottom: 4 },
-  productName: { fontSize: 13, color: "#444", marginBottom: 4, height: 34, textAlign: 'center' },
+  productName: { fontSize: 13, color: colors.textSecondary, marginBottom: 4, height: 34, textAlign: 'center' },
   offerStoreName: { fontSize: 10, color: colors.primaryDark, fontWeight: '600', marginBottom: 10, textAlign: 'center' },
 
   actionsContainer: { width: '100%', alignItems: 'center', height: 40, justifyContent: 'center' },
@@ -544,7 +551,7 @@ const styles = StyleSheet.create({
     ...shadow.button,
   },
   addBtnAgotado: { backgroundColor: '#ccc', width: 'auto', paddingHorizontal: 10, shadowOpacity: 0, elevation: 0 },
-  agotadoBtnText: { color: '#666', fontWeight: 'bold', fontSize: 11 },
+  agotadoBtnText: { color: colors.textSecondary, fontWeight: 'bold', fontSize: 11 },
   qtyPill: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: colors.background, borderRadius: 25,
@@ -565,7 +572,7 @@ const styles = StyleSheet.create({
     ...shadow.card,
   },
   catImage: { width: 35, height: 35, resizeMode: 'contain' },
-  catText: { fontSize: 11, color: "#555", fontWeight: '500' },
+  catText: { fontSize: 11, color: colors.textSecondary, fontWeight: '500' },
 
   // Grilla de 2 columnas para "Más ofertas": reutiliza la misma tarjeta que
   // el carrusel de arriba (TopOfferItem con cardStyle), así toda la pantalla

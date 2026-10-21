@@ -1,3 +1,4 @@
+import { useAppTheme } from '@/src/contexts/ThemeContext';
 import Logo from "@/components/Logo";
 import { colors, radius, shadow } from "@/constants/designSystem";
 import { db } from "@/src/config/firebase";
@@ -7,7 +8,7 @@ import { alTopeDeStock, estaAgotado } from "@/src/utils/stock";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { collection, onSnapshot } from "firebase/firestore";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -50,12 +51,18 @@ const CATEGORIES: { name: string; icon: any; ionicon?: keyof typeof Ionicons.gly
 ];
 
 export default function Home() {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
   const router = useRouter();
   const { width: winWidth } = useWindowDimensions();
   const [products, setProducts] = useState<Product[]>([]);
   const [storeNames, setStoreNames] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [promoAutoPlayPaused, setPromoAutoPlayPaused] = useState(false);
+  const promoListRef = useRef<FlatList<Product>>(null);
+  const promoResumeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const promoAutoPlayPausedRef = useRef(false);
 
   const [miniCartVisible, setMiniCartVisible] = useState(false);
   const [isLoadingCart, setIsLoadingCart] = useState(false);
@@ -135,18 +142,51 @@ export default function Home() {
   }, [products]);
 
   const [promoIndex, setPromoIndex] = useState(0);
+  const promoCardWidth = Math.max(0, winWidth - 32);
+  const promoCardHeight = Math.min(166, Math.max(154, winWidth * 0.41));
+  const promoImageSize = Math.min(116, promoCardWidth * 0.3, promoCardHeight * 0.7);
 
   useEffect(() => {
-    if (topDescuentos.length < 2) return;
+    if (topDescuentos.length < 2 || promoAutoPlayPaused) return;
     const interval = setInterval(() => {
-      setPromoIndex((prev) => (prev + 1) % topDescuentos.length);
-    }, 4000);
+      if (promoAutoPlayPausedRef.current) return;
+      const nextIndex = (promoIndex + 1) % topDescuentos.length;
+      setPromoIndex(nextIndex);
+      promoListRef.current?.scrollToOffset({
+        offset: nextIndex * promoCardWidth,
+        animated: true,
+      });
+    }, 5000);
     return () => clearInterval(interval);
-  }, [topDescuentos.length]);
+  }, [promoAutoPlayPaused, promoCardWidth, promoIndex, topDescuentos.length]);
 
   useEffect(() => {
-    if (promoIndex >= topDescuentos.length) setPromoIndex(0);
-  }, [topDescuentos.length]);
+    if (promoIndex >= topDescuentos.length) {
+      setPromoIndex(0);
+      promoListRef.current?.scrollToOffset({ offset: 0, animated: false });
+    }
+  }, [promoIndex, topDescuentos.length]);
+
+  useEffect(
+    () => () => {
+      if (promoResumeTimer.current) clearTimeout(promoResumeTimer.current);
+    },
+    []
+  );
+
+  const pausePromoAutoPlay = () => {
+    promoAutoPlayPausedRef.current = true;
+    setPromoAutoPlayPaused(true);
+    if (promoResumeTimer.current) clearTimeout(promoResumeTimer.current);
+  };
+
+  const resumePromoAutoPlay = () => {
+    if (promoResumeTimer.current) clearTimeout(promoResumeTimer.current);
+    promoResumeTimer.current = setTimeout(() => {
+      promoAutoPlayPausedRef.current = false;
+      setPromoAutoPlayPaused(false);
+    }, 7000);
+  };
 
   const groupedProducts = CATEGORIES.filter(
     (cat) => !selectedCategory || cat.name === selectedCategory
@@ -173,6 +213,8 @@ export default function Home() {
       <ScrollView
         style={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         contentContainerStyle={{ paddingBottom: BOTTOM_TAB_HEIGHT + 120 }}
       >
         <View style={styles.headerContainer}>
@@ -237,54 +279,112 @@ export default function Home() {
           </ScrollView>
         </View>
 
-        {topDescuentos.length > 0 && (() => {
-          const promo = topDescuentos[promoIndex] || topDescuentos[0];
-          const precioAnterior = getOriginalPrice(promo.price, promo.discountPercent);
-          return (
-            <TouchableOpacity
-              style={styles.promoWrapper}
-              activeOpacity={0.9}
-              onPress={() => router.push("/ofertas")}
-            >
-              <View style={styles.promoBackground}>
-                <View style={styles.promoLeftContent}>
-                  <Text style={styles.promoPercent}>{promo.discountPercent}%</Text>
-                  <Text style={styles.promoSubtitle}>Descuento</Text>
-                  <Text style={styles.promoDate}>Oferta activa ahora</Text>
-                  <View style={styles.priceTagContainer}>
-                    <View style={styles.nowBadge}>
-                      <Text style={styles.nowBadgeText}>${promo.price.toLocaleString()}</Text>
-                    </View>
-                    <Text style={[styles.promoPrice, { textDecorationLine: "line-through", fontSize: 13, opacity: 0.8 }]}>
-                      ${precioAnterior?.toLocaleString()}
-                    </Text>
-                  </View>
-                </View>
-                <View style={styles.promoImageContainer}>
-                  <Image source={{ uri: promo.imageUrl }} style={styles.promoImage} resizeMode="contain" />
-                </View>
-              </View>
-              <Text style={styles.promoProductLabel}>{promo.name}</Text>
+        {topDescuentos.length > 0 && (
+          <View style={styles.promoSection}>
+            <FlatList
+              ref={promoListRef}
+              data={topDescuentos}
+              horizontal
+              pagingEnabled
+              nestedScrollEnabled
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(item) => item.id}
+              getItemLayout={(_, index) => ({
+                length: promoCardWidth,
+                offset: promoCardWidth * index,
+                index,
+              })}
+              onScrollBeginDrag={pausePromoAutoPlay}
+              onScrollEndDrag={(event) => {
+                const nextIndex = Math.round(
+                  event.nativeEvent.contentOffset.x / promoCardWidth
+                );
+                setPromoIndex(Math.min(nextIndex, topDescuentos.length - 1));
+                resumePromoAutoPlay();
+              }}
+              onMomentumScrollEnd={(event) => {
+                const nextIndex = Math.round(
+                  event.nativeEvent.contentOffset.x / promoCardWidth
+                );
+                setPromoIndex(Math.min(nextIndex, topDescuentos.length - 1));
+                resumePromoAutoPlay();
+              }}
+              renderItem={({ item: promo }) => {
+                const precioAnterior = getOriginalPrice(
+                  promo.price,
+                  promo.discountPercent
+                );
 
-              {topDescuentos.length > 1 && (
-                <View style={{ flexDirection: "row", justifyContent: "center", marginTop: 8 }}>
-                  {topDescuentos.map((_, i) => (
+                return (
+                  <TouchableOpacity
+                    style={[styles.promoCard, { width: promoCardWidth, height: promoCardHeight }]}
+                    activeOpacity={0.92}
+                    onPress={() => router.push("/ofertas")}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Oferta de ${promo.discountPercent}% en ${promo.name}`}
+                  >
+                    <View style={styles.promoBackground}>
+                      <View style={styles.promoLeftContent}>
+                        <Text style={[styles.promoPercent, { fontSize: Math.min(33, promoCardWidth * 0.09), lineHeight: Math.min(36, promoCardWidth * 0.098) }]}>{promo.discountPercent}%</Text>
+                        <Text style={styles.promoSubtitle}>Descuento</Text>
+                        <Text style={styles.promoDate}>Oferta activa ahora</Text>
+                        <View style={styles.priceTagContainer}>
+                          <View style={styles.nowBadge}>
+                            <Text style={styles.nowBadgeText}>
+                              ${promo.price.toLocaleString()}
+                            </Text>
+                          </View>
+                          <Text style={styles.promoPrice}>
+                            ${precioAnterior?.toLocaleString()}
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={styles.promoImageContainer}>
+                        <Image
+                          source={{ uri: promo.imageUrl }}
+                          style={{ width: promoImageSize, height: promoImageSize }}
+                          resizeMode="contain"
+                        />
+                      </View>
+                      <Text style={styles.promoProductLabel} numberOfLines={1}>
+                        {promo.name}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              }}
+            />
+
+            {topDescuentos.length > 1 && (
+              <View style={styles.promoPagination}>
+                {topDescuentos.map((promo, index) => (
+                  <TouchableOpacity
+                    key={promo.id}
+                    onPress={() => {
+                      setPromoIndex(index);
+                      promoListRef.current?.scrollToOffset({
+                        offset: index * promoCardWidth,
+                        animated: true,
+                      });
+                      pausePromoAutoPlay();
+                      resumePromoAutoPlay();
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Ver promoción ${index + 1}`}
+                    style={styles.promoDotButton}
+                  >
                     <View
-                      key={i}
-                      style={{
-                        width: 6,
-                        height: 6,
-                        borderRadius: 3,
-                        backgroundColor: i === promoIndex ? colors.primary : colors.border,
-                        marginHorizontal: 3,
-                      }}
+                      style={[
+                        styles.promoDot,
+                        index === promoIndex && styles.promoDotActive,
+                      ]}
                     />
-                  ))}
-                </View>
-              )}
-            </TouchableOpacity>
-          );
-        })()}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
 
         {groupedProducts.map((group) =>
             group.products.length > 0 && (
@@ -301,6 +401,8 @@ export default function Home() {
                     const currentQty = cartItem ? cartItem.quantity : 0;
                     return (
                       <ProductCard
+                        colors={colors}
+                        styles={styles}
                         item={item}
                         categoryLabel={group.category}
                         storeName={item.proveedorId ? storeNames[item.proveedorId] : undefined}
@@ -424,7 +526,7 @@ export default function Home() {
          <View style={styles.loadingOverlay}>
             <View style={styles.loadingCard}>
                <ActivityIndicator size="large" color={colors.primary} />
-               <Text style={{marginTop:10, fontWeight:'bold', color:'#555'}}>Cargando carrito...</Text>
+               <Text style={{marginTop:10, fontWeight:'bold', color:colors.textSecondary}}>Cargando carrito...</Text>
             </View>
          </View>
       </Modal>
@@ -433,7 +535,7 @@ export default function Home() {
   );
 }
 
-function ProductCard({ item, categoryLabel, storeName, onStorePress, currentQty, onAdd, onRemove, onDelete }: any) {
+function ProductCard({ item, categoryLabel, storeName, onStorePress, currentQty, onAdd, onRemove, onDelete, colors, styles }: any) {
   const handleDecrease = () => {
     if (currentQty > 1) onRemove(); else onDelete();
   };
@@ -477,7 +579,7 @@ function ProductCard({ item, categoryLabel, storeName, onStorePress, currentQty,
       <View style={styles.actionsRow}>
         {sinStock ? (
           <View style={[styles.addToCartFullBtn, { backgroundColor: "#ccc" }]}>
-            <Text style={{ color: "#666", fontWeight: "bold" }}>Agotado</Text>
+            <Text style={{ color: colors.textSecondary, fontWeight: "bold" }}>Agotado</Text>
           </View>
         ) : currentQty === 0 ? (
           <TouchableOpacity style={styles.addToCartFullBtn} onPress={onAdd}>
@@ -503,7 +605,7 @@ function ProductCard({ item, categoryLabel, storeName, onStorePress, currentQty,
     </View>
   );
 }
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
 
     agotadoBadge: { position: 'absolute', top: 6, left: 6, backgroundColor: colors.danger, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, zIndex: 2 },
   agotadoBadgeText: { color: colors.white, fontSize: 10, fontWeight: 'bold' },
@@ -549,27 +651,31 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border, ...shadow.card,
   },
   categoryImage: { width: '60%', height: '60%' },
-  categoryLabel: { fontSize: 11, color: "#444", textAlign: "center", fontWeight: '500' },
+  categoryLabel: { fontSize: 11, color: colors.textSecondary, textAlign: "center", fontWeight: '500' },
 
-  promoWrapper: { marginBottom: 25, height: 170, position: "relative", marginTop: 10 },
+  promoSection: { marginBottom: 25, marginTop: 10 },
+  promoCard: {},
   promoBackground: {
     backgroundColor: "#FF6F00", borderRadius: radius.xl, height: "100%", width: "100%",
-    flexDirection: 'row', padding: 20, position: 'relative', overflow: 'hidden', ...shadow.floating,
+    flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 12, position: 'relative', overflow: 'hidden', ...shadow.floating,
   },
-  promoLeftContent: { width: "55%", justifyContent: 'center', zIndex: 2 },
-  promoPercent: { fontSize: 38, fontWeight: "900", color: colors.white, lineHeight: 38 },
-  promoSubtitle: { fontSize: 20, fontWeight: "700", color: colors.white, marginBottom: 4 },
-  promoDate: { fontSize: 12, color: "rgba(255,255,255,0.9)", marginBottom: 12 },
+  promoLeftContent: { width: "58%", justifyContent: 'center', zIndex: 2 },
+  promoPercent: { fontWeight: "900", color: colors.white },
+  promoSubtitle: { fontSize: 18, fontWeight: "700", color: colors.white, marginBottom: 3 },
+  promoDate: { fontSize: 11, color: "rgba(255,255,255,0.9)", marginBottom: 9 },
   priceTagContainer: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingVertical: 6, paddingHorizontal: 10, borderRadius: 20, alignSelf: 'flex-start',
+    paddingVertical: 5, paddingHorizontal: 8, borderRadius: 20, alignSelf: 'flex-start', maxWidth: '100%',
   },
-  nowBadge: { backgroundColor: "#FFEB3B", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, marginRight: 8 },
+  nowBadge: { backgroundColor: "#FFEB3B", paddingHorizontal: 5, paddingVertical: 2, borderRadius: 6, marginRight: 6 },
   nowBadgeText: { color: "#D84315", fontWeight: "800", fontSize: 10 },
-  promoPrice: { fontSize: 18, fontWeight: "bold", color: colors.white },
-  promoImageContainer: { position: 'absolute', right: -25, top: -20, bottom: 0, justifyContent: 'center', alignItems: 'center', width: '60%', height: '120%' },
-  promoImage: { width: 200, height: 200 },
-  promoProductLabel: { position: 'absolute', bottom: 15, right: 15, fontSize: 10, color: 'rgba(255,255,255,0.8)', fontWeight: '600', zIndex: 3 },
+  promoPrice: { fontSize: 14, fontWeight: "bold", color: colors.white },
+  promoImageContainer: { position: 'absolute', right: 5, top: 0, bottom: 20, justifyContent: 'center', alignItems: 'center', width: '38%' },
+  promoProductLabel: { position: 'absolute', bottom: 7, right: 12, maxWidth: '44%', fontSize: 10, color: 'rgba(255,255,255,0.9)', fontWeight: '600', zIndex: 3 },
+  promoPagination: { flexDirection: 'row', justifyContent: 'center', marginTop: 5 },
+  promoDotButton: { padding: 7 },
+  promoDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.border },
+  promoDotActive: { width: 18, backgroundColor: colors.primary },
 
   productSection: { marginBottom: 25 },
   productCard: {
@@ -581,7 +687,7 @@ const styles = StyleSheet.create({
   productPrice: { fontSize: 17, fontWeight: "bold", color: colors.textPrimary },
   productPriceRow: { flexDirection: "row", alignItems: "center", flexWrap: "wrap" },
   productOldPrice: { fontSize: 11, color: colors.textMuted, textDecorationLine: "line-through", marginLeft: 6 },
-  productName: { fontSize: 13, color: "#555", marginTop: 2, height: 34 },
+  productName: { fontSize: 13, color: colors.textSecondary, marginTop: 2, height: 34 },
   productUnitLabel: { fontSize: 11, color: colors.textMuted, marginTop: 4 },
   storeName: { fontSize: 10, color: colors.primaryDark, fontWeight: "600", marginTop: 4 },
   actionsRow: { flexDirection: 'row', width: '100%', justifyContent: 'center', alignItems: 'center', marginTop: 5, height: 40 },

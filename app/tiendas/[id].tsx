@@ -1,3 +1,4 @@
+import { useAppTheme } from '@/src/contexts/ThemeContext';
 import { colors, radius, shadow } from "@/constants/designSystem";
 import { db } from "@/src/config/firebase";
 import { useCart } from "@/src/contexts/CartContext";
@@ -20,6 +21,8 @@ import {
 } from "react-native";
 
 export default function TiendaDetalleScreen() {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { cart, addToCart, decreaseCart } = useCart();
@@ -135,7 +138,7 @@ export default function TiendaDetalleScreen() {
 
               {sinStock ? (
                 <View style={[styles.addBtn, { backgroundColor: "#ccc" }]}>
-                  <Text style={[styles.addBtnText, { color: "#666" }]}>Agotado</Text>
+                  <Text style={[styles.addBtnText, { color: colors.textSecondary }]}>Agotado</Text>
                 </View>
               ) : qty === 0 ? (
                 <TouchableOpacity
@@ -171,7 +174,7 @@ export default function TiendaDetalleScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
   header: {

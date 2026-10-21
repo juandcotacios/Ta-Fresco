@@ -1,3 +1,4 @@
+import { useAppTheme } from '@/src/contexts/ThemeContext';
 import { colors, radius, shadow } from "@/constants/designSystem";
 import { db } from "@/src/config/firebase";
 import {
@@ -22,6 +23,8 @@ import {
 } from "react-native";
 
 export default function AdminSolicitudesScreen() {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
   const router = useRouter();
   const miUid = getAuth().currentUser?.uid;
 
@@ -193,7 +196,7 @@ export default function AdminSolicitudesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: "row",
@@ -227,7 +230,7 @@ const styles = StyleSheet.create({
     ...shadow.card,
   },
   storeName: { fontWeight: "bold", fontSize: 16, color: colors.textPrimary },
-  desc: { color: "#555", fontSize: 13, marginTop: 4 },
+  desc: { color: colors.textSecondary, fontSize: 13, marginTop: 4 },
   person: { color: colors.textSecondary, fontSize: 12, marginTop: 10 },
   date: { color: colors.textMuted, fontSize: 11, marginTop: 2 },
   actionsRow: { flexDirection: "row", justifyContent: "flex-end", marginTop: 14 },
@@ -258,7 +261,7 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     backgroundColor: "#F0F0F0",
   },
-  confirmCancelText: { color: "#555", fontWeight: "600", fontSize: 13 },
+  confirmCancelText: { color: colors.textSecondary, fontWeight: "600", fontSize: 13 },
   confirmYesBtn: { borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8, marginLeft: 10 },
   confirmYesText: { color: colors.white, fontWeight: "600", fontSize: 13 },
   rejectSolidBtn: { backgroundColor: colors.danger },

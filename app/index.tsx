@@ -1,3 +1,4 @@
+import { useAppTheme } from '@/src/contexts/ThemeContext';
 import Logo from "@/components/Logo";
 import { colors, radius, shadow, spacing } from "@/constants/designSystem";
 import { Ionicons } from "@expo/vector-icons";
@@ -11,6 +12,8 @@ import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 SplashScreen.preventAutoHideAsync();
 
 export default function WelcomeScreen() {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
   const router = useRouter();
   const [fontsLoaded, setFontsLoaded] = useState(false);
 
@@ -41,7 +44,7 @@ export default function WelcomeScreen() {
       <View style={styles.blobBottom} />
 
       <View style={styles.topContent}>
-        <Logo variant="light" size="lg" />
+        <Logo variant="light" size="lg" showBadge={false} />
         <Text style={styles.welcome}>Bienvenido!</Text>
         <Text style={styles.description}>
           En Ta Fresco, somos tu plaza online, ¡permítenos ir a la plaza por ti!
@@ -56,7 +59,7 @@ export default function WelcomeScreen() {
       <TouchableOpacity
         style={styles.button}
         activeOpacity={0.85}
-        onPress={() => router.push("/login")}
+        onPress={() => router.replace("/login")}
       >
         <Text style={styles.buttonText}>Iniciar</Text>
         <Ionicons name="arrow-forward" size={20} color={colors.textPrimary} />
@@ -65,7 +68,7 @@ export default function WelcomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.ink,

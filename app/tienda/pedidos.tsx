@@ -1,3 +1,4 @@
+import { useAppTheme } from '@/src/contexts/ThemeContext';
 import { colors, radius, shadow } from "@/constants/designSystem";
 import { db } from "@/src/config/firebase";
 import {
@@ -27,6 +28,8 @@ import {
 } from "react-native";
 
 export default function PedidosDeMiTiendaScreen() {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
   const router = useRouter();
   const auth = getAuth();
   const user = auth.currentUser;
@@ -229,7 +232,7 @@ export default function PedidosDeMiTiendaScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: "row",
@@ -268,7 +271,7 @@ const styles = StyleSheet.create({
   },
   compradorNombre: { fontWeight: "bold", fontSize: 13, color: colors.textPrimary },
   compradorDato: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
-  itemLine: { color: "#555", fontSize: 14, marginBottom: 2 },
+  itemLine: { color: colors.textSecondary, fontSize: 14, marginBottom: 2 },
   independentStatus: { color: colors.primaryDark, fontSize: 12, marginTop: 7, fontWeight: "600" },
   addressLine: { color: colors.textSecondary, fontSize: 12, marginTop: 6 },
   paymentLine: { color: colors.textSecondary, fontSize: 12, marginTop: 4 },
@@ -314,7 +317,7 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     backgroundColor: "#F0F0F0",
   },
-  cancelFormBackText: { color: "#555", fontWeight: "600", fontSize: 13 },
+  cancelFormBackText: { color: colors.textSecondary, fontWeight: "600", fontSize: 13 },
   cancelFormConfirmBtn: { backgroundColor: colors.danger, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8, marginLeft: 10 },
   cancelFormConfirmText: { color: colors.white, fontWeight: "600", fontSize: 13 },
 });

@@ -1,3 +1,4 @@
+import { useAppTheme } from '@/src/contexts/ThemeContext';
 import { colors, radius, shadow } from "@/constants/designSystem";
 import {
   actualizarRolUsuario,
@@ -28,6 +29,8 @@ const ROLES: { value: Rol; label: string; color: string }[] = [
 ];
 
 export default function AdminUsuariosScreen() {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
   const router = useRouter();
   const auth = getAuth();
   const miUid = auth.currentUser?.uid;
@@ -148,7 +151,7 @@ export default function AdminUsuariosScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: "row",

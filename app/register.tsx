@@ -1,3 +1,4 @@
+import { useAppTheme } from '@/src/contexts/ThemeContext';
 import { Ionicons } from "@expo/vector-icons";
 import * as Google from "expo-auth-session/providers/google";
 import { useRouter } from "expo-router";
@@ -12,8 +13,12 @@ import React, { useState } from "react";
 import {
   ActivityIndicator,
   Image,
+  KeyboardAvoidingView,
+  Linking,
+  Modal,
   Platform,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -24,6 +29,7 @@ import {
 import Logo from "@/components/Logo";
 import { colors, radius, shadow, spacing } from "@/constants/designSystem";
 import { auth, db } from "@/src/config/firebase";
+import { PRIVACY_POLICY, TERMS_AND_CONDITIONS } from "@/src/content/legalDocuments";
 import { GOOGLE_AUTH } from "@/src/config/googleAuth";
 import { signInWithGoogleNative } from "@/src/utils/googleSignIn";
 import { mensajeErrorGoogleAndroid } from "@/src/utils/googleSignInErrors";
@@ -36,6 +42,8 @@ import {
 WebBrowser.maybeCompleteAuthSession();
 
 export default function RegisterScreen() {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
   const router = useRouter();
 
   const [email, setEmail] = useState("");
@@ -43,6 +51,8 @@ export default function RegisterScreen() {
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [acceptedLegal, setAcceptedLegal] = useState(false);
+  const [legalDocument, setLegalDocument] = useState<"terms" | "privacy" | null>(null);
 
   const [request, , promptAsync] =
     Google.useIdTokenAuthRequest({
@@ -57,6 +67,11 @@ export default function RegisterScreen() {
 
     if (!email || !password || !confirm) {
       setErrorMsg("Completa todos los campos.");
+      return;
+    }
+
+    if (!acceptedLegal) {
+      setErrorMsg("Lee y acepta los términos y la política de datos para crear tu cuenta.");
       return;
     }
 
@@ -98,6 +113,9 @@ export default function RegisterScreen() {
         phone: "",
         role: "cliente",
         createdAt: serverTimestamp(),
+        termsAcceptedAt: serverTimestamp(),
+        termsVersion: "2026-10-20",
+        privacyAcceptedAt: serverTimestamp(),
       });
 
       console.log("Perfil creado exitosamente en Firestore");
@@ -132,6 +150,12 @@ export default function RegisterScreen() {
         });
       }
 
+      await setDoc(userRef, {
+        termsAcceptedAt: serverTimestamp(),
+        termsVersion: "2026-10-20",
+        privacyAcceptedAt: serverTimestamp(),
+      }, { merge: true });
+
       router.replace("/(tabs)/home");
     } catch (error: any) {
       console.log(
@@ -147,6 +171,11 @@ export default function RegisterScreen() {
 
   const handleGoogle = async () => {
     setErrorMsg(null);
+
+    if (!acceptedLegal) {
+      setErrorMsg("Lee y acepta los términos y la política de datos para continuar.");
+      return;
+    }
 
     if (Platform.OS === "android") {
       setLoading(true);
@@ -227,6 +256,32 @@ export default function RegisterScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <Modal visible={legalDocument !== null} animationType="slide" onRequestClose={() => setLegalDocument(null)}>
+        <SafeAreaView style={styles.legalModal}>
+          <View style={styles.legalHeader}>
+            <Text style={styles.legalTitle}>{legalDocument === "terms" ? "Términos y condiciones" : "Política de datos personales"}</Text>
+            <TouchableOpacity onPress={() => setLegalDocument(null)} accessibilityRole="button" accessibilityLabel="Cerrar documento">
+              <Ionicons name="close" size={26} color={colors.textPrimary} />
+            </TouchableOpacity>
+          </View>
+          <ScrollView contentContainerStyle={styles.legalBody}>
+            <Text style={styles.legalText}>{legalDocument === "terms" ? TERMS_AND_CONDITIONS : PRIVACY_POLICY}</Text>
+          </ScrollView>
+          <TouchableOpacity style={styles.legalSicLink} onPress={() => Linking.openURL("https://www.sic.gov.co/")}>
+            <Text style={styles.legalLink}>Superintendencia de Industria y Comercio</Text>
+            <Ionicons name="open-outline" size={16} color={colors.primary} />
+          </TouchableOpacity>
+        </SafeAreaView>
+      </Modal>
+      <KeyboardAvoidingView
+        style={styles.keyboardScreen}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+      >
       <View style={styles.container}>
         <View style={styles.logoWrap}>
           <Logo variant="dark" size="lg" />
@@ -235,7 +290,7 @@ export default function RegisterScreen() {
         <Text style={styles.title}>Crea una cuenta</Text>
 
         <Text style={styles.subtitle}>
-          Únete a la plaza online de Ta Fresco
+          Prototipo académico de una plaza digital. Usa solo datos de prueba.
         </Text>
 
         {errorMsg ? (
@@ -267,6 +322,7 @@ export default function RegisterScreen() {
             onChangeText={setEmail}
             autoCapitalize="none"
             keyboardType="email-address"
+            returnKeyType="next"
           />
         </View>
 
@@ -287,6 +343,7 @@ export default function RegisterScreen() {
             secureTextEntry
             value={password}
             onChangeText={setPassword}
+            returnKeyType="next"
           />
         </View>
 
@@ -307,7 +364,31 @@ export default function RegisterScreen() {
             secureTextEntry
             value={confirm}
             onChangeText={setConfirm}
+            returnKeyType="done"
+            onSubmitEditing={handleRegister}
           />
+        </View>
+
+        <View style={styles.legalConsentRow}>
+          <TouchableOpacity
+            onPress={() => setAcceptedLegal((value) => !value)}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: acceptedLegal }}
+            style={[styles.legalCheckbox, acceptedLegal && styles.legalCheckboxChecked]}
+          >
+            {acceptedLegal && <Ionicons name="checkmark" size={17} color={colors.white} />}
+          </TouchableOpacity>
+          <View style={styles.legalConsentCopy}>
+            <Text style={styles.legalConsentText}>Acepto los </Text>
+            <TouchableOpacity onPress={() => setLegalDocument("terms")}>
+              <Text style={styles.legalLink}>Términos y condiciones</Text>
+            </TouchableOpacity>
+            <Text style={styles.legalConsentText}> y autorizo el tratamiento de mis datos según la </Text>
+            <TouchableOpacity onPress={() => setLegalDocument("privacy")}>
+              <Text style={styles.legalLink}>Política de datos</Text>
+            </TouchableOpacity>
+            <Text style={styles.legalConsentText}>.</Text>
+          </View>
         </View>
 
         <TouchableOpacity
@@ -351,27 +432,43 @@ export default function RegisterScreen() {
             ¿Ya tienes cuenta?{" "}
           </Text>
 
-          <TouchableOpacity onPress={() => router.push("/login")}>
+          <TouchableOpacity onPress={() => router.replace("/login")}>
             <Text style={styles.loginLink}>Inicia sesión</Text>
           </TouchableOpacity>
         </View>
       </View>
+      </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.background,
   },
   container: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: spacing.xxl,
     backgroundColor: colors.background,
   },
+  keyboardScreen: { flex: 1 },
+  scrollContent: { flexGrow: 1, justifyContent: "center" },
+  legalConsentRow: { flexDirection: "row", alignItems: "flex-start", width: "100%", marginBottom: spacing.md },
+  legalConsentCopy: { flex: 1, flexDirection: "row", flexWrap: "wrap", alignItems: "center" },
+  legalCheckbox: { width: 22, height: 22, borderRadius: 5, borderWidth: 1.5, borderColor: colors.textMuted, marginRight: 10, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface },
+  legalCheckboxChecked: { backgroundColor: colors.primary, borderColor: colors.primary },
+  legalConsentText: { color: colors.textSecondary, fontSize: 12, lineHeight: 18 },
+  legalLink: { color: colors.primary, fontSize: 12, lineHeight: 18, fontWeight: "700", textDecorationLine: "underline" },
+  legalModal: { flex: 1, backgroundColor: colors.background },
+  legalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
+  legalTitle: { flex: 1, fontSize: 18, fontWeight: "700", color: colors.textPrimary },
+  legalBody: { padding: spacing.lg, paddingBottom: 40 },
+  legalText: { fontSize: 14, lineHeight: 21, color: colors.textPrimary },
+  legalSicLink: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, padding: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
   logoWrap: {
     marginBottom: spacing.lg,
   },

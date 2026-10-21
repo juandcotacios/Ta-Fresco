@@ -1,3 +1,4 @@
+import { useAppTheme } from '@/src/contexts/ThemeContext';
 import { colors, radius, shadow, spacing } from "@/constants/designSystem";
 import { db } from "@/src/config/firebase";
 import {
@@ -23,6 +24,8 @@ import {
 } from "react-native";
 
 export default function ConvertirseTenderoScreen() {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
   const router = useRouter();
   const auth = getAuth();
   const user = auth.currentUser;
@@ -121,7 +124,12 @@ export default function ConvertirseTenderoScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: spacing.xl, paddingTop: 55 }}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={{ padding: spacing.xl, paddingTop: 55, paddingBottom: 48 }}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
+    >
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
@@ -204,7 +212,7 @@ export default function ConvertirseTenderoScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: { flexDirection: "row", alignItems: "center", marginBottom: spacing.xl },
   backBtn: {
@@ -251,7 +259,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     marginBottom: spacing.lg,
   },
-  infoText: { color: "#8a6d00", fontSize: 13, lineHeight: 18, marginLeft: spacing.sm, flex: 1 },
+  infoText: { color: colors.warningText, fontSize: 13, lineHeight: 18, marginLeft: spacing.sm, flex: 1 },
   label: { fontSize: 13, color: colors.textSecondary, marginBottom: spacing.sm, marginTop: spacing.md, fontWeight: "600" },
   input: {
     backgroundColor: colors.surface,

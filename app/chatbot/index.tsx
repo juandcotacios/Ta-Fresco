@@ -1,3 +1,4 @@
+import { useAppTheme } from '@/src/contexts/ThemeContext';
 // chatbot/index.tsx
 import { colors, radius, shadow, spacing } from "@/constants/designSystem";
 import { db } from "@/src/config/firebase";
@@ -160,6 +161,8 @@ function buscarProductos(
 }
 
 export default function ChatbotScreen() {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
   const [messages, setMessages] = useState<{ from: "user" | "bot"; text: string }[]>([
     {
       from: "bot",
@@ -290,7 +293,7 @@ export default function ChatbotScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
 
   header: {

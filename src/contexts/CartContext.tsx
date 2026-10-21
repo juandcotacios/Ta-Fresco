@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { onAuthStateChanged } from "firebase/auth";
 import { collection, documentId, onSnapshot, query, where } from "firebase/firestore";
@@ -33,20 +33,23 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false); 
+  const activeUserIdRef = useRef<string | null>(null);
 
   
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        
-        setUserId(user.uid);
-        await loadCart(user.uid);
-      } else {
-        
-        setUserId(null);
-        setCart([]); 
+      const nextUserId = user?.uid ?? null;
+      activeUserIdRef.current = nextUserId;
+      setIsInitialized(false);
+      setUserId(nextUserId);
+      setCart([]);
+
+      if (!nextUserId) {
+        setIsInitialized(true);
+        return;
       }
-      setIsInitialized(true);
+
+      await loadCart(nextUserId);
     });
 
     return () => unsubscribe();
@@ -55,15 +58,20 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   
   const loadCart = async (uid: string) => {
     try {
-      
       const savedCart = await AsyncStorage.getItem(`cart_${uid}`);
+      if (activeUserIdRef.current !== uid) return;
+
       if (savedCart) {
         setCart(JSON.parse(savedCart));
       } else {
-        setCart([]); 
+        setCart([]);
       }
     } catch (error) {
       console.log("Error cargando carrito:", error);
+    } finally {
+      if (activeUserIdRef.current === uid) {
+        setIsInitialized(true);
+      }
     }
   };
 
