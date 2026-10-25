@@ -114,7 +114,7 @@ export default function RegisterScreen() {
         role: "cliente",
         createdAt: serverTimestamp(),
         termsAcceptedAt: serverTimestamp(),
-        termsVersion: "2026-10-20",
+        termsVersion: "2026-10-25",
         privacyAcceptedAt: serverTimestamp(),
       });
 
@@ -152,7 +152,7 @@ export default function RegisterScreen() {
 
       await setDoc(userRef, {
         termsAcceptedAt: serverTimestamp(),
-        termsVersion: "2026-10-20",
+        termsVersion: "2026-10-25",
         privacyAcceptedAt: serverTimestamp(),
       }, { merge: true });
 
@@ -284,14 +284,19 @@ export default function RegisterScreen() {
       >
       <View style={styles.container}>
         <View style={styles.logoWrap}>
-          <Logo variant="dark" size="lg" />
+          <Logo variant="dark" size="md" />
         </View>
 
         <Text style={styles.title}>Crea una cuenta</Text>
 
         <Text style={styles.subtitle}>
-          Prototipo académico de una plaza digital. Usa solo datos de prueba.
+          Regístrate para explorar productos y tiendas de Ta Fresco.
         </Text>
+
+        <View style={styles.demoNotice}>
+          <Ionicons name="information-circle-outline" size={16} color={colors.textMuted} />
+          <Text style={styles.demoNoticeText}>Entorno de prueba · Usa datos ficticios</Text>
+        </View>
 
         {errorMsg ? (
           <View style={styles.errorBox}>
@@ -304,7 +309,7 @@ export default function RegisterScreen() {
           </View>
         ) : null}
 
-        <Text style={styles.label}>Correo o teléfono</Text>
+        <Text style={styles.label}>Correo electrónico</Text>
 
         <View style={styles.inputWrap}>
           <Ionicons
@@ -316,7 +321,7 @@ export default function RegisterScreen() {
 
           <TextInput
             style={styles.input}
-            placeholder="Ingresa tu correo o teléfono"
+            placeholder="nombre@correo.com"
             placeholderTextColor={colors.textMuted}
             value={email}
             onChangeText={setEmail}
@@ -338,7 +343,7 @@ export default function RegisterScreen() {
 
           <TextInput
             style={styles.input}
-            placeholder="Mínimo 8 caracteres, con letras y números"
+            placeholder="Mínimo 8 caracteres"
             placeholderTextColor={colors.textMuted}
             secureTextEntry
             value={password}
@@ -346,6 +351,7 @@ export default function RegisterScreen() {
             returnKeyType="next"
           />
         </View>
+        <Text style={styles.helperText}>Incluye letras y números para mayor seguridad.</Text>
 
         <Text style={styles.label}>Confirmar contraseña</Text>
 
@@ -359,7 +365,7 @@ export default function RegisterScreen() {
 
           <TextInput
             style={styles.input}
-            placeholder="Confirma tu contraseña"
+            placeholder="Repite tu contraseña"
             placeholderTextColor={colors.textMuted}
             secureTextEntry
             value={confirm}
@@ -452,7 +458,11 @@ const createStyles = (colors: any) => StyleSheet.create({
     flexGrow: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: spacing.xxl,
+    width: "100%",
+    maxWidth: 500,
+    alignSelf: "center",
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
     backgroundColor: colors.background,
   },
   keyboardScreen: { flex: 1 },
@@ -463,6 +473,9 @@ const createStyles = (colors: any) => StyleSheet.create({
   legalCheckboxChecked: { backgroundColor: colors.primary, borderColor: colors.primary },
   legalConsentText: { color: colors.textSecondary, fontSize: 12, lineHeight: 18 },
   legalLink: { color: colors.primary, fontSize: 12, lineHeight: 18, fontWeight: "700", textDecorationLine: "underline" },
+  demoNotice: { flexDirection: "row", alignItems: "center", alignSelf: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 7, marginBottom: spacing.lg, borderRadius: radius.pill, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  demoNoticeText: { color: colors.textMuted, fontSize: 11, fontWeight: "600" },
+  helperText: { alignSelf: "flex-start", color: colors.textMuted, fontSize: 11, marginTop: -spacing.sm, marginBottom: spacing.md, marginLeft: 6 },
   legalModal: { flex: 1, backgroundColor: colors.background },
   legalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
   legalTitle: { flex: 1, fontSize: 18, fontWeight: "700", color: colors.textPrimary },
@@ -470,10 +483,10 @@ const createStyles = (colors: any) => StyleSheet.create({
   legalText: { fontSize: 14, lineHeight: 21, color: colors.textPrimary },
   legalSicLink: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, padding: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
   logoWrap: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   title: {
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: "800",
     color: colors.textPrimary,
     marginBottom: 4,
@@ -481,7 +494,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   subtitle: {
     fontSize: 14,
     color: colors.textSecondary,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
     textAlign: "center",
   },
   errorBox: {
@@ -515,9 +528,9 @@ const createStyles = (colors: any) => StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.pill,
+    borderRadius: radius.md,
     paddingHorizontal: spacing.lg,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
     ...shadow.card,
   },
   inputIcon: {
@@ -525,15 +538,15 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   input: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: 12,
     fontSize: 15,
     color: colors.textPrimary,
   },
   createButton: {
     width: "100%",
     backgroundColor: colors.primary,
-    borderRadius: radius.pill,
-    paddingVertical: 15,
+    borderRadius: radius.md,
+    paddingVertical: 13,
     alignItems: "center",
     marginBottom: spacing.lg,
     ...shadow.button,
@@ -565,7 +578,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.pill,
+    borderRadius: radius.md,
     paddingVertical: 14,
     alignItems: "center",
     justifyContent: "center",

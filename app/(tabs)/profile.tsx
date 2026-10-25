@@ -436,14 +436,14 @@ export default function ProfileScreen() {
         </View>
       </Modal>
 
-      <Modal animationType="slide" visible={editModalVisible} onRequestClose={() => setEditModalVisible(false)}>
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+      <Modal animationType="slide" visible={editModalVisible} onRequestClose={() => setEditModalVisible(false)} navigationBarTranslucent statusBarTranslucent>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1, backgroundColor: colors.background }}>
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
               <TouchableOpacity onPress={() => setEditModalVisible(false)}><Ionicons name="close" size={28} color={colors.textPrimary} /></TouchableOpacity>
               <Text style={styles.modalTitleText}>Editar Perfil</Text>
             </View>
-            <ScrollView>
+            <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={{ paddingBottom: 36 }}>
               <View style={styles.editAvatarSection}>
                 <Image source={{ uri: selectedImageUri || userData?.photoURL }} style={styles.avatarImageLarge} />
                 <TouchableOpacity onPress={pickImage}><Text style={styles.changePhotoText}>Cambiar foto</Text></TouchableOpacity>
@@ -464,8 +464,8 @@ export default function ProfileScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
-      <Modal animationType="slide" visible={addressModalVisible} onRequestClose={() => setAddressModalVisible(false)}>
-       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+      <Modal animationType="slide" visible={addressModalVisible} onRequestClose={() => setAddressModalVisible(false)} navigationBarTranslucent statusBarTranslucent>
+       <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={() => setAddressModalVisible(false)}><Ionicons name="close" size={28} color={colors.textPrimary} /></TouchableOpacity>
@@ -663,7 +663,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   sicLinkButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10 },
   sicLinkText: { color: colors.primary, fontWeight: '700', fontSize: 13 },
 
-  modalContainer: { flex: 1, backgroundColor: colors.surface, padding: 20 },
+  modalContainer: { flex: 1, backgroundColor: colors.background, padding: 20 },
   modalHeader: { flexDirection: 'row', alignItems: 'center', marginTop: 10, marginBottom: 20 },
   modalTitleText: { fontSize: 18, fontWeight: 'bold', marginLeft: 15, color: colors.textPrimary },
   editAvatarSection: { alignItems: 'center', marginBottom: 20 },

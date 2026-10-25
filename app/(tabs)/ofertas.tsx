@@ -550,8 +550,8 @@ const createStyles = (colors: any) => StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
     ...shadow.button,
   },
-  addBtnAgotado: { backgroundColor: '#ccc', width: 'auto', paddingHorizontal: 10, shadowOpacity: 0, elevation: 0 },
-  agotadoBtnText: { color: colors.textSecondary, fontWeight: 'bold', fontSize: 11 },
+  addBtnAgotado: { backgroundColor: colors.surface, width: 'auto', paddingHorizontal: 10, borderWidth: 1, borderColor: colors.border, shadowOpacity: 0, elevation: 0 },
+  agotadoBtnText: { color: colors.textPrimary, fontWeight: 'bold', fontSize: 11 },
   qtyPill: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: colors.background, borderRadius: 25,

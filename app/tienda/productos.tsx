@@ -18,7 +18,9 @@ import {
   Alert,
   FlatList,
   Image,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -242,9 +244,10 @@ export default function MisProductosScreen() {
       )}
 
       <Modal visible={modalVisible} animationType="slide" presentationStyle="pageSheet">
+        <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.surface }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView
           style={styles.modalContainer}
-          contentContainerStyle={{ padding: 20, paddingTop: 30, paddingBottom: 48 }}
+          contentContainerStyle={{ padding: 20, paddingTop: 30, paddingBottom: 120 }}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
         >
@@ -327,6 +330,7 @@ export default function MisProductosScreen() {
             <Text style={styles.cancelBtnText}>Cancelar</Text>
           </TouchableOpacity>
         </ScrollView>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );

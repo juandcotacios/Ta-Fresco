@@ -1,11 +1,11 @@
 export const TERMS_AND_CONDITIONS = `TÉRMINOS Y CONDICIONES DE TA FRESCO
-Última actualización: 20 de octubre de 2026
+Última actualización: 25 de octubre de 2026
 
 1. QUIÉNES SOMOS Y ALCANCE
 Ta Fresco es un prototipo académico de una plaza en línea, desarrollado como proyecto de grado en Bogotá D.C., Colombia. El responsable de esta demostración es el “Equipo académico Ta Fresco”; no es una sociedad constituida, no tiene NIT asignado y no representa a un comercio real. La aplicación permite explorar productos, ofertas y flujos de pedido de prueba. No intermedia actualmente ventas comerciales reales.
 
 2. DEMOSTRACIÓN Y PEDIDOS DE PRUEBA
-Los pedidos que se crean en esta versión son registros de demostración dentro del sistema. No generan un cobro, una obligación de compra, una preparación ni una entrega real. No ingreses números de tarjeta, claves bancarias, documentos, direcciones privadas ni otra información sensible o real. Usa datos ficticios al probar el flujo. Los productos, precios, inventarios, tiendas, promociones, usuarios y estados pueden ser datos de prueba, cambiar o ser restablecidos sin aviso. La función de contraentrega solo muestra el flujo académico; no hay recaudo efectivo.
+Los pedidos que se crean en esta versión son registros de demostración dentro del sistema. No generan un cobro, una obligación de compra, una preparación ni una entrega real. Usa exclusivamente datos ficticios. Nunca ingreses números reales de tarjeta, claves bancarias, documentos, direcciones privadas ni otra información personal o sensible. Los productos, precios, inventarios, tiendas, promociones, usuarios y estados pueden ser datos de prueba, cambiar o ser restablecidos sin aviso. La función de contraentrega solo muestra el flujo académico; no hay recaudo efectivo.
 
 3. ACEPTACIÓN Y CAMBIOS
 Al crear una cuenta o usar las funciones de compra aceptas estos términos. Las condiciones particulares de una oferta o pedido se muestran antes de confirmarlo y hacen parte de la compra. Si cambiamos estos términos, indicaremos la fecha de actualización; los cambios no alteran pedidos ya confirmados ni eliminan derechos legales. Si no estás de acuerdo con un cambio, puedes dejar de usar la aplicación y solicitar la eliminación de tu cuenta conforme a la política de datos.
@@ -20,7 +20,7 @@ Los productos pueden ser ofrecidos por distintos vendedores. Las fotos son ilust
 Los precios se expresan en pesos colombianos (COP). Antes de confirmar, revisa el resumen con productos, cantidades, subtotal, domicilio/envío y total. La solicitud se registra cuando la aplicación confirma el pedido; el vendedor puede tener que validar disponibilidad y preparación. Un pedido no se considera pagado solo por aparecer como creado. Cualquier sustitución, ajuste de precio o cambio de condiciones requiere informarte y contar con tu aceptación antes de cobrarlo o entregarlo.
 
 7. PAGOS
-No se procesan pagos reales en esta versión académica. El selector de contraentrega es parte de la demostración; tarjeta y Nequi no están habilitados. La aplicación no solicita ni conserva números completos de tarjeta, códigos de seguridad (CVV/CVC), claves bancarias ni códigos de verificación. La creación de un pedido de prueba no es un comprobante de pago.
+Todos los medios disponibles —contraentrega, tarjeta y Nequi— representan flujos simulados de esta demostración. No se realiza ningún cobro ni se envía información a bancos o a Nequi. Los campos de tarjeta y teléfono se usan temporalmente en la pantalla para representar el flujo y validar datos ficticios; esos valores no se envían al pedido ni se guardan en la base de datos. No ingreses números, códigos de seguridad (CVV/CVC), claves bancarias ni códigos de verificación reales. La creación de un pedido de prueba no es un comprobante de pago.
 
 8. ENTREGA Y COBERTURA
 La cobertura, dirección, costo y tiempo estimado se presentan antes de confirmar. Los tiempos son estimaciones; si ocurre una demora importante o no es posible entregar, se informará y podrás aceptar una nueva fecha o ejercer los derechos de terminación y devolución que correspondan. Debes facilitar una dirección correcta y estar disponible para recibir. Un intento fallido no elimina los derechos por falta de entrega ni autoriza cobros no informados.
@@ -50,7 +50,7 @@ Esta versión es una demostración académica y no cuenta con un canal de atenci
 Se aplican las leyes de la República de Colombia, incluidas las normas imperativas de protección al consumidor y de protección de datos personales. Si una disposición resulta inaplicable, las demás continúan vigentes en la medida permitida por la ley. Ninguna cláusula limita derechos irrenunciables del consumidor.`;
 
 export const PRIVACY_POLICY = `POLÍTICA DE TRATAMIENTO DE DATOS PERSONALES — TA FRESCO
-Última actualización: 20 de octubre de 2026
+Última actualización: 25 de octubre de 2026
 
 1. RESPONSABLE Y CONTACTO
 Responsable de la demostración: Equipo académico Ta Fresco, proyecto de grado en Bogotá D.C., Colombia. No existe una sociedad constituida ni un NIT asignado. Para no simular una identidad empresarial real, el correo soporte@tafresco.invalid se muestra solo como ejemplo ficticio y no es un canal operativo. Aunque técnicamente el prototipo recibe y guarda datos durante las pruebas, no está dirigido al registro de público; utiliza datos ficticios y no ingreses información personal real. El equipo académico debe depurar los datos de prueba al terminar el proyecto. Antes de una publicación o uso comercial, una persona natural o jurídica deberá asumir formalmente el rol de responsable, informar su identificación, domicilio y contacto real, y habilitar los canales de consultas y reclamos.
@@ -62,7 +62,7 @@ Según las funciones que utilices: correo electrónico, nombre o apodo, teléfon
 Crear y administrar cuentas de demostración; autenticar usuarios de prueba; almacenar datos ficticios de perfil y direcciones; representar el flujo de pedidos; administrar el catálogo e inventario de demostración; proteger y depurar el prototipo. Estos registros no se usan para preparar, cobrar ni entregar compras reales. Los datos no deben usarse para publicidad ni compartirse con fines distintos sin base legal y, cuando sea necesario, autorización previa.
 
 4. DATOS SENSIBLES Y DE MENORES
-No solicitamos datos sensibles para comprar productos de la plaza. No ingreses claves bancarias, códigos de seguridad de tarjetas ni códigos de autenticación en campos de la app. Las compras realizadas por menores requieren intervención y autorización de su representante legal; el responsable debe aplicar las garantías reforzadas de privacidad que correspondan.
+El formulario de pago es una simulación: los datos ficticios de tarjeta o teléfono se mantienen temporalmente en la pantalla para representar el flujo y no se envían ni guardan en la base de datos. No ingreses números reales de tarjeta, códigos de seguridad (CVV/CVC), claves bancarias ni códigos de autenticación. Las compras realizadas por menores requieren intervención y autorización de su representante legal; el responsable debe aplicar las garantías reforzadas de privacidad que correspondan.
 
 5. DESTINATARIOS Y ENCARGADOS
 La demostración usa Firebase Authentication y Firestore para autenticación y base de datos; las imágenes de perfil pueden procesarse mediante Cloudinary. Estos servicios pueden procesar o alojar información desde otros países según su infraestructura. En un uso real, el responsable deberá documentar las transmisiones/transferencias internacionales aplicables y sus garantías. No uses datos personales de terceros ni datos reales en este prototipo.

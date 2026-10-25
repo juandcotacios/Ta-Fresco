@@ -5,6 +5,7 @@ import { db } from "@/src/config/firebase";
 import { useCart } from "@/src/contexts/CartContext";
 import { getOriginalPrice, hasDiscount } from "@/src/utils/pricing";
 import { alTopeDeStock, estaAgotado } from "@/src/utils/stock";
+import { findMatchingCategory, matchesSearchToken, normalizeSearchText, productMatchesCategory } from "@/src/utils/productSearch";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { collection, onSnapshot } from "firebase/firestore";
@@ -111,25 +112,18 @@ export default function Home() {
     return () => unsubscribe();
   }, []);
 
-  const normalizar = (s: string) =>
-    s
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[̀-ͯ]/g, "") // quita tildes para comparar "Tubérculos" y "Tuberculos" por igual
-      .trim();
-
-  // Búsqueda "inteligente": ignora tildes/mayúsculas, compara por palabras (no
-  // exige que coincidan en orden ni sean la frase exacta) y busca tanto en el
-  // nombre del producto como en su categoría. Así "frutas" encuentra toda la
-  // categoría Frutas y no solo productos que se llamen literalmente "frutas".
+  // Busca por nombre y categoría, tolera tildes, plural/singular y errores
+  // pequeños de escritura; una consulta como "frutaaas" también llega a Frutas.
   const filtered = useMemo(() => {
-    const query = normalizar(search);
+    const query = normalizeSearchText(search);
     if (!query) return products;
     const tokens = query.split(/\s+/).filter(Boolean);
+    const category = findMatchingCategory(query);
     return products.filter((p) => {
-      const nombreCategoria = `${p.name} ${p.category}`.toLowerCase();
-      const texto = normalizar(nombreCategoria);
-      return tokens.every((t) => texto.includes(t));
+      const categoryMatch = !!category && productMatchesCategory(p.category, category);
+      const remainingTokens = category ? tokens.filter((token) => findMatchingCategory(token) !== category) : tokens;
+      const textMatch = remainingTokens.every((token) => matchesSearchToken(token, `${p.name} ${p.category}`));
+      return (categoryMatch || !category) && textMatch;
     });
   }, [products, search]);
 
@@ -193,9 +187,7 @@ export default function Home() {
   ).map((cat) => ({
     category: cat.name,
     products: filtered.filter((p) => {
-      const catName = normalizar(cat.name).replace(/s$/, "");
-      const prodCat = normalizar(p.category || "");
-      return prodCat.includes(catName) || prodCat === normalizar(cat.name);
+      return productMatchesCategory(p.category || "", cat.name);
     }),
   }));
 
@@ -578,8 +570,8 @@ function ProductCard({ item, categoryLabel, storeName, onStorePress, currentQty,
       </View>
       <View style={styles.actionsRow}>
         {sinStock ? (
-          <View style={[styles.addToCartFullBtn, { backgroundColor: "#ccc" }]}>
-            <Text style={{ color: colors.textSecondary, fontWeight: "bold" }}>Agotado</Text>
+          <View style={[styles.addToCartFullBtn, styles.addToCartOutOfStock]}>
+            <Text style={styles.outOfStockText}>Agotado</Text>
           </View>
         ) : currentQty === 0 ? (
           <TouchableOpacity style={styles.addToCartFullBtn} onPress={onAdd}>
@@ -616,6 +608,8 @@ const createStyles = (colors: any) => StyleSheet.create({
   discountBadge: { position: 'absolute', top: 6, right: 6, backgroundColor: colors.accent, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, zIndex: 3 },
   discountBadgeText: { color: colors.primaryDarker, fontSize: 11, fontWeight: '800' },
   stockText: { fontSize: 10, color: colors.warning, marginTop: 2 },
+  addToCartOutOfStock: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, elevation: 0, shadowOpacity: 0 },
+  outOfStockText: { color: colors.textPrimary, fontWeight: "bold" },
 
   mainContainer: { flex: 1, backgroundColor: colors.background },
   scrollContainer: { flex: 1, paddingHorizontal: 16 },

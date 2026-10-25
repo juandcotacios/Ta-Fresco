@@ -1,7 +1,7 @@
-import { useAppTheme } from '@/src/contexts/ThemeContext';
-import { colors, radius, shadow } from "@/constants/designSystem";
+import { radius, shadow } from "@/constants/designSystem";
 import { db } from "@/src/config/firebase";
 import { useCart } from "@/src/contexts/CartContext";
+import { useAppTheme } from '@/src/contexts/ThemeContext';
 import { crearPedido } from "@/src/services/pedidosService";
 import { Direccion } from "@/src/services/usuariosService";
 import { getOriginalPrice, hasDiscount } from "@/src/utils/pricing";
@@ -17,6 +17,7 @@ import {
   Dimensions,
   FlatList,
   Image,
+  KeyboardAvoidingView,
   LayoutAnimation,
   Modal,
   Platform,
@@ -334,6 +335,7 @@ export default function CartScreen() {
       </View>
 
       <Modal visible={checkoutVisible} animationType="slide" presentationStyle="pageSheet">
+       <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior={Platform.OS === "ios" ? "padding" : "height"} keyboardVerticalOffset={0}>
          <View style={styles.checkoutContainer}>
             <View style={styles.checkoutHeader}>
                 <Text style={styles.checkoutTitle}>Finalizar Pedido</Text>
@@ -342,7 +344,11 @@ export default function CartScreen() {
                 </TouchableOpacity>
             </View>
 
-            <ScrollView contentContainerStyle={{padding: 20, paddingBottom: 50}}>
+            <ScrollView
+              contentContainerStyle={{ padding: 20, paddingBottom: 120 }}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+            >
                 <Text style={styles.sectionHeader}>¿Dónde lo enviamos?</Text>
 
                 {loadingAddresses ? (
@@ -397,6 +403,15 @@ export default function CartScreen() {
                    </TouchableOpacity>
                 </View>
 
+                {paymentMethod !== 'cash' && (
+                  <View style={styles.paymentDemoNotice}>
+                    <Ionicons name="information-circle-outline" size={19} color={colors.warningText} />
+                    <Text style={styles.paymentDemoNoticeText}>
+                      Pago de prueba: no se realiza ningún cobro ni se envían datos a Nequi o a un banco. Usa datos ficticios.
+                    </Text>
+                  </View>
+                )}
+
                 {paymentMethod === 'nequi' && (
                     <View style={styles.cardForm}>
                         <View style={styles.nequiBanner}>
@@ -404,15 +419,16 @@ export default function CartScreen() {
                             <Text style={[styles.nequiDotText, { fontSize: 16 }]}>N</Text>
                           </View>
                           <Text style={styles.nequiBannerText}>
-                            Vas a recibir una notificación push en tu app de Nequi para aprobar el pago.
+                            Este paso solo simula la aprobación. La app no se conecta con Nequi ni envía notificaciones.
                           </Text>
                         </View>
                         <Text style={styles.label}>Número de celular Nequi</Text>
                         <TextInput
-                           placeholder="300 000 0000"
+                           placeholder="000 000 0000 (prueba)"
                            style={styles.input}
-                           keyboardType="numeric"
+                           keyboardType="number-pad"
                            maxLength={10}
+                           returnKeyType="done"
                            value={nequiPhone}
                            onChangeText={(t) => setNequiPhone(t.replace(/[^0-9]/g, ''))}
                         />
@@ -446,19 +462,19 @@ export default function CartScreen() {
                         <Text style={styles.label}>Número de Tarjeta</Text>
                         <TextInput
                            placeholder="0000 0000 0000 0000"
-                           style={styles.input} keyboardType="numeric" maxLength={16}
+                           style={styles.input} keyboardType="number-pad" maxLength={16} returnKeyType="next"
                            value={cardNumber} onChangeText={handleCardNumberChange}
                         />
                          <Text style={styles.label}>Nombre del titular</Text>
-                         <TextInput placeholder="Como aparece en la tarjeta" style={styles.input} value={cardName} onChangeText={setCardName}/>
+                         <TextInput placeholder="Nombre de prueba" style={styles.input} value={cardName} onChangeText={setCardName} returnKeyType="next" />
                         <View style={{flexDirection:'row', justifyContent:'space-between'}}>
                            <View style={{width: '48%'}}>
                               <Text style={styles.label}>Fecha (MM/YY)</Text>
-                              <TextInput placeholder="MM/YY" style={styles.input} maxLength={5} keyboardType="numeric" value={cardDate} onChangeText={handleDateChange}/>
+                              <TextInput placeholder="MM/YY" style={styles.input} maxLength={5} keyboardType="number-pad" value={cardDate} onChangeText={handleDateChange} returnKeyType="next" />
                            </View>
                            <View style={{width: '48%'}}>
                               <Text style={styles.label}>CVC</Text>
-                              <TextInput placeholder="123" style={styles.input} maxLength={3} keyboardType="numeric" value={cardCVC} onChangeText={handleCVCChange}/>
+                              <TextInput placeholder="000" style={styles.input} maxLength={3} keyboardType="number-pad" value={cardCVC} onChangeText={handleCVCChange} returnKeyType="done" />
                            </View>
                         </View>
                     </View>
@@ -485,6 +501,7 @@ export default function CartScreen() {
                 </TouchableOpacity>
             </View>
          </View>
+       </KeyboardAvoidingView>
       </Modal>
 
       <Modal visible={successVisible} transparent animationType="fade">
@@ -593,8 +610,8 @@ const UpsellCard = ({ item, cantidad, onAdd, onIncrease, onDecrease, colors, sty
       </View>
 
       {sinStock ? (
-        <View style={[styles.upsellAddBtn, { backgroundColor: "#ccc" }]}>
-          <Text style={styles.upsellAddBtnText}>Agotado</Text>
+        <View style={[styles.upsellAddBtn, styles.upsellOutOfStock]}>
+          <Text style={[styles.upsellAddBtnText, styles.outOfStockText]}>Agotado</Text>
         </View>
       ) : cantidad === 0 ? (
         <TouchableOpacity style={styles.upsellAddBtn} onPress={onAdd}>
@@ -655,8 +672,8 @@ const createStyles = (colors: any) => StyleSheet.create({
   itemAgotadoBadge: { position: 'absolute', top: 2, left: 2, backgroundColor: colors.danger, paddingHorizontal: 5, paddingVertical: 2, borderRadius: 5, zIndex: 2 },
   itemAgotadoBadgeText: { color: colors.white, fontSize: 8, fontWeight: 'bold' },
   itemAgotadoActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  itemAgotadoPill: { backgroundColor: '#EEE', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 7 },
-  itemAgotadoPillText: { color: colors.textSecondary, fontWeight: '700', fontSize: 12 },
+  itemAgotadoPill: { backgroundColor: colors.surface, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 7, borderWidth: 1, borderColor: colors.border },
+  itemAgotadoPillText: { color: colors.textPrimary, fontWeight: '700', fontSize: 12 },
   itemAgotadoRemove: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.dangerLight, justifyContent: 'center', alignItems: 'center' },
   itemInfo: { flex: 1 },
   itemName: { fontSize: 15, fontWeight: '600', color: colors.textPrimary, marginBottom: 2 },
@@ -694,6 +711,8 @@ const createStyles = (colors: any) => StyleSheet.create({
   upsellOldPrice: { fontSize: 11, color: colors.textMuted, textDecorationLine: 'line-through' },
   upsellAddBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary, borderRadius: 16, paddingVertical: 6, marginTop: 6, gap: 4 },
   upsellAddBtnText: { color: colors.white, fontSize: 12, fontWeight: '700' },
+  upsellOutOfStock: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  outOfStockText: { color: colors.textPrimary },
   upsellQtyRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 },
   upsellQtyBtn: { width: 26, height: 26, borderRadius: 13, backgroundColor: '#EFEFEF', justifyContent: 'center', alignItems: 'center' },
   upsellQtyText: { fontSize: 14, fontWeight: '700', color: colors.textPrimary },
@@ -727,10 +746,12 @@ const createStyles = (colors: any) => StyleSheet.create({
   paymentText: { marginTop: 10, fontWeight: '600', fontSize: 12, color: colors.textPrimary },
   cardForm: { backgroundColor: colors.surface, padding: 20, borderRadius: 12, marginTop: 15 },
   input: { backgroundColor: colors.background, borderRadius: 8, padding: 12, fontSize: 14, color: colors.textPrimary },
+  paymentDemoNotice: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: colors.warningLight, borderRadius: 10, padding: 12, marginTop: 12 },
+  paymentDemoNoticeText: { flex: 1, color: colors.warningText, fontSize: 12, lineHeight: 17, fontWeight: '600' },
   nequiDot: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#8A2BE2', justifyContent: 'center', alignItems: 'center' },
   nequiDotText: { color: colors.white, fontWeight: 'bold', fontSize: 13 },
-  nequiBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3E8FF', borderRadius: 12, padding: 12, marginBottom: 16 },
-  nequiBannerText: { flex: 1, marginLeft: 10, fontSize: 12, color: '#6B21A8' },
+  nequiBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.infoLight, borderRadius: 12, padding: 12, marginBottom: 16 },
+  nequiBannerText: { flex: 1, marginLeft: 10, fontSize: 12, lineHeight: 17, color: colors.textPrimary },
   creditCardPreview: {
     backgroundColor: colors.ink,
     borderRadius: 16,

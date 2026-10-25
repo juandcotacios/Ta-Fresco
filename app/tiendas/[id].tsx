@@ -137,8 +137,8 @@ export default function TiendaDetalleScreen() {
               </View>
 
               {sinStock ? (
-                <View style={[styles.addBtn, { backgroundColor: "#ccc" }]}>
-                  <Text style={[styles.addBtnText, { color: colors.textSecondary }]}>Agotado</Text>
+                <View style={[styles.addBtn, styles.addBtnOutOfStock]}>
+                  <Text style={[styles.addBtnText, styles.outOfStockText]}>Agotado</Text>
                 </View>
               ) : qty === 0 ? (
                 <TouchableOpacity
@@ -222,6 +222,8 @@ const createStyles = (colors: any) => StyleSheet.create({
   discountBadgeText: { color: colors.primaryDarker, fontSize: 11, fontWeight: "800" },
   agotadoBadge: { position: "absolute", top: 6, left: 6, backgroundColor: colors.danger, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, zIndex: 2 },
   agotadoBadgeText: { color: colors.white, fontSize: 10, fontWeight: "bold" },
+  addBtnOutOfStock: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, elevation: 0, shadowOpacity: 0 },
+  outOfStockText: { color: colors.textPrimary },
   stockText: { fontSize: 10, color: colors.warning, marginBottom: 2 },
   image: { width: "100%", height: 90, resizeMode: "contain", marginBottom: 6 },
   name: { fontSize: 13, fontWeight: "600", color: colors.textPrimary, height: 34 },

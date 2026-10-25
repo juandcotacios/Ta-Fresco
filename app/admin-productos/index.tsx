@@ -8,12 +8,14 @@ import {
 } from "@/src/services/tiendaService";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   FlatList,
   Image,
+  KeyboardAvoidingView,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -31,6 +33,7 @@ export default function AdminProductosScreen() {
   const [discountInput, setDiscountInput] = useState("");
   const [saving, setSaving] = useState(false);
   const [borrandoTodos, setBorrandoTodos] = useState(false);
+  const listRef = useRef<FlatList<ProductoTendero>>(null);
 
   const cargar = async () => {
     setLoading(true);
@@ -96,7 +99,7 @@ export default function AdminProductosScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backCircle}>
           <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
@@ -123,11 +126,14 @@ export default function AdminProductosScreen() {
         <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
       ) : (
         <FlatList
+          ref={listRef}
           data={productos}
           keyExtractor={(item) => item.id}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           contentContainerStyle={{ padding: 16 }}
           ListEmptyComponent={<Text style={styles.empty}>No hay productos en el catálogo.</Text>}
-          renderItem={({ item }) => {
+          renderItem={({ item, index }) => {
             const esHuerfano = !item.proveedorId;
             return (
               <View style={[styles.card, esHuerfano && styles.cardHuerfano]}>
@@ -149,6 +155,8 @@ export default function AdminProductosScreen() {
                         keyboardType="numeric"
                         placeholder="0-90"
                         autoFocus
+                        returnKeyType="done"
+                        onFocus={() => listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.25 })}
                       />
                       <Text style={{ marginLeft: 4, marginRight: 10, color: colors.textPrimary }}>%</Text>
                       <TouchableOpacity
@@ -182,7 +190,7 @@ export default function AdminProductosScreen() {
           }}
         />
       )}
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
