@@ -1,12 +1,15 @@
 import { getAnalytics, isSupported } from "firebase/analytics";
 import { getApp, getApps, initializeApp } from "firebase/app";
+import * as FirebaseAuth from "firebase/auth";
 import {
   getAuth,
+  initializeAuth,
   GoogleAuthProvider
 } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { Platform } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -40,10 +43,37 @@ if (missingConfig.length > 0) {
 export const app =
   getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 
-export const auth =
-  Platform.OS === "web"
-    ? getAuth(app)
-    : getAuth(app);
+// Firebase Auth needs explicit React Native persistence so a signed-in user
+// stays signed in after closing and reopening the iOS/Android app.
+function createAuth() {
+  if (Platform.OS === "web") {
+    return getAuth(app);
+  }
+
+  // Firebase exposes this only from its React Native runtime entry point,
+  // while the package's generic TypeScript declarations omit the export.
+  type AuthDependencies = NonNullable<Parameters<typeof initializeAuth>[1]>;
+  type AuthPersistence = NonNullable<AuthDependencies["persistence"]>;
+  const getReactNativePersistence = (
+    FirebaseAuth as typeof FirebaseAuth & {
+      getReactNativePersistence: (storage: typeof AsyncStorage) => AuthPersistence;
+    }
+  ).getReactNativePersistence;
+
+  try {
+    return initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage),
+    });
+  } catch (error) {
+    // Fast Refresh can re-evaluate this module after Auth was initialized.
+    if ((error as { code?: string } | null)?.code === "auth/already-initialized") {
+      return getAuth(app);
+    }
+    throw error;
+  }
+}
+
+export const auth = createAuth();
 
 export const googleProvider = new GoogleAuthProvider();
 export const db = getFirestore(app);

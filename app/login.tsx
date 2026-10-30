@@ -17,8 +17,8 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -29,15 +29,15 @@ import {
 import GoogleLoginModal from "@/components/GoogleLoginModal";
 import Logo from "@/components/Logo";
 
-import { colors, radius, shadow, spacing } from "@/constants/designSystem";
+import { radius, shadow, spacing } from "@/constants/designSystem";
 import { auth, db } from "@/src/config/firebase";
 import { GOOGLE_AUTH } from "@/src/config/googleAuth";
-import { signInWithGoogleNative } from "@/src/utils/googleSignIn";
-import { mensajeErrorGoogleAndroid } from "@/src/utils/googleSignInErrors";
 import {
   esCorreoValido,
   traducirErrorAuth,
 } from "@/src/utils/authErrors";
+import { signInWithGoogleNative } from "@/src/utils/googleSignIn";
+import { mensajeErrorGoogleAndroid } from "@/src/utils/googleSignInErrors";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -163,7 +163,7 @@ export default function LoginScreen() {
       return;
     }
 
-    if (Platform.OS === "android") {
+    if (Platform.OS === "ios" || Platform.OS === "android") {
       setLoading(true);
       setLoginStatus("loading");
       setModalVisible(true);
@@ -178,10 +178,16 @@ export default function LoginScreen() {
 
         await finishGoogleSignIn(idToken);
       } catch (error: any) {
-        console.log("Error de Google en Android:", error);
+        console.log(`Error de Google en ${Platform.OS}:`, error);
 
         setModalVisible(false);
-        setErrorMsg(mensajeErrorGoogleAndroid(error));
+        setErrorMsg(
+          Platform.OS === "android"
+            ? mensajeErrorGoogleAndroid(error)
+            : error instanceof Error
+              ? error.message
+              : "No se pudo iniciar sesión con Google. Inténtalo de nuevo."
+        );
       } finally {
         setLoading(false);
       }
