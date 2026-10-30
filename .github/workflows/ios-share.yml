@@ -56,6 +56,17 @@ on:
 
 jobs:
   simulator:
+    env:
+      EXPO_PUBLIC_FIREBASE_API_KEY: ${{ secrets.EXPO_PUBLIC_FIREBASE_API_KEY }}
+      EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+      EXPO_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.EXPO_PUBLIC_FIREBASE_PROJECT_ID }}
+      EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET }}
+      EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
+      EXPO_PUBLIC_FIREBASE_APP_ID: ${{ secrets.EXPO_PUBLIC_FIREBASE_APP_ID }}
+      EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID: ${{ secrets.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID }}
+      EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID }}
+      EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME: ${{ secrets.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME }}
+      EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET: ${{ secrets.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET }}
     runs-on: macos-latest
     permissions:
       contents: write # deletes the trigger tag
@@ -114,9 +125,42 @@ jobs:
       # Starts the simulator booting in the background (cached, so later runs
       # boot fast) while the app builds.
       - name: Install mobai-ci + boot simulator
+        id: mobai
         uses: MobAI-App/mobai-ci@v1
         with:
           boot-sim: true # UDID lands in $MOBAI_SIM_UDID
+
+      # The hosted simulator's hardware keyboard hides iOS's onscreen keyboard.
+      # Turn it off so manual entry works in MobAI's streamed CI device.
+      - name: Enable iOS software keyboard
+        if: runner.os == 'macOS'
+        env:
+          SIM_UDID: ${{ steps.mobai.outputs.sim-udid }}
+        run: |
+          set -euo pipefail
+          if [ -z "$SIM_UDID" ]; then
+            echo "::error::The MobAI simulator UDID is missing."
+            exit 1
+          fi
+          python3 - "$SIM_UDID" <<'PY'
+          import pathlib
+          import plistlib
+          import sys
+
+          udid = sys.argv[1]
+          pref_file = pathlib.Path.home() / "Library/Preferences/com.apple.iphonesimulator.plist"
+          prefs = {}
+          if pref_file.exists():
+              with pref_file.open("rb") as handle:
+                  prefs = plistlib.load(handle)
+          prefs["ConnectHardwareKeyboard"] = False
+          prefs.setdefault("DevicePreferences", {}).setdefault(udid, {})["ConnectHardwareKeyboard"] = False
+          pref_file.parent.mkdir(parents=True, exist_ok=True)
+          with pref_file.open("wb") as handle:
+              plistlib.dump(prefs, handle, fmt=plistlib.FMT_BINARY)
+          PY
+          killall Simulator 2>/dev/null || true
+          open -a Simulator --args -CurrentDeviceUDID "$SIM_UDID" -ConnectHardwareKeyboard 0
 
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
@@ -619,7 +663,7 @@ jobs:
 
             xcodebuild "$TARGET_FLAG" "$TARGET_PATH" \
               -scheme "$SCHEME" \
-              -configuration Debug \
+              -configuration Release \
               "$DEST_FLAG" "$DEST_VALUE" \
               -derivedDataPath "$GITHUB_WORKSPACE/DerivedData" \
               COMPILER_INDEX_STORE_ENABLE=NO \
@@ -631,7 +675,7 @@ jobs:
             # than one app target.
             APP_PATH=$(xcodebuild "$TARGET_FLAG" "$TARGET_PATH" \
               -scheme "$SCHEME" \
-              -configuration Debug \
+              -configuration Release \
               "$DEST_FLAG" "$DEST_VALUE" \
               -derivedDataPath "$GITHUB_WORKSPACE/DerivedData" \
               -showBuildSettings -json 2>/dev/null \
