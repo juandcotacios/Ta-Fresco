@@ -630,7 +630,7 @@ jobs:
 
             xcodebuild "$TARGET_FLAG" "$TARGET_PATH" \
               -scheme "$SCHEME" \
-              -configuration Debug \
+              -configuration Release \
               "$DEST_FLAG" "$DEST_VALUE" \
               -derivedDataPath "$GITHUB_WORKSPACE/DerivedData" \
               COMPILER_INDEX_STORE_ENABLE=NO \
@@ -642,7 +642,7 @@ jobs:
             # than one app target.
             APP_PATH=$(xcodebuild "$TARGET_FLAG" "$TARGET_PATH" \
               -scheme "$SCHEME" \
-              -configuration Debug \
+              -configuration Release \
               "$DEST_FLAG" "$DEST_VALUE" \
               -derivedDataPath "$GITHUB_WORKSPACE/DerivedData" \
               -showBuildSettings -json 2>/dev/null \
