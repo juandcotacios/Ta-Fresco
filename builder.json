@@ -1,0 +1,24 @@
+{
+  "project": "Ta-Fresco",
+  "platform": "ios",
+  "github": {
+    "owner": "juandcotacios",
+    "repo": "Ta-Fresco"
+  },
+  "provider": "github",
+  "codemagic": {},
+  "bitrise": {},
+  "ios": {
+    "path": "ios",
+    "bundleId": "com.juandcotacios.tafresco",
+    "configuration": "Debug"
+  },
+  "flutter": {
+    "watch": {}
+  },
+  "reactNative": {
+    "expo": true
+  },
+  "kmp": {},
+  "mobai": {}
+}
