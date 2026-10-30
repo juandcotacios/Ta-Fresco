@@ -9,6 +9,7 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
+      "bundleIdentifier": "com.juandcotacios.tafresco",
       "supportsTablet": true
     },
     "android": {
@@ -27,12 +28,7 @@
     },
     "plugins": [
       "expo-router",
-      [
-        "react-native-nitro-google-signin",
-        {
-          "iosUrlScheme": "com.googleusercontent.apps.TU_IOS_CLIENT_ID"
-        }
-      ],
+      ["react-native-nitro-google-signin", {}],
       [
         "expo-splash-screen",
         {

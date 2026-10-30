@@ -177,7 +177,7 @@ export default function RegisterScreen() {
       return;
     }
 
-    if (Platform.OS === "android") {
+    if (Platform.OS !== "web") {
       setLoading(true);
 
       try {
@@ -190,10 +190,16 @@ export default function RegisterScreen() {
 
         await finishGoogleSignIn(idToken);
       } catch (error: any) {
-        console.log("Error de Google en Android:", error);
+        console.log(`Error de Google en ${Platform.OS}:`, error);
 
         setLoading(false);
-        setErrorMsg(mensajeErrorGoogleAndroid(error));
+        setErrorMsg(
+          Platform.OS === "android"
+            ? mensajeErrorGoogleAndroid(error)
+            : error instanceof Error
+              ? error.message
+              : "No se pudo iniciar sesión con Google. Inténtalo de nuevo."
+        );
       }
 
       return;
