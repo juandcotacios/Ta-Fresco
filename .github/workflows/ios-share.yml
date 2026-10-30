@@ -125,9 +125,42 @@ jobs:
       # Starts the simulator booting in the background (cached, so later runs
       # boot fast) while the app builds.
       - name: Install mobai-ci + boot simulator
+        id: mobai
         uses: MobAI-App/mobai-ci@v1
         with:
           boot-sim: true # UDID lands in $MOBAI_SIM_UDID
+
+      # The hosted simulator's hardware keyboard hides iOS's onscreen keyboard.
+      # Turn it off so manual entry works in MobAI's streamed CI device.
+      - name: Enable iOS software keyboard
+        if: runner.os == 'macOS'
+        env:
+          SIM_UDID: ${{ steps.mobai.outputs.sim-udid }}
+        run: |
+          set -euo pipefail
+          if [ -z "$SIM_UDID" ]; then
+            echo "::error::The MobAI simulator UDID is missing."
+            exit 1
+          fi
+          python3 - "$SIM_UDID" <<'PY'
+          import pathlib
+          import plistlib
+          import sys
+
+          udid = sys.argv[1]
+          pref_file = pathlib.Path.home() / "Library/Preferences/com.apple.iphonesimulator.plist"
+          prefs = {}
+          if pref_file.exists():
+              with pref_file.open("rb") as handle:
+                  prefs = plistlib.load(handle)
+          prefs["ConnectHardwareKeyboard"] = False
+          prefs.setdefault("DevicePreferences", {}).setdefault(udid, {})["ConnectHardwareKeyboard"] = False
+          pref_file.parent.mkdir(parents=True, exist_ok=True)
+          with pref_file.open("wb") as handle:
+              plistlib.dump(prefs, handle, fmt=plistlib.FMT_BINARY)
+          PY
+          killall Simulator 2>/dev/null || true
+          open -a Simulator --args -CurrentDeviceUDID "$SIM_UDID" -ConnectHardwareKeyboard 0
 
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
