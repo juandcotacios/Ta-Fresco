@@ -11,7 +11,7 @@
   "ios": {
     "path": "ios",
     "bundleId": "com.juandcotacios.tafresco",
-    "configuration": "Debug"
+    "configuration": "Release"
   },
   "flutter": {
     "watch": {}
