@@ -1,5 +1,5 @@
 import { useAppTheme } from '@/src/contexts/ThemeContext';
-import { colors, radius, shadow } from "@/constants/designSystem";
+import { radius, shadow } from "@/constants/designSystem";
 import { db } from "@/src/config/firebase";
 import {
   aprobarSolicitud,
@@ -13,6 +13,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { getAuth } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import React, { useCallback, useState } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   ActivityIndicator,
   FlatList,
@@ -24,7 +25,8 @@ import {
 
 export default function AdminSolicitudesScreen() {
   const { colors } = useAppTheme();
-  const styles = createStyles(colors);
+  const insets = useSafeAreaInsets();
+  const styles = createStyles(colors, insets.top);
   const router = useRouter();
   const miUid = getAuth().currentUser?.uid;
 
@@ -196,12 +198,12 @@ export default function AdminSolicitudesScreen() {
   );
 }
 
-const createStyles = (colors: any) => StyleSheet.create({
+const createStyles = (colors: any, topInset = 0) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingTop: 55,
+    paddingTop: topInset + 12,
     paddingHorizontal: 16,
     paddingBottom: 10,
   },
@@ -259,7 +261,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     marginLeft: 10,
-    backgroundColor: "#F0F0F0",
+    backgroundColor: colors.border,
   },
   confirmCancelText: { color: colors.textSecondary, fontWeight: "600", fontSize: 13 },
   confirmYesBtn: { borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8, marginLeft: 10 },

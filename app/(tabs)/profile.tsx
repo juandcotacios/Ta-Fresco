@@ -1,5 +1,5 @@
 import { useAppTheme } from '@/src/contexts/ThemeContext';
-import { colors, radius, shadow } from '@/constants/designSystem';
+import { radius, shadow } from '@/constants/designSystem';
 import { db } from '@/src/config/firebase';
 import { signOutGoogleNative } from '@/src/utils/googleSignIn';
 import { subirImagenCloudinary } from '@/src/services/cloudinaryService';
@@ -20,6 +20,7 @@ import {
   updateDoc
 } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PRIVACY_POLICY, TERMS_AND_CONDITIONS } from '@/src/content/legalDocuments';
 import {
   ActivityIndicator,
@@ -44,7 +45,8 @@ const { width, height } = Dimensions.get('window');
 
 export default function ProfileScreen() {
   const { colors, mode, setMode } = useAppTheme();
-  const styles = createStyles(colors);
+  const insets = useSafeAreaInsets();
+  const styles = createStyles(colors, insets.top);
   const router = useRouter();
   const user = auth.currentUser;
 
@@ -59,7 +61,6 @@ export default function ProfileScreen() {
 
   const [addressModalVisible, setAddressModalVisible] = useState(false);
   const [userAddresses, setUserAddresses] = useState<Direccion[]>([]);
-  const [loadingAddresses, setLoadingAddresses] = useState(false);
   const [showAddAddressForm, setShowAddAddressForm] = useState(false);
   const [newAddrName, setNewAddrName] = useState('');
   const [newAddrLine, setNewAddrLine] = useState('');
@@ -175,7 +176,6 @@ export default function ProfileScreen() {
   const fetchAddresses = async () => {
     if (!user) return;
     setAddressModalVisible(true);
-    setLoadingAddresses(true);
     setShowAddAddressForm(false);
     try {
       const addrRef = collection(db, `users/${user.uid}/addresses`);
@@ -185,7 +185,6 @@ export default function ProfileScreen() {
     } catch (error) {
       console.log(error);
     } finally {
-      setLoadingAddresses(false);
     }
   };
 
@@ -579,7 +578,7 @@ const MenuOption = ({ icon, text, onPress, colors, styles }: { icon: any, text: 
   </TouchableOpacity>
 );
 
-const createStyles = (colors: any) => StyleSheet.create({
+const createStyles = (colors: any, topInset = 0) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
@@ -587,7 +586,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     backgroundColor: colors.primary,
     height: height * 0.18,
     width: '100%',
-    paddingTop: height * 0.06,
+    paddingTop: topInset + 12,
     alignItems: 'center',
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
@@ -608,7 +607,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   headerTitle: { color: colors.white, fontSize: 18, fontWeight: '700' },
 
   scrollContent: {
-    paddingTop: height * 0.14,
+    paddingTop: Math.max(height * 0.14, topInset + 100),
     paddingBottom: 150,
     paddingHorizontal: 20
   },
@@ -680,7 +679,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   addressItem: { flexDirection: 'row', justifyContent:'space-between', alignItems:'center', padding: 15, backgroundColor: colors.background, borderRadius: 12, marginBottom: 10 },
   addrName: { fontWeight: 'bold', fontSize: 15, color: colors.textPrimary },
   addrLine: { color: colors.textSecondary, fontSize: 13 },
-  cancelBtn: { flex: 1, backgroundColor: '#EEE', padding: 12, borderRadius: 10, alignItems: 'center', marginRight: 5 },
+  cancelBtn: { flex: 1, backgroundColor: colors.border, padding: 12, borderRadius: 10, alignItems: 'center', marginRight: 5 },
   smallSaveBtn: { flex: 1, backgroundColor: colors.primary, padding: 12, borderRadius: 10, alignItems: 'center', marginLeft: 5 },
   emptyText: { textAlign: 'center', color: colors.textMuted, marginTop: 20 },
 
@@ -688,7 +687,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   alertTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 10, color: colors.textPrimary },
   alertMessage: { fontSize: 14, color: colors.textSecondary, marginBottom: 20, textAlign: 'center' },
   alertBtnContainer: { flexDirection: 'row', width: '100%', justifyContent: 'space-between' },
-  alertBtnCancel: { flex: 1, padding: 12, backgroundColor: '#F0F0F0', borderRadius: 10, marginRight: 10, alignItems: 'center' },
+  alertBtnCancel: { flex: 1, padding: 12, backgroundColor: colors.border, borderRadius: 10, marginRight: 10, alignItems: 'center' },
   alertBtnDelete: { flex: 1, padding: 12, backgroundColor: colors.danger, borderRadius: 10, marginLeft: 10, alignItems: 'center' },
   alertBtnTextCancel: { fontWeight: 'bold', color: colors.textSecondary },
   alertBtnTextDelete: { fontWeight: 'bold', color: colors.white },
@@ -697,7 +696,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   toastContent: { backgroundColor: colors.ink, padding: 20, borderRadius: 15, alignItems: 'center', flexDirection: 'row' },
   toastText: { color: colors.white, marginLeft: 10, fontWeight: 'bold' },
 
-  logoutOverlay: { flex: 1, backgroundColor: 'rgba(255,255,255,0.9)', justifyContent: 'center', alignItems: 'center' },
+  logoutOverlay: { flex: 1, backgroundColor: `${colors.background}E6`, justifyContent: 'center', alignItems: 'center' },
   logoutContent: { alignItems: 'center' },
   logoutText: { marginTop: 15, fontSize: 16, color: colors.primary, fontWeight: 'bold' }
 });

@@ -11,6 +11,7 @@ import { useRouter } from "expo-router";
 import { getAuth } from "firebase/auth";
 import { collection, getDocs } from "firebase/firestore";
 import React, { useEffect, useMemo, useState } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   ActivityIndicator,
   Alert,
@@ -44,7 +45,8 @@ const auth = getAuth();
 
 export default function CartScreen() {
   const { colors } = useAppTheme();
-  const styles = createStyles(colors);
+  const insets = useSafeAreaInsets();
+  const styles = createStyles(colors, insets.top);
   const router = useRouter();
   const user = auth.currentUser;
 
@@ -625,7 +627,7 @@ const UpsellCard = ({ item, cantidad, onAdd, onIncrease, onDecrease, colors, sty
           </TouchableOpacity>
           <Text style={styles.upsellQtyText}>{cantidad}</Text>
           <TouchableOpacity
-            style={[styles.upsellQtyBtn, { backgroundColor: alTope ? "#ccc" : colors.primary }]}
+            style={[styles.upsellQtyBtn, { backgroundColor: alTope ? colors.border : colors.primary }]}
             onPress={alTope ? undefined : onIncrease}
             disabled={alTope}
           >
@@ -651,9 +653,9 @@ const CustomModal = ({ visible, onClose, onConfirm, colors, styles }: any) => (
   </Modal>
 );
 
-const createStyles = (colors: any) => StyleSheet.create({
+const createStyles = (colors: any, topInset = 0) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  header: { flexDirection: 'row', alignItems: 'center', paddingTop: 60, paddingHorizontal: 20, paddingBottom: 15, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.divider },
+  header: { flexDirection: 'row', alignItems: 'center', paddingTop: topInset + 8, paddingHorizontal: 20, paddingBottom: 15, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.divider },
   backCircle: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
   headerTitle: { fontSize: 22, fontWeight: 'bold', color: colors.textPrimary },
   emptyStateContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40, marginTop: height * 0.15 },
@@ -691,7 +693,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   qtyBtn: { width: 30, height: 30, borderRadius: 15, justifyContent: 'center', alignItems: 'center' },
   qtyBtnRed: { backgroundColor: colors.dangerLight },
   qtyBtnGreen: { backgroundColor: colors.primary },
-  qtyBtnGray: { backgroundColor: '#E0E0E0' },
+  qtyBtnGray: { backgroundColor: colors.border },
   qtyText: { marginHorizontal: 12, fontWeight: 'bold', fontSize: 15 },
   cleanBtn: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 10 },
   clearCartText: { color: colors.danger, fontSize: 13, fontWeight: '600', marginLeft: 5 },
@@ -714,7 +716,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   upsellOutOfStock: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   outOfStockText: { color: colors.textPrimary },
   upsellQtyRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 },
-  upsellQtyBtn: { width: 26, height: 26, borderRadius: 13, backgroundColor: '#EFEFEF', justifyContent: 'center', alignItems: 'center' },
+  upsellQtyBtn: { width: 26, height: 26, borderRadius: 13, backgroundColor: colors.border, justifyContent: 'center', alignItems: 'center' },
   upsellQtyText: { fontSize: 14, fontWeight: '700', color: colors.textPrimary },
   imageContainer: { width: '100%', height: 90, justifyContent: 'center', alignItems: 'center', marginBottom: 5 },
   upsellImage: { width: '100%', height: '100%', resizeMode: 'contain' },
@@ -726,7 +728,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   totalAmount: { fontSize: 20, fontWeight: 'bold', color: colors.textPrimary },
   payButton: { paddingVertical: 12, paddingHorizontal: 25, borderRadius: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   payButtonActive: { backgroundColor: colors.primary, ...shadow.button },
-  payButtonDisabled: { backgroundColor: '#E0E0E0' },
+  payButtonDisabled: { backgroundColor: colors.border },
   payButtonText: { color: colors.white, fontSize: 15, fontWeight: 'bold' },
   chatbotContainer: { position: "absolute", bottom: 160, right: 20, zIndex: 999 },
   checkoutContainer: { flex: 1, backgroundColor: colors.background },
@@ -739,7 +741,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   addrAlias: { fontWeight: 'bold', fontSize: 14, color: colors.textPrimary },
   addrText: { fontSize: 12, color: colors.textSecondary },
   addAddressBtnSmall: { marginTop: 10, backgroundColor: colors.primary, padding: 10, borderRadius: 10, alignItems: 'center' },
-  noAddressBox: { padding: 20, backgroundColor: '#EEE', borderRadius: 10, alignItems: 'center' },
+  noAddressBox: { padding: 20, backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: 10, alignItems: 'center' },
   paymentMethods: { flexDirection: 'row', justifyContent: 'space-between' },
   paymentOption: { flex: 1, backgroundColor: colors.surface, padding: 20, borderRadius: 12, alignItems: 'center', marginHorizontal: 5, borderWidth: 1, borderColor: colors.border },
   paymentOptionSelected: { borderColor: colors.primary, backgroundColor: colors.primaryLight },
@@ -785,7 +787,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   modalContent: { backgroundColor: colors.surface, width: '80%', borderRadius: 20, padding: 25, alignItems: 'center' },
   modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 10, color: colors.textPrimary },
   modalButtons: { flexDirection: 'row', width: '100%', justifyContent: 'space-between', marginTop: 15 },
-  btnCancel: { flex: 1, backgroundColor: '#F0F0F0', borderRadius: 12, paddingVertical: 12, marginRight: 10, alignItems: 'center' },
+  btnCancel: { flex: 1, backgroundColor: colors.border, borderRadius: 12, paddingVertical: 12, marginRight: 10, alignItems: 'center' },
   btnCancelText: { color: colors.textSecondary, fontWeight: 'bold' },
   btnConfirm: { flex: 1, backgroundColor: colors.dangerLight, borderRadius: 12, paddingVertical: 12, marginLeft: 10, alignItems: 'center' },
   btnConfirmText: { color: colors.danger, fontWeight: 'bold' },

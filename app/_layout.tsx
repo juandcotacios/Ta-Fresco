@@ -1,6 +1,9 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { setBackgroundColorAsync } from 'expo-system-ui';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { onAuthStateChanged } from 'firebase/auth';
 import React, { useEffect, useRef, useState } from 'react';
 import 'react-native-reanimated';
@@ -13,9 +16,13 @@ export const unstable_settings = { anchor: '(tabs)' };
 
 export default function RootLayout() {
   return (
-    <AppThemeProvider>
-      <RootLayoutContent />
-    </AppThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <AppThemeProvider>
+          <RootLayoutContent />
+        </AppThemeProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 
@@ -27,6 +34,12 @@ function RootLayoutContent() {
   const [authReady, setAuthReady] = useState(false);
   const [restoredSignedInSession, setRestoredSignedInSession] = useState(false);
   const firstAuthEvent = useRef(true);
+
+  useEffect(() => {
+    // Edge-to-edge Android exposes the native window behind resized screens
+    // when the keyboard closes; keep that surface in sync with the app theme.
+    setBackgroundColorAsync(themeColors.background).catch(() => undefined);
+  }, [themeColors.background]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -64,7 +77,14 @@ function RootLayoutContent() {
     <CartProvider>
       <ThemeProvider value={mode === 'dark' ? DarkTheme : DefaultTheme}>
         {authReady && themeReady ? (
-          <Stack key={user?.uid ?? 'signed-out'} screenOptions={{ headerShown: false }}>
+          <Stack
+            key={user?.uid ?? 'signed-out'}
+            screenOptions={{
+              headerShown: false,
+              gestureEnabled: true,
+              contentStyle: { backgroundColor: themeColors.background },
+            }}
+          >
             <Stack.Screen name="index" />
             <Stack.Screen name="login" />
             <Stack.Screen name="register" />
@@ -77,7 +97,6 @@ function RootLayoutContent() {
             <Stack.Screen name="tiendas" />
             <Stack.Screen name="convertirse-tendero" />
             <Stack.Screen name="chatbot" />
-            <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
           </Stack>
         ) : (
           <View style={[styles.authLoading, { backgroundColor: themeColors.background }]}>

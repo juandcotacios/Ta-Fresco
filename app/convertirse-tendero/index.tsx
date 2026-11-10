@@ -1,5 +1,5 @@
 import { useAppTheme } from '@/src/contexts/ThemeContext';
-import { colors, radius, shadow, spacing } from "@/constants/designSystem";
+import { radius, shadow, spacing } from "@/constants/designSystem";
 import { db } from "@/src/config/firebase";
 import {
   crearSolicitud,
@@ -13,6 +13,7 @@ import { useRouter } from "expo-router";
 import { getAuth } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   ActivityIndicator,
   ScrollView,
@@ -26,6 +27,7 @@ import {
 export default function ConvertirseTenderoScreen() {
   const { colors } = useAppTheme();
   const styles = createStyles(colors);
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const auth = getAuth();
   const user = auth.currentUser;
@@ -126,7 +128,7 @@ export default function ConvertirseTenderoScreen() {
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={{ padding: spacing.xl, paddingTop: 55, paddingBottom: 48 }}
+      contentContainerStyle={{ padding: spacing.xl, paddingTop: insets.top + 12, paddingBottom: Math.max(48, insets.bottom + 24) }}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"
     >

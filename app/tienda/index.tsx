@@ -1,10 +1,11 @@
 import { useAppTheme } from '@/src/contexts/ThemeContext';
-import { colors, radius, shadow } from "@/constants/designSystem";
+import { radius, shadow } from "@/constants/designSystem";
 import { guardarMiTienda, obtenerMiTienda } from "@/src/services/tiendaService";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { getAuth } from "firebase/auth";
 import React, { useEffect, useState } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   ActivityIndicator,
   Alert,
@@ -19,6 +20,7 @@ import {
 export default function MiTiendaScreen() {
   const { colors } = useAppTheme();
   const styles = createStyles(colors);
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const auth = getAuth();
   const user = auth.currentUser;
@@ -73,7 +75,7 @@ export default function MiTiendaScreen() {
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={{ padding: 20, paddingTop: 55, paddingBottom: 48 }}
+      contentContainerStyle={{ padding: 20, paddingTop: insets.top + 12, paddingBottom: 48 }}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"
     >

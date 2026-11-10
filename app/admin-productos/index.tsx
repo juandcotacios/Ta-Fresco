@@ -1,5 +1,5 @@
 import { useAppTheme } from '@/src/contexts/ThemeContext';
-import { colors, radius, shadow } from "@/constants/designSystem";
+import { radius, shadow } from "@/constants/designSystem";
 import {
   actualizarProducto,
   eliminarProducto,
@@ -9,6 +9,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   ActivityIndicator,
   Alert,
@@ -25,7 +26,8 @@ import {
 
 export default function AdminProductosScreen() {
   const { colors } = useAppTheme();
-  const styles = createStyles(colors);
+  const insets = useSafeAreaInsets();
+  const styles = createStyles(colors, insets.top);
   const router = useRouter();
   const [productos, setProductos] = useState<ProductoTendero[]>([]);
   const [loading, setLoading] = useState(true);
@@ -194,12 +196,12 @@ export default function AdminProductosScreen() {
   );
 }
 
-const createStyles = (colors: any) => StyleSheet.create({
+const createStyles = (colors: any, topInset = 0) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingTop: 55,
+    paddingTop: topInset + 12,
     paddingHorizontal: 16,
     paddingBottom: 10,
   },
@@ -232,7 +234,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     marginBottom: 12,
     ...shadow.card,
   },
-  cardHuerfano: { backgroundColor: "#FFF8F8" },
+  cardHuerfano: { backgroundColor: colors.dangerLight },
   thumb: { width: 50, height: 50, borderRadius: 8, backgroundColor: colors.background },
   name: { fontWeight: "bold", fontSize: 14, color: colors.textPrimary },
   meta: { color: colors.textSecondary, fontSize: 12, marginTop: 2, marginBottom: 6 },

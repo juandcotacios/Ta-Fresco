@@ -1,5 +1,5 @@
 import { useAppTheme } from '@/src/contexts/ThemeContext';
-import { colors, radius, shadow } from "@/constants/designSystem";
+import { radius, shadow } from "@/constants/designSystem";
 import { db } from "@/src/config/firebase";
 import {
   actualizarEstadoPedido,
@@ -14,6 +14,7 @@ import { Comprador } from "@/src/services/usuariosService";
 import { avisar } from "@/src/utils/dialogos";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { doc, getDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
@@ -27,7 +28,8 @@ import {
 
 export default function AdminPedidosScreen() {
   const { colors } = useAppTheme();
-  const styles = createStyles(colors);
+  const insets = useSafeAreaInsets();
+  const styles = createStyles(colors, insets.top);
   const router = useRouter();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [compradores, setCompradores] = useState<Record<string, Comprador>>({});
@@ -203,12 +205,12 @@ export default function AdminPedidosScreen() {
   );
 }
 
-const createStyles = (colors: any) => StyleSheet.create({
+const createStyles = (colors: any, topInset = 0) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingTop: 55,
+    paddingTop: topInset + 12,
     paddingHorizontal: 15,
     paddingBottom: 10,
   },
@@ -285,7 +287,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     marginLeft: 10,
-    backgroundColor: "#F0F0F0",
+    backgroundColor: colors.border,
   },
   cancelFormBackText: { color: colors.textSecondary, fontWeight: "600", fontSize: 13 },
   cancelFormConfirmBtn: { backgroundColor: colors.danger, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8, marginLeft: 10 },

@@ -1,5 +1,5 @@
 import { useAppTheme } from '@/src/contexts/ThemeContext';
-import { colors, radius, shadow } from "@/constants/designSystem";
+import { radius, shadow } from "@/constants/designSystem";
 import { db } from "@/src/config/firebase";
 import { useCart } from "@/src/contexts/CartContext";
 import { ProductoTendero, TiendaConId } from "@/src/services/tiendaService";
@@ -10,6 +10,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { collection, doc, getDoc, onSnapshot, query, where } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   ActivityIndicator,
   FlatList,
@@ -22,7 +23,8 @@ import {
 
 export default function TiendaDetalleScreen() {
   const { colors } = useAppTheme();
-  const styles = createStyles(colors);
+  const insets = useSafeAreaInsets();
+  const styles = createStyles(colors, insets.top);
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { cart, addToCart, decreaseCart } = useCart();
@@ -158,7 +160,7 @@ export default function TiendaDetalleScreen() {
                   </TouchableOpacity>
                   <Text style={styles.qtyText}>{qty}</Text>
                   <TouchableOpacity
-                    style={[styles.qtyBtn, { backgroundColor: alTope ? "#ccc" : colors.primary }]}
+                    style={[styles.qtyBtn, { backgroundColor: alTope ? colors.border : colors.primary }]}
                     onPress={alTope ? undefined : () => addToCart({ ...item, quantity: 1 })}
                     disabled={alTope}
                   >
@@ -174,13 +176,13 @@ export default function TiendaDetalleScreen() {
   );
 }
 
-const createStyles = (colors: any) => StyleSheet.create({
+const createStyles = (colors: any, topInset = 0) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
   header: {
     flexDirection: "row",
     alignItems: "flex-start",
-    paddingTop: 55,
+    paddingTop: topInset + 12,
     paddingHorizontal: 16,
     paddingBottom: 14,
     backgroundColor: colors.surface,

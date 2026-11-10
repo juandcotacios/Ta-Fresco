@@ -1,5 +1,5 @@
 import { useAppTheme } from '@/src/contexts/ThemeContext';
-import { colors, radius, shadow } from "@/constants/designSystem";
+import { radius, shadow } from "@/constants/designSystem";
 import { auth } from "@/src/config/firebase";
 import {
   ESTADO_LABELS,
@@ -19,6 +19,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { onAuthStateChanged } from "firebase/auth";
 import React, { useEffect, useState } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   ActivityIndicator,
   FlatList,
@@ -56,7 +57,7 @@ function StatusStepper({ status }: { status: EstadoPedido }) {
               <View
                 style={[
                   stepperStyles.dot,
-                  { backgroundColor: reached ? ESTADO_LABELS[estado].color : "#E0E0E0" },
+                  { backgroundColor: reached ? ESTADO_LABELS[estado].color : colors.border },
                 ]}
               />
               <Text
@@ -72,7 +73,7 @@ function StatusStepper({ status }: { status: EstadoPedido }) {
               <View
                 style={[
                   stepperStyles.line,
-                  { backgroundColor: index < currentIndex ? ESTADO_LABELS[estado].color : "#E0E0E0" },
+                  { backgroundColor: index < currentIndex ? ESTADO_LABELS[estado].color : colors.border },
                 ]}
               />
             )}
@@ -85,7 +86,8 @@ function StatusStepper({ status }: { status: EstadoPedido }) {
 
 export default function PedidosScreen() {
   const { colors } = useAppTheme();
-  const styles = createStyles(colors);
+  const insets = useSafeAreaInsets();
+  const styles = createStyles(colors, insets.top);
   const router = useRouter();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
@@ -425,14 +427,14 @@ export default function PedidosScreen() {
   );
 }
 
-const createStyles = (colors: any) => StyleSheet.create({
+const createStyles = (colors: any, topInset = 0) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
   header: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: colors.surface,
-    paddingTop: 55,
+    paddingTop: topInset + 12,
     paddingHorizontal: 16,
     paddingBottom: 14,
     borderBottomWidth: 1,

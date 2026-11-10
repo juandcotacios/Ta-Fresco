@@ -1,5 +1,5 @@
 import { useAppTheme } from '@/src/contexts/ThemeContext';
-import { colors, radius, shadow } from "@/constants/designSystem";
+import { radius, shadow } from "@/constants/designSystem";
 import { subirImagenCloudinary } from "@/src/services/cloudinaryService";
 import {
   actualizarProducto,
@@ -13,6 +13,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useFocusEffect, useRouter } from "expo-router";
 import { getAuth } from "firebase/auth";
 import React, { useCallback, useState } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   ActivityIndicator,
   Alert,
@@ -33,7 +34,8 @@ const CATEGORIAS = ["Hortalizas", "Frutas", "Abarrotes", "Tuberculos", "Verduras
 
 export default function MisProductosScreen() {
   const { colors } = useAppTheme();
-  const styles = createStyles(colors);
+  const insets = useSafeAreaInsets();
+  const styles = createStyles(colors, insets.top);
   const router = useRouter();
   const auth = getAuth();
   const user = auth.currentUser;
@@ -336,12 +338,12 @@ export default function MisProductosScreen() {
   );
 }
 
-const createStyles = (colors: any) => StyleSheet.create({
+const createStyles = (colors: any, topInset = 0) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingTop: 55,
+    paddingTop: topInset + 12,
     paddingHorizontal: 16,
     paddingBottom: 10,
   },

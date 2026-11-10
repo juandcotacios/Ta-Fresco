@@ -1,5 +1,5 @@
 import { useAppTheme } from '@/src/contexts/ThemeContext';
-import { colors, radius, shadow } from "@/constants/designSystem";
+import { radius, shadow } from "@/constants/designSystem";
 import { db } from "@/src/config/firebase";
 import { useCart } from "@/src/contexts/CartContext";
 import { getOriginalPrice } from "@/src/utils/pricing";
@@ -8,6 +8,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { collection, onSnapshot } from "firebase/firestore";
 import React, { useEffect, useMemo, useState } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   ActivityIndicator,
   Dimensions,
@@ -20,11 +21,11 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View
 } from "react-native";
 import OpenChatbotButton from "../../components/OpenChatbotButton";
 
-const { height } = Dimensions.get('window');
 const MIN_ORDER_AMOUNT = 100000;
 const BOTTOM_TAB_HEIGHT = Platform.OS === 'ios' ? 90 : 70;
 
@@ -53,7 +54,9 @@ const CATEGORIES: { name: string; icon: any; ionicon?: keyof typeof Ionicons.gly
 
 export default function OfertasScreen() {
   const { colors } = useAppTheme();
-  const styles = createStyles(colors);
+  const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
+  const styles = createStyles(colors, insets.top, windowHeight);
   const router = useRouter();
   const { cart, addToCart, increaseCart, decreaseCart } = useCart();
 
@@ -343,7 +346,7 @@ export default function OfertasScreen() {
                               <View style={styles.miniControls}>
                                  <TouchableOpacity
                                     onPress={() => decreaseCart(item.id)}
-                                    style={[styles.miniCtrlBtn, item.quantity === 1 ? {backgroundColor: colors.dangerLight, borderColor:'#FFCDD2'} : {backgroundColor:'#EEE'}]}
+                                    style={[styles.miniCtrlBtn, item.quantity === 1 ? {backgroundColor: colors.dangerLight, borderColor: colors.danger} : {backgroundColor: colors.border}]}
                                  >
                                     <Ionicons
                                        name={item.quantity === 1 ? "trash-outline" : "remove"}
@@ -469,7 +472,7 @@ const TopOfferItem = ({ item, currentQty, addToCart, decreaseCart, cardStyle, st
   );
 };
 
-const createStyles = (colors: any) => StyleSheet.create({
+const createStyles = (colors: any, topInset = 0, windowHeight = Dimensions.get('window').height) => StyleSheet.create({
   mainContainer: {
     flex: 1,
     backgroundColor: colors.background,
@@ -483,7 +486,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 50,
+    paddingTop: topInset + 12,
     paddingBottom: 15,
     paddingHorizontal: 20,
     backgroundColor: colors.background,
@@ -616,16 +619,16 @@ const createStyles = (colors: any) => StyleSheet.create({
     backgroundColor: colors.surface,
     borderTopLeftRadius: 25, borderTopRightRadius: 25,
     padding: 20, paddingBottom: 30,
-    maxHeight: height * 0.7,
+    maxHeight: windowHeight * 0.7,
     ...shadow.floating,
   },
   miniHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   miniTitle: { fontSize: 22, fontWeight: 'bold', marginLeft: 10, color: colors.textPrimary },
   miniGoCartBtn: { paddingVertical: 8, paddingHorizontal: 20, borderRadius: 20, elevation: 2 },
   btnActive: { backgroundColor: colors.primary },
-  btnDisabled: { backgroundColor: '#DDD' },
+  btnDisabled: { backgroundColor: colors.border },
   miniGoCartText: { color: colors.white, fontWeight: 'bold', fontSize: 14 },
-  miniListContainer: { maxHeight: height * 0.4, marginBottom: 20 },
+  miniListContainer: { maxHeight: windowHeight * 0.4, marginBottom: 20 },
   emptyText: { textAlign: 'center', color: colors.textMuted, marginVertical: 20 },
   miniItemRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 15, borderBottomWidth: 1, borderBottomColor: colors.divider, paddingBottom: 10 },
   miniItemImg: { width: 50, height: 50, resizeMode: 'contain', marginRight: 5 },
@@ -639,6 +642,6 @@ const createStyles = (colors: any) => StyleSheet.create({
   miniTotalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.divider },
   totalLabel: { fontSize: 18, fontWeight: 'bold', color: colors.textPrimary },
   totalValue: { fontSize: 22, fontWeight: 'bold', color: colors.textPrimary },
-  loadingOverlay: { flex: 1, backgroundColor: 'rgba(255,255,255,0.8)', justifyContent: 'center', alignItems: 'center' },
+  loadingOverlay: { flex: 1, backgroundColor: `${colors.background}CC`, justifyContent: 'center', alignItems: 'center' },
   loadingCard: { backgroundColor: colors.surface, padding: 25, borderRadius: radius.lg, alignItems: 'center', ...shadow.floating },
 });

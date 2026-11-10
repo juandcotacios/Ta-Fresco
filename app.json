@@ -20,7 +20,7 @@
         "foregroundImage": "./assets/images/ta-fresco-logo.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": true
     },
     "web": {
       "output": "static",

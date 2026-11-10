@@ -1,24 +1,26 @@
-import { colors, radius } from "@/constants/designSystem";
+import { radius } from "@/constants/designSystem";
 import { useAppTheme } from "@/src/contexts/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import { Platform } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function TabLayout() {
   const { colors: themeColors } = useAppTheme();
+  const insets = useSafeAreaInsets();
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
 
         animation: 'fade',
+        tabBarHideOnKeyboard: true,
 
         tabBarStyle: {
           // primary (sin oscurecer) con el texto inactivo al 60% daba 2,1:1 de
           // contraste, casi ilegible con 10px. primaryDark + 85% blanco + 11px
           // sube eso a ~4,1:1 sin tocar la marca ni el resto del diseño.
           backgroundColor: themeColors.primaryDark,
-          height: Platform.OS === 'ios' ? 90 : 75,
+          height: 62 + insets.bottom,
           borderTopLeftRadius: radius.xl,
           borderTopRightRadius: radius.xl,
           position: 'absolute',
@@ -31,8 +33,8 @@ export default function TabLayout() {
           shadowOffset: { width: 0, height: -3 },
           shadowOpacity: 0.15,
           shadowRadius: 8,
-          paddingBottom: Platform.OS === 'ios' ? 25 : 10,
-          paddingTop: 10,
+          paddingBottom: Math.max(insets.bottom, 8),
+          paddingTop: 8,
         },
         tabBarActiveTintColor: themeColors.white,
         tabBarInactiveTintColor: "rgba(255,255,255,0.85)",

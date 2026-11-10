@@ -1,6 +1,6 @@
-# Frescapp
+# Ta Fresco
 
-This is an app created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app) called Frescapp, in which the interprice will sell products through the app. 
+Aplicación móvil para explorar productos, gestionar compras y conectar clientes con tiendas mayoristas. Está construida con Expo, React Native y Firebase.
 ## Get started
 
 1. Install dependencies
@@ -28,6 +28,17 @@ El catálogo de demostración agrega una tienda ficticia y productos en las seis
    ```
 
 La carga conserva los datos de una tienda existente y no duplica productos al volver a ejecutarla. Los productos nuevos aparecen asociados a la cuenta tendera usada para iniciar sesión. No configures una cuenta real: este catálogo es ficticio.
+
+## Generar APK Android
+
+El perfil `preview` de EAS genera un APK instalable. Inicia sesión en EAS y confirma que las variables de Firebase y Cloudinary de `.env.example` estén configuradas en el entorno `preview` del proyecto:
+
+```bash
+npx eas-cli@latest login
+npx eas-cli@latest build --platform android --profile preview
+```
+
+Al terminar, EAS muestra un enlace para descargar el APK. El archivo `.env` local no se sube al repositorio ni se usa automáticamente por la compilación en la nube.
 
 ## Instalar en iPhone sin App Store
 

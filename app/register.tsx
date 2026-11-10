@@ -10,6 +10,7 @@ import {
 } from "firebase/auth";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import React, { useState } from "react";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   ActivityIndicator,
   Image,
@@ -17,7 +18,6 @@ import {
   Linking,
   Modal,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -27,7 +27,7 @@ import {
 } from "react-native";
 
 import Logo from "@/components/Logo";
-import { colors, radius, shadow, spacing } from "@/constants/designSystem";
+import { radius, shadow, spacing } from "@/constants/designSystem";
 import { auth, db } from "@/src/config/firebase";
 import { PRIVACY_POLICY, TERMS_AND_CONDITIONS } from "@/src/content/legalDocuments";
 import { GOOGLE_AUTH } from "@/src/config/googleAuth";

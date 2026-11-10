@@ -1,11 +1,12 @@
 import { useAppTheme } from '@/src/contexts/ThemeContext';
 import Logo from "@/components/Logo";
-import { colors, radius, shadow, spacing } from "@/constants/designSystem";
+import { radius, shadow, spacing } from "@/constants/designSystem";
 import { Ionicons } from "@expo/vector-icons";
 import * as Font from 'expo-font';
 import { useRouter } from "expo-router";
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect, useState } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 // Mantiene la pantalla de bienvenida visible mientras cargan las fuentes
@@ -13,7 +14,8 @@ SplashScreen.preventAutoHideAsync();
 
 export default function WelcomeScreen() {
   const { colors } = useAppTheme();
-  const styles = createStyles(colors);
+  const insets = useSafeAreaInsets();
+  const styles = createStyles(colors, insets.top, insets.bottom);
   const router = useRouter();
   const [fontsLoaded, setFontsLoaded] = useState(false);
 
@@ -68,13 +70,14 @@ export default function WelcomeScreen() {
   );
 }
 
-const createStyles = (colors: any) => StyleSheet.create({
+const createStyles = (colors: any, topInset = 0, bottomInset = 0) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.ink,
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 40,
+    paddingTop: Math.max(24, topInset + 16),
+    paddingBottom: Math.max(24, bottomInset + 16),
     paddingHorizontal: spacing.xl,
     overflow: "hidden",
   },
@@ -100,7 +103,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   topContent: {
     alignItems: "center",
-    paddingTop: 60,
+    paddingTop: 12,
   },
   welcome: {
     fontSize: 56,

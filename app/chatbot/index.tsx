@@ -7,6 +7,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { collection, onSnapshot } from "firebase/firestore";
 import React, { useEffect, useRef, useState } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -323,7 +324,8 @@ function responder(mensaje: string, productos: ProductoChat[], storeNames: Recor
 
 export default function ChatbotScreen() {
   const { colors } = useAppTheme();
-  const styles = createStyles(colors);
+  const insets = useSafeAreaInsets();
+  const styles = createStyles(colors, insets.top, insets.bottom);
   const [messages, setMessages] = useState<{ from: "user" | "bot"; text: string; access?: Intencion["acceso"] }[]>([
     {
       from: "bot",
@@ -477,7 +479,7 @@ export default function ChatbotScreen() {
   );
 }
 
-const createStyles = (colors: any) => StyleSheet.create({
+const createStyles = (colors: any, topInset = 0, bottomInset = 0) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
 
   header: {
@@ -485,8 +487,8 @@ const createStyles = (colors: any) => StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: spacing.lg,
-    paddingTop: 55,
     paddingVertical: spacing.lg,
+    paddingTop: topInset + spacing.lg,
     ...shadow.floating,
   },
   backBtn: { marginRight: spacing.md },
@@ -527,6 +529,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   inputContainer: {
     flexDirection: "row",
     padding: spacing.sm,
+    paddingBottom: Math.max(spacing.sm, bottomInset),
     backgroundColor: colors.surface,
     borderTopWidth: 1,
     borderColor: colors.border,

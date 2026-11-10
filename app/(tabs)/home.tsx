@@ -1,6 +1,6 @@
 import { useAppTheme } from '@/src/contexts/ThemeContext';
 import Logo from "@/components/Logo";
-import { colors, radius, shadow } from "@/constants/designSystem";
+import { radius, shadow } from "@/constants/designSystem";
 import { db } from "@/src/config/firebase";
 import { useCart } from "@/src/contexts/CartContext";
 import { getOriginalPrice, hasDiscount } from "@/src/utils/pricing";
@@ -26,8 +26,9 @@ import {
   View
 } from "react-native";
 import OpenChatbotButton from "../../components/OpenChatbotButton";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 const MIN_ORDER_AMOUNT = 100000;
 const BOTTOM_TAB_HEIGHT = Platform.OS === 'ios' ? 90 : 70;
 
@@ -53,9 +54,10 @@ const CATEGORIES: { name: string; icon: any; ionicon?: keyof typeof Ionicons.gly
 
 export default function Home() {
   const { colors } = useAppTheme();
-  const styles = createStyles(colors);
+  const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { width: winWidth } = useWindowDimensions();
+  const { width: winWidth, height: winHeight } = useWindowDimensions();
+  const styles = createStyles(colors, winHeight, insets.top);
   const [products, setProducts] = useState<Product[]>([]);
   const [storeNames, setStoreNames] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
@@ -469,7 +471,7 @@ export default function Home() {
                               <View style={styles.miniControls}>
                                  <TouchableOpacity
                                     onPress={() => decreaseCart(item.id)}
-                                    style={[styles.miniCtrlBtn, item.quantity === 1 ? {backgroundColor: colors.dangerLight, borderColor:'#FFCDD2'} : {backgroundColor:'#EEE'}]}
+                                    style={[styles.miniCtrlBtn, item.quantity === 1 ? {backgroundColor: colors.dangerLight, borderColor: colors.danger} : {backgroundColor: colors.border}]}
                                  >
                                     <Ionicons
                                        name={item.quantity === 1 ? "trash-outline" : "remove"}
@@ -597,7 +599,7 @@ function ProductCard({ item, categoryLabel, storeName, onStorePress, currentQty,
     </View>
   );
 }
-const createStyles = (colors: any) => StyleSheet.create({
+const createStyles = (colors: any, windowHeight = Dimensions.get('window').height, topInset = 0) => StyleSheet.create({
 
     agotadoBadge: { position: 'absolute', top: 6, left: 6, backgroundColor: colors.danger, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, zIndex: 2 },
   agotadoBadgeText: { color: colors.white, fontSize: 10, fontWeight: 'bold' },
@@ -614,7 +616,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: colors.background },
   scrollContainer: { flex: 1, paddingHorizontal: 16 },
 
-  headerContainer: { marginTop: height * 0.05, marginBottom: 15, alignItems: "flex-start", paddingLeft: 4, width: '100%' },
+  headerContainer: { marginTop: topInset + 8, marginBottom: 15, alignItems: "flex-start", paddingLeft: 4, width: '100%' },
 
   searchContainer: {
     flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderRadius: radius.md,
@@ -723,16 +725,16 @@ const createStyles = (colors: any) => StyleSheet.create({
     backgroundColor: colors.surface,
     borderTopLeftRadius: 25, borderTopRightRadius: 25,
     padding: 20, paddingBottom: 30,
-    maxHeight: height * 0.7,
+    maxHeight: windowHeight * 0.7,
     ...shadow.floating,
   },
   miniHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   miniTitle: { fontSize: 22, fontWeight: 'bold', marginLeft: 10, color: colors.textPrimary },
   miniGoCartBtn: { paddingVertical: 8, paddingHorizontal: 20, borderRadius: 20, elevation: 2 },
   btnActive: { backgroundColor: colors.primary },
-  btnDisabled: { backgroundColor: '#DDD' },
+  btnDisabled: { backgroundColor: colors.border },
   miniGoCartText: { color: colors.white, fontWeight: 'bold', fontSize: 14 },
-  miniListContainer: { maxHeight: height * 0.4, marginBottom: 20 },
+  miniListContainer: { maxHeight: windowHeight * 0.4, marginBottom: 20 },
   emptyText: { textAlign: 'center', color: colors.textMuted, marginVertical: 20 },
   miniItemRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 15, borderBottomWidth: 1, borderBottomColor: colors.divider, paddingBottom: 10 },
   miniItemImg: { width: 50, height: 50, marginRight: 5 },
@@ -746,6 +748,6 @@ const createStyles = (colors: any) => StyleSheet.create({
   miniTotalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.divider },
   totalLabel: { fontSize: 18, fontWeight: 'bold', color: colors.textPrimary },
   totalValue: { fontSize: 22, fontWeight: 'bold', color: colors.textPrimary },
-  loadingOverlay: { flex: 1, backgroundColor: 'rgba(255,255,255,0.8)', justifyContent: 'center', alignItems: 'center' },
+  loadingOverlay: { flex: 1, backgroundColor: `${colors.background}CC`, justifyContent: 'center', alignItems: 'center' },
   loadingCard: { backgroundColor: colors.surface, padding: 25, borderRadius: radius.lg, alignItems: 'center', ...shadow.floating },
 });

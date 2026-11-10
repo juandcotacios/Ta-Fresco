@@ -1,8 +1,9 @@
 import { useAppTheme } from '@/src/contexts/ThemeContext';
-import { colors, radius, shadow } from "@/constants/designSystem";
+import { radius, shadow } from "@/constants/designSystem";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 const OPCIONES = [
@@ -35,10 +36,11 @@ const OPCIONES = [
 export default function AdminHomeScreen() {
   const { colors } = useAppTheme();
   const styles = createStyles(colors);
+  const insets = useSafeAreaInsets();
   const router = useRouter();
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: 20, paddingTop: 55 }}>
+    <ScrollView style={styles.container} contentContainerStyle={{ padding: 20, paddingTop: insets.top + 12 }}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backCircle}>
           <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
