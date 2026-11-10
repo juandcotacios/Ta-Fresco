@@ -15,6 +15,20 @@ This is an app created with [`create-expo-app`](https://www.npmjs.com/package/cr
    npx expo start
    ```
 
+## Cargar tienda y productos de demostración
+
+El catálogo de demostración agrega una tienda ficticia y productos en las seis categorías. Los datos son de ejemplo y los precios están expresados en pesos colombianos.
+
+1. Crea una cuenta de prueba en la app y, desde el panel de administración, asígnale el rol **Mayorista** (internamente es `tendero`).
+2. En `.env`, configura `SEED_TENDERO_EMAIL` y `SEED_TENDERO_PASSWORD` con esa cuenta. Añade `SEED_PRODUCT_IMAGE_URL` con una imagen pública de Cloudinary; también puedes configurar una URL distinta por categoría con las variables `SEED_IMAGE_*_URL` del archivo `.env.example`.
+3. Desde la carpeta del proyecto, ejecuta:
+
+   ```bash
+   npm run seed:demo
+   ```
+
+La carga conserva los datos de una tienda existente y no duplica productos al volver a ejecutarla. Los productos nuevos aparecen asociados a la cuenta tendera usada para iniciar sesión. No configures una cuenta real: este catálogo es ficticio.
+
 ## Instalar en iPhone sin App Store
 
 El proyecto ya genera una app nativa con Expo; para iPhone se necesita una compilación firmada, no Expo Go. Antes de compilar:
