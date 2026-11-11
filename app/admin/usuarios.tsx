@@ -1,5 +1,5 @@
-import { useAppTheme } from '@/src/contexts/ThemeContext';
 import { colors, radius, shadow } from "@/constants/designSystem";
+import { useAppTheme } from '@/src/contexts/ThemeContext';
 import {
   actualizarRolUsuario,
   obtenerTodosLosUsuarios,
@@ -10,7 +10,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import { getAuth } from "firebase/auth";
 import React, { useCallback, useState } from "react";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   ActivityIndicator,
   FlatList,
@@ -19,6 +18,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // Las etiquetas son solo lo que se muestra en pantalla; el valor guardado en
 // Firestore (value) sigue siendo "cliente"/"tendero"/"admin" como siempre,
