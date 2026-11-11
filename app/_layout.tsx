@@ -82,6 +82,7 @@ function RootLayoutContent() {
             screenOptions={{
               headerShown: false,
               gestureEnabled: true,
+              animation: 'slide_from_right',
               contentStyle: { backgroundColor: themeColors.background },
             }}
           >

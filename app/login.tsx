@@ -36,7 +36,6 @@ import {
   esCorreoValido,
   traducirErrorAuth,
 } from "@/src/utils/authErrors";
-import { signInWithGoogleNative } from "@/src/utils/googleSignIn";
 import { mensajeErrorGoogleAndroid } from "@/src/utils/googleSignInErrors";
 
 WebBrowser.maybeCompleteAuthSession();
@@ -169,6 +168,10 @@ export default function LoginScreen() {
       setModalVisible(true);
 
       try {
+        // Load Nitro only when native Google sign-in is requested. This keeps
+        // the rest of the app usable in Expo Go, which does not include the
+        // app's custom native Nitro module.
+        const { signInWithGoogleNative } = await import("@/src/utils/googleSignIn");
         const idToken = await signInWithGoogleNative();
 
         if (!idToken) {

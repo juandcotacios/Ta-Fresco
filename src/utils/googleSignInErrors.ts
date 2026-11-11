@@ -1,4 +1,10 @@
 export function mensajeErrorGoogleAndroid(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+
+  if (/NitroModules|Turbo\/Native-Module could not be found/i.test(message)) {
+    return "Esta instalación no incluye el módulo nativo de Google. Para iniciar con Google, instala el APK de Ta Fresco; Expo Go no es compatible.";
+  }
+
   const code = (error as { code?: string } | null)?.code;
 
   if (code === "DEVELOPER_ERROR") {

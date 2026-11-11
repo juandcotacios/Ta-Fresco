@@ -336,8 +336,14 @@ export default function CartScreen() {
         </TouchableOpacity>
       </View>
 
-      <Modal visible={checkoutVisible} animationType="slide" presentationStyle="pageSheet">
-       <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior={Platform.OS === "ios" ? "padding" : "height"} keyboardVerticalOffset={0}>
+      <Modal
+        visible={checkoutVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        backdropColor={colors.background}
+        onRequestClose={() => setCheckoutVisible(false)}
+      >
+       <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={0}>
          <View style={styles.checkoutContainer}>
             <View style={styles.checkoutHeader}>
                 <Text style={styles.checkoutTitle}>Finalizar Pedido</Text>
@@ -347,6 +353,7 @@ export default function CartScreen() {
             </View>
 
             <ScrollView
+              style={{ flex: 1 }}
               contentContainerStyle={{ padding: 20, paddingBottom: 120 }}
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="on-drag"

@@ -31,7 +31,6 @@ import { radius, shadow, spacing } from "@/constants/designSystem";
 import { auth, db } from "@/src/config/firebase";
 import { PRIVACY_POLICY, TERMS_AND_CONDITIONS } from "@/src/content/legalDocuments";
 import { GOOGLE_AUTH } from "@/src/config/googleAuth";
-import { signInWithGoogleNative } from "@/src/utils/googleSignIn";
 import { mensajeErrorGoogleAndroid } from "@/src/utils/googleSignInErrors";
 import {
   esCorreoValido,
@@ -181,6 +180,10 @@ export default function RegisterScreen() {
       setLoading(true);
 
       try {
+        // Load Nitro only when native Google sign-in is requested. This keeps
+        // the rest of the app usable in Expo Go, which does not include the
+        // app's custom native Nitro module.
+        const { signInWithGoogleNative } = await import("@/src/utils/googleSignIn");
         const idToken = await signInWithGoogleNative();
 
         if (!idToken) {

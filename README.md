@@ -31,7 +31,13 @@ La carga conserva los datos de una tienda existente y no duplica productos al vo
 
 ## Generar APK Android
 
-El perfil `preview` de EAS genera un APK instalable. Inicia sesión en EAS y confirma que las variables de Firebase y Cloudinary de `.env.example` estén configuradas en el entorno `preview` del proyecto:
+El inicio de sesión nativo de Google usa Nitro y no está incluido en Expo Go. Para probar en Android Studio, inicia una compilación nativa con:
+
+```bash
+npm run android
+```
+
+Para generar un APK instalable, el perfil `preview` de EAS compila la app en la nube. Confirma que las variables de Firebase y Cloudinary de `.env.example` estén configuradas en el entorno `preview` del proyecto:
 
 ```bash
 npx eas-cli@latest login
