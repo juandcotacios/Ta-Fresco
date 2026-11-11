@@ -90,14 +90,14 @@ function RootLayoutContent() {
             <Stack.Screen name="login" />
             <Stack.Screen name="register" />
             <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="pedidos" />
-            <Stack.Screen name="admin" />
-            <Stack.Screen name="admin-pedidos" />
-            <Stack.Screen name="admin-productos" />
-            <Stack.Screen name="tienda" />
-            <Stack.Screen name="tiendas" />
-            <Stack.Screen name="convertirse-tendero" />
-            <Stack.Screen name="chatbot" />
+            <Stack.Screen name="pedidos/index" />
+            <Stack.Screen name="admin/index" />
+            <Stack.Screen name="admin-pedidos/index" />
+            <Stack.Screen name="admin-productos/index" />
+            <Stack.Screen name="tienda/index" />
+            <Stack.Screen name="tiendas/index" />
+            <Stack.Screen name="convertirse-tendero/index" />
+            <Stack.Screen name="chatbot/index" />
           </Stack>
         ) : (
           <View style={[styles.authLoading, { backgroundColor: themeColors.background }]}>

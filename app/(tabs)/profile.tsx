@@ -1,7 +1,6 @@
 import { useAppTheme } from '@/src/contexts/ThemeContext';
 import { radius, shadow } from '@/constants/designSystem';
 import { db } from '@/src/config/firebase';
-import { signOutGoogleNative } from '@/src/utils/googleSignIn';
 import { subirImagenCloudinary } from '@/src/services/cloudinaryService';
 import { Direccion, Usuario } from '@/src/services/usuariosService';
 import { Ionicons } from '@expo/vector-icons';
@@ -239,6 +238,10 @@ export default function ProfileScreen() {
     try {
       if (user?.providerData.some((provider) => provider.providerId === 'google.com')) {
         try {
+          // Load the native Google module only when signing out. Expo Go does
+          // not include NitroModules, and importing it while building routes
+          // prevents the profile screen from loading there.
+          const { signOutGoogleNative } = await import('@/src/utils/googleSignIn');
           await signOutGoogleNative();
         } catch (googleError) {
           console.log('No se pudo limpiar la sesión nativa de Google:', googleError);
