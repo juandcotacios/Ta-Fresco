@@ -36,7 +36,10 @@ import {
   esCorreoValido,
   traducirErrorAuth,
 } from "@/src/utils/authErrors";
-import { mensajeErrorGoogleAndroid } from "@/src/utils/googleSignInErrors";
+import {
+  mensajeErrorGoogleAndroid,
+  mensajeErrorGoogleIOS,
+} from "@/src/utils/googleSignInErrors";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -188,7 +191,7 @@ export default function LoginScreen() {
           Platform.OS === "android"
             ? mensajeErrorGoogleAndroid(error)
             : error instanceof Error
-              ? error.message
+              ? mensajeErrorGoogleIOS(error)
               : "No se pudo iniciar sesión con Google. Inténtalo de nuevo."
         );
       } finally {
