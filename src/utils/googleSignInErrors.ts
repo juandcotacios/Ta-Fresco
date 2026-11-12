@@ -17,3 +17,13 @@ export function mensajeErrorGoogleAndroid(error: unknown): string {
 
   return "No se pudo iniciar sesión con Google. Inténtalo de nuevo.";
 }
+
+export function mensajeErrorGoogleIOS(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+
+  if (message.toLowerCase().includes("keychain")) {
+    return "iOS no pudo guardar la sesión segura de Google. Actualiza Ta Fresco y vuelve a intentarlo.";
+  }
+
+  return message || "No se pudo iniciar sesión con Google. Inténtalo de nuevo.";
+}

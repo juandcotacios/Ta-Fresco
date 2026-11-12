@@ -31,7 +31,10 @@ import { radius, shadow, spacing } from "@/constants/designSystem";
 import { auth, db } from "@/src/config/firebase";
 import { PRIVACY_POLICY, TERMS_AND_CONDITIONS } from "@/src/content/legalDocuments";
 import { GOOGLE_AUTH } from "@/src/config/googleAuth";
-import { mensajeErrorGoogleAndroid } from "@/src/utils/googleSignInErrors";
+import {
+  mensajeErrorGoogleAndroid,
+  mensajeErrorGoogleIOS,
+} from "@/src/utils/googleSignInErrors";
 import {
   esCorreoValido,
   traducirErrorAuth,
@@ -200,7 +203,7 @@ export default function RegisterScreen() {
           Platform.OS === "android"
             ? mensajeErrorGoogleAndroid(error)
             : error instanceof Error
-              ? error.message
+              ? mensajeErrorGoogleIOS(error)
               : "No se pudo iniciar sesión con Google. Inténtalo de nuevo."
         );
       }

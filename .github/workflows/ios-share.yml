@@ -6,8 +6,8 @@ run-name: iOS Simulator ${{ inputs.build_id || github.ref_name }}
 # Mac. The job stays alive while the simulator is in use and ends when it is
 # released or left unused.
 #
-# Simulator builds are never signed, so none of the signing setup in
-# ios-build.yml applies here.
+# Simulator builds use ad-hoc signing so iOS embeds the app's entitlements.
+# No distribution certificate or provisioning profile is needed.
 
 on:
   # Pushing a tag named ios-share/<build-id> starts the same job without the
@@ -42,7 +42,7 @@ on:
         description: 'How long the simulator stays available while unused (e.g. 30m)'
         required: false
         type: string
-        default: '30m'
+        default: '10m'
       flutter_version:
         description: 'Flutter version to use (e.g., 3.24.0). Empty means latest stable.'
         required: false
@@ -118,7 +118,7 @@ jobs:
           param build_id         "$IN_BUILD_ID" '""' "${GITHUB_REF_NAME##*/}"
           param ios_path         "$IN_IOS_PATH" '.ios.path' '.'
           param scheme           "$IN_SCHEME" '.ios.scheme' ''
-          param duration         "$IN_DURATION" '""' '30m'
+          param duration         "$IN_DURATION" '""' '10m'
           param flutter_version  "$IN_FLUTTER_VERSION" '.flutter.version' ''
           param jdk_version      "$IN_JDK_VERSION" '.kmp.jdkVersion' '17'
 
@@ -667,7 +667,9 @@ jobs:
               "$DEST_FLAG" "$DEST_VALUE" \
               -derivedDataPath "$GITHUB_WORKSPACE/DerivedData" \
               COMPILER_INDEX_STORE_ENABLE=NO \
-              CODE_SIGNING_ALLOWED=NO \
+              CODE_SIGNING_ALLOWED=YES \
+              CODE_SIGNING_REQUIRED=YES \
+              CODE_SIGN_IDENTITY=- \
               build
 
             # Ask the project which bundle this scheme produces: the first .app
