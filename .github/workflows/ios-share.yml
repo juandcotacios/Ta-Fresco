@@ -42,7 +42,7 @@ on:
         description: 'How long the simulator stays available while unused (e.g. 30m)'
         required: false
         type: string
-        default: '30m'
+        default: '10m'
       flutter_version:
         description: 'Flutter version to use (e.g., 3.24.0). Empty means latest stable.'
         required: false
@@ -118,7 +118,7 @@ jobs:
           param build_id         "$IN_BUILD_ID" '""' "${GITHUB_REF_NAME##*/}"
           param ios_path         "$IN_IOS_PATH" '.ios.path' '.'
           param scheme           "$IN_SCHEME" '.ios.scheme' ''
-          param duration         "$IN_DURATION" '""' '30m'
+          param duration         "$IN_DURATION" '""' '10m'
           param flutter_version  "$IN_FLUTTER_VERSION" '.flutter.version' ''
           param jdk_version      "$IN_JDK_VERSION" '.kmp.jdkVersion' '17'
 
