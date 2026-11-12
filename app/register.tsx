@@ -31,7 +31,10 @@ import { radius, shadow, spacing } from "@/constants/designSystem";
 import { auth, db } from "@/src/config/firebase";
 import { PRIVACY_POLICY, TERMS_AND_CONDITIONS } from "@/src/content/legalDocuments";
 import { GOOGLE_AUTH } from "@/src/config/googleAuth";
-import { mensajeErrorGoogleAndroid } from "@/src/utils/googleSignInErrors";
+import {
+  mensajeErrorGoogleAndroid,
+  mensajeErrorGoogleIOS,
+} from "@/src/utils/googleSignInErrors";
 import {
   esCorreoValido,
   traducirErrorAuth,
@@ -178,6 +181,7 @@ export default function RegisterScreen() {
 
     if (Platform.OS !== "web") {
       setLoading(true);
+      let etapaGoogle = "Google nativo";
 
       try {
         // Load Nitro only when native Google sign-in is requested. This keeps
@@ -191,16 +195,17 @@ export default function RegisterScreen() {
           return;
         }
 
+        etapaGoogle = "Firebase Auth";
         await finishGoogleSignIn(idToken);
       } catch (error: any) {
-        console.log(`Error de Google en ${Platform.OS}:`, error);
+        console.log(`Error de Google en ${Platform.OS} (${etapaGoogle}):`, error);
 
         setLoading(false);
         setErrorMsg(
           Platform.OS === "android"
             ? mensajeErrorGoogleAndroid(error)
             : error instanceof Error
-              ? error.message
+              ? mensajeErrorGoogleIOS(error)
               : "No se pudo iniciar sesión con Google. Inténtalo de nuevo."
         );
       }
