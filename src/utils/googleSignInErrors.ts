@@ -17,3 +17,30 @@ export function mensajeErrorGoogleAndroid(error: unknown): string {
 
   return "No se pudo iniciar sesión con Google. Inténtalo de nuevo.";
 }
+
+export function mensajeErrorGoogleIOS(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  const code = (error as { code?: string } | null)?.code;
+
+  if (message.toLowerCase().includes("keychain")) {
+    return "Google Sign-In de iOS no pudo acceder al llavero seguro. El fallo ocurre antes de validar la cuenta en Firebase.";
+  }
+
+  if (code === "auth/operation-not-allowed") {
+    return "El acceso con Google no está habilitado en Firebase Authentication.";
+  }
+
+  if (code === "auth/invalid-api-key") {
+    return "Firebase rechazó la API key de esta compilación. Revisa la configuración de Firebase en GitHub Actions.";
+  }
+
+  if (code === "auth/network-request-failed") {
+    return "No hubo respuesta de Firebase. Revisa la conexión del simulador e inténtalo de nuevo.";
+  }
+
+  if (code === "auth/invalid-credential" || code === "auth/invalid-idp-response") {
+    return "Firebase rechazó el token de Google. Revisa los Client ID de OAuth y que Google esté habilitado en Firebase.";
+  }
+
+  return message || "No se pudo iniciar sesión con Google. Inténtalo de nuevo.";
+}

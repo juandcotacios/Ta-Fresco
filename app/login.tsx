@@ -36,7 +36,10 @@ import {
   esCorreoValido,
   traducirErrorAuth,
 } from "@/src/utils/authErrors";
-import { mensajeErrorGoogleAndroid } from "@/src/utils/googleSignInErrors";
+import {
+  mensajeErrorGoogleAndroid,
+  mensajeErrorGoogleIOS,
+} from "@/src/utils/googleSignInErrors";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -166,6 +169,7 @@ export default function LoginScreen() {
       setLoading(true);
       setLoginStatus("loading");
       setModalVisible(true);
+      let etapaGoogle = "Google nativo";
 
       try {
         // Load Nitro only when native Google sign-in is requested. This keeps
@@ -179,16 +183,17 @@ export default function LoginScreen() {
           return;
         }
 
+        etapaGoogle = "Firebase Auth";
         await finishGoogleSignIn(idToken);
       } catch (error: any) {
-        console.log(`Error de Google en ${Platform.OS}:`, error);
+        console.log(`Error de Google en ${Platform.OS} (${etapaGoogle}):`, error);
 
         setModalVisible(false);
         setErrorMsg(
           Platform.OS === "android"
             ? mensajeErrorGoogleAndroid(error)
             : error instanceof Error
-              ? error.message
+              ? mensajeErrorGoogleIOS(error)
               : "No se pudo iniciar sesión con Google. Inténtalo de nuevo."
         );
       } finally {
