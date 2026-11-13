@@ -667,6 +667,7 @@ jobs:
               "$DEST_FLAG" "$DEST_VALUE" \
               -derivedDataPath "$GITHUB_WORKSPACE/DerivedData" \
               COMPILER_INDEX_STORE_ENABLE=NO \
+              AD_HOC_CODE_SIGNING_ALLOWED=YES \
               CODE_SIGNING_ALLOWED=YES \
               CODE_SIGNING_REQUIRED=YES \
               CODE_SIGN_IDENTITY=- \
