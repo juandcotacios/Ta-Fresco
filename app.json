@@ -10,11 +10,6 @@
     "newArchEnabled": true,
     "ios": {
       "bundleIdentifier": "com.juandcotacios.tafresco",
-      "entitlements": {
-        "keychain-access-groups": [
-          "$(AppIdentifierPrefix)com.google.GIDSignIn"
-        ]
-      },
       "supportsTablet": true
     },
     "android": {

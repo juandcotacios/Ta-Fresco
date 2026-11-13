@@ -236,7 +236,10 @@ export default function ProfileScreen() {
     setLoggingOut(true);
 
     try {
-      if (user?.providerData.some((provider) => provider.providerId === 'google.com')) {
+      if (
+        Platform.OS === 'android' &&
+        user?.providerData.some((provider) => provider.providerId === 'google.com')
+      ) {
         try {
           // Load the native Google module only when signing out. Expo Go does
           // not include NitroModules, and importing it while building routes

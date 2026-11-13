@@ -30,11 +30,15 @@ import Logo from "@/components/Logo";
 import { radius, shadow, spacing } from "@/constants/designSystem";
 import { auth, db } from "@/src/config/firebase";
 import { PRIVACY_POLICY, TERMS_AND_CONDITIONS } from "@/src/content/legalDocuments";
-import { GOOGLE_AUTH } from "@/src/config/googleAuth";
+import {
+  GOOGLE_AUTH,
+  GOOGLE_IOS_REDIRECT_URI,
+} from "@/src/config/googleAuth";
 import {
   mensajeErrorGoogleAndroid,
   mensajeErrorGoogleIOS,
 } from "@/src/utils/googleSignInErrors";
+import { signInWithGoogleIOSAuthSession } from "@/src/utils/googleIOSAuthSession";
 import {
   esCorreoValido,
   traducirErrorAuth,
@@ -56,12 +60,16 @@ export default function RegisterScreen() {
   const [acceptedLegal, setAcceptedLegal] = useState(false);
   const [legalDocument, setLegalDocument] = useState<"terms" | "privacy" | null>(null);
 
-  const [request, , promptAsync] =
-    Google.useIdTokenAuthRequest({
+  const [request, , promptAsync] = Google.useIdTokenAuthRequest(
+    {
       clientId: GOOGLE_AUTH.webClientId,
       androidClientId: GOOGLE_AUTH.androidClientId,
       iosClientId: GOOGLE_AUTH.iosClientId,
-    });
+      selectAccount: Platform.OS === "ios",
+      shouldAutoExchangeCode: Platform.OS === "ios" ? false : undefined,
+    },
+    Platform.OS === "ios" ? { native: GOOGLE_IOS_REDIRECT_URI } : {}
+  );
 
   // Registro con correo y contraseña.
   const handleRegister = async () => {
@@ -165,7 +173,11 @@ export default function RegisterScreen() {
         error
       );
 
-      setErrorMsg(traducirErrorAuth(error));
+      setErrorMsg(
+        Platform.OS === "ios"
+          ? mensajeErrorGoogleIOS(error)
+          : traducirErrorAuth(error)
+      );
     } finally {
       setLoading(false);
     }
@@ -181,14 +193,19 @@ export default function RegisterScreen() {
 
     if (Platform.OS !== "web") {
       setLoading(true);
-      let etapaGoogle = "Google nativo";
+      let etapaGoogle = Platform.OS === "ios" ? "OAuth de Google" : "Google nativo";
 
       try {
-        // Load Nitro only when native Google sign-in is requested. This keeps
-        // the rest of the app usable in Expo Go, which does not include the
-        // app's custom native Nitro module.
-        const { signInWithGoogleNative } = await import("@/src/utils/googleSignIn");
-        const idToken = await signInWithGoogleNative();
+        const idToken =
+          Platform.OS === "ios"
+            ? await signInWithGoogleIOSAuthSession(request, promptAsync)
+            : await (async () => {
+                // Nitro is only needed for Android's native Google sign-in.
+                const { signInWithGoogleNative } = await import(
+                  "@/src/utils/googleSignIn"
+                );
+                return signInWithGoogleNative();
+              })();
 
         if (!idToken) {
           setLoading(false);

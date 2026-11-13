@@ -7,3 +7,8 @@ export const GOOGLE_AUTH = {
     process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ||
     "799200713865-9s1m9do6an0pc7l0qn0hqi3grd6dqogu.apps.googleusercontent.com",
 };
+
+export const GOOGLE_IOS_REDIRECT_URI = `com.googleusercontent.apps.${GOOGLE_AUTH.iosClientId.replace(
+  /\.apps\.googleusercontent\.com$/,
+  ""
+)}:/oauthredirect`;
